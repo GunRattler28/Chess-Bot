@@ -1,0 +1,370 @@
+import tkinter as tk
+import numpy
+
+root = tk.Tk()
+root.title("Gun's Chess Bot")
+
+windowSize = 800
+positionSize = windowSize / 8
+root.geometry(f"{windowSize}x{windowSize}+100+100")
+root.resizable(False, False)
+canvas = tk.Canvas(root, width=windowSize, height=windowSize, bg="white")
+activeOutline = None
+activeSquare = None
+moves = 0
+turnColour = "w"
+totalPieces = None
+moveIndicator = []
+possibleMoves = []
+
+pieces = {
+    "bQ": tk.PhotoImage(file="images/pieces/bqueen.png"),
+    "bK": tk.PhotoImage(file="images/pieces/bking.png"),
+    "bB": tk.PhotoImage(file="images/pieces/bbishop.png"),
+    "bH": tk.PhotoImage(file="images/pieces/bhorse.png"),
+    "bR": tk.PhotoImage(file="images/pieces/brook.png"),
+    "bP": tk.PhotoImage(file="images/pieces/bpawn.png"),
+    "wQ": tk.PhotoImage(file="images/pieces/wqueen.png"), 
+    "wK": tk.PhotoImage(file="images/pieces/wking.png"),
+    "wB": tk.PhotoImage(file="images/pieces/wbishop.png"),
+    "wH": tk.PhotoImage(file="images/pieces/whorse.png"),
+    "wR": tk.PhotoImage(file="images/pieces/wrook.png"),
+    "wP": tk.PhotoImage(file="images/pieces/wpawn.png")
+}
+
+piecePositions = {
+    "bQ": numpy.uint64(0x0000000000000008),
+    "bK": numpy.uint64(0x0000000000000010), 
+    "bB": numpy.uint64(0x0000000000000024),
+    "bH": numpy.uint64(0x0000000000000042), 
+    "bR": numpy.uint64(0x0000000000000081), 
+    "bP": numpy.uint64(0x000000000000FF00),
+    "wQ": numpy.uint64(0x0800000000000000), 
+    "wK": numpy.uint64(0x1000000000000000), 
+    "wB": numpy.uint64(0x2400000000000000), 
+    "wH": numpy.uint64(0x4200000000000000), 
+    "wR": numpy.uint64(0x8100000000000000), 
+    "wP": numpy.uint64(0x00FF000000000000)
+}
+
+overlays = {
+    "red": tk.PhotoImage(file="images/redOverlay.png"),
+    "green": tk.PhotoImage(file="images/greenOverlay.png")
+}
+
+def drawBoard():
+    for column in range(0, 8):
+        for row in range(0, 8):
+            if ((row + column) % 2 == 0):
+                canvas.create_rectangle(column * positionSize, row * positionSize, (column + 1) * positionSize, (row + 1) * positionSize, fill="#ffffff")
+            else:
+                canvas.create_rectangle(column * positionSize, row * positionSize, (column + 1) * positionSize, (row + 1) * positionSize, fill="#0088ff")
+
+            piece = getPiece(row, column)
+            if (piece != ""):
+                canvas.create_image(column * positionSize + positionSize / 2, row * positionSize + positionSize / 2, image= pieces[piece])
+
+def calculateTotalPieces():
+    global totalPieces
+    totalPieces = numpy.uint64(0)
+    for each in piecePositions.values():
+        totalPieces |= each
+
+def getPiece(row, column):
+    position = numpy.uint64(1) << numpy.uint64(row * 8 + column)
+    if not (totalPieces & position):                                   # efficient. Brother would be proud
+        return ""
+    
+    for pieceBoard, bitBoard in piecePositions.items():
+        if (bitBoard & position):
+            return pieceBoard
+        
+    return ""
+
+def onClick(event):
+    global activeOutline
+    global activeSquare
+    global moves
+    global turnColour
+    global moveIndicator
+    global possibleMoves
+
+    x = event.x
+    y = event.y
+
+    row = int(y // positionSize)
+    column = int(x // positionSize)
+
+    if activeOutline != None:
+        canvas.delete(activeOutline)
+        activeOutline = None
+
+    if activeSquare == None:
+            calculateTotalPieces()
+            piece = getPiece(row, column)
+            if piece != "":
+                if turnColour != piece[0]:
+                    return
+
+                activeSquare = [row, column]
+                activeOutline = canvas.create_rectangle(column * positionSize, row * positionSize, (column + 1) * positionSize, (row + 1) * positionSize, outline="#00ff00", width=4,)
+
+                possibleMoves = blockCheck(row, column)
+                showLegalMoves(possibleMoves)
+            return
+
+    startRow = activeSquare[0]
+    startColumn = activeSquare[1]
+
+    movingPiece = getPiece(startRow, startColumn)
+    targetPiece = getPiece(row, column)
+    targetPosition = numpy.uint64(1) << numpy.uint64(row * 8 + column)
+
+    if (row, column) in possibleMoves:
+
+        clearPossibleMoves()
+
+        if targetPiece != "":
+           piecePositions[targetPiece] &= ~targetPosition
+
+        piecePositions[movingPiece] &= ~(numpy.uint64(1) << numpy.uint64(startRow * 8 + startColumn))
+        piecePositions[movingPiece] |= targetPosition
+
+        if turnColour == "w":
+            turnColour = "b"
+        else:
+            turnColour = "w"
+
+        calculateTotalPieces()
+        activeSquare = None
+        canvas.delete("all")
+        moveIndicator.clear()
+        possibleMoves.clear()
+        drawBoard()
+        moves += 1
+        print(moves)
+        if kingCheck(turnColour):
+            king = findKing(turnColour)
+            canvas.create_image(king[1] * positionSize + positionSize / 2, king[0] * positionSize + positionSize / 2, image=overlays["red"])
+            canMove = False
+            for r in range(8):
+                for c in range(8):
+                    p = getPiece(r, c)
+                    if p != "" and p[0] == turnColour:
+                        if len(blockCheck(r, c)) > 0:
+                            canMove = True
+                            break
+                if canMove:
+                    break
+
+            if canMove == False:
+                if turnColour == "w":
+                    winner = "Black"
+                else:
+                    winner = "White"
+                canvas.create_text(windowSize / 2, windowSize / 2, text=f"Checkmate!\n{winner} wins!", fill="#FF0000", font=("dynapuff", 64, "bold"), justify="center", tags="gameover")
+
+    else:
+        if targetPiece != "":
+            if targetPiece[0] == turnColour:
+                activeSquare = [row, column]
+                activeOutline = canvas.create_rectangle(column * positionSize, row * positionSize, (column + 1) * positionSize, (row + 1) * positionSize, outline="#00ff00", width=4,)
+                possibleMoves = blockCheck(row, column)
+                showLegalMoves(possibleMoves)
+            else:
+                activeSquare = None
+                clearPossibleMoves()
+            
+def calculateLegalMoves(row, column):
+    possibleMoves = []
+    piece = getPiece(row, column)
+    if piece == "":
+        print('Something has gone wrong... calculateLegalMoves() got "" from getPiece()')
+        return []
+
+    pieceType = piece[-1]
+    pieceColour = piece[0]
+
+    knightMoves = [(2, 1), (2, -1), (-2, 1), (-2, -1), (1, 2), (1, -2), (-1, 2), (-1, -2)]
+    kingMoves = [(1,0), (-1,0), (0,1), (0,-1), (1,1), (1,-1), (-1,1), (-1,-1)]
+    rookDirections = [(1,0), (-1,0), (0,1), (0,-1)]
+    bishopDirections = [(1,1), (1,-1), (-1,1), (-1,-1)]
+    queenDirections = rookDirections + bishopDirections
+
+    if pieceType == "H":
+        for rowChange, columnChange in knightMoves:
+            potRow = row + rowChange
+            potColumn = column + columnChange
+
+            if potRow >= 0 and potRow < 8 and potColumn >= 0 and potColumn < 8:
+                target = getPiece(potRow, potColumn)
+
+                if target == "" or target[0] != pieceColour:
+                    possibleMoves.append((potRow, potColumn))
+
+    elif pieceType == "K":
+        for rowChange, columnChange in kingMoves:
+            potRow = row + rowChange
+            potColumn = column + columnChange
+
+            if potRow >= 0 and potRow < 8 and potColumn >= 0 and potColumn < 8:
+                target = getPiece(potRow, potColumn)
+
+                if target == "" or target[0] != pieceColour:
+                    possibleMoves.append((potRow, potColumn))
+
+    elif pieceType == "R":
+        slidingMoves(row, column, rookDirections, pieceColour, possibleMoves)
+
+    elif pieceType == "B":
+        slidingMoves(row, column, bishopDirections, pieceColour, possibleMoves)
+
+    elif pieceType == "Q":
+        slidingMoves(row, column, queenDirections, pieceColour, possibleMoves)
+
+    elif pieceType == "P":
+        if pieceColour == "w":
+            direction = -1
+        else:
+            direction = 1
+
+        potRow = row + direction
+
+        if 0 <= potRow < 8:
+            if getPiece(potRow, column) == "":
+                possibleMoves.append((potRow, column))
+
+                if pieceColour == "w" and row == 6:
+                    if getPiece(potRow - 1, column) == "":
+                        possibleMoves.append((potRow - 1, column))
+
+                if pieceColour == "b" and row == 1:
+                    if getPiece(potRow + 1, column) == "":
+                        possibleMoves.append((potRow + 1, column))
+
+        for columnChange in [-1, 1]:
+            
+            potRow = row + direction
+            potColumn = column + columnChange
+
+            if potRow >= 0 and potRow < 8 and potColumn >= 0 and potColumn < 8:
+                target = getPiece(potRow, potColumn)
+                if target != "" and target[0] != pieceColour:
+                    possibleMoves.append((potRow, potColumn))
+
+    return possibleMoves
+
+def showLegalMoves(possibleMoves):
+    global moveIndicator
+    
+    for indicator in moveIndicator:
+        canvas.delete(indicator)
+
+    moveIndicator.clear()
+
+    for moveRow, moveColumn in possibleMoves:
+        x = moveColumn * positionSize + positionSize / 2
+        y = moveRow * positionSize + positionSize / 2
+
+        if getPiece(moveRow, moveColumn) != "":
+            cirColour = overlays["red"]
+        else:
+            cirColour = overlays["green"]
+
+        moveIndicator.append(canvas.create_image(x, y, image=cirColour))
+
+def slidingMoves(row, column, movements, colour, possibleMoves):
+    for rowChange, columnChange in movements:
+        potRow = row + rowChange
+        potColumn = column + columnChange
+        while potRow >= 0 and potRow < 8 and potColumn >= 0 and potColumn < 8:
+            target = getPiece(potRow, potColumn)
+            if target == "":
+                possibleMoves.append((potRow, potColumn))
+            else:
+                if target[0] != colour:
+                    possibleMoves.append((potRow, potColumn))
+                break
+
+            potRow += rowChange
+            potColumn += columnChange
+
+def clearPossibleMoves():
+    global moveIndicator
+    global possibleMoves
+
+    for indicator in moveIndicator:
+        canvas.delete(indicator)
+
+    moveIndicator.clear()
+    possibleMoves.clear()
+
+def isSquareAttacked(row, column, atkColour):
+    for piece, bitboard in piecePositions.items():
+        if piece[0] == atkColour:
+            board = int(bitboard)
+            while board > 0:
+                index = board.bit_length() - 1
+                pieceRow = index // 8
+                pieceColumn = index % 8
+                moves = calculateLegalMoves(pieceRow, pieceColumn)
+                if (row, column) in moves:
+                    return True
+                
+                board = board & ~(1 << index)
+    return False
+
+def findKing(colour):
+    kingBoard = int(piecePositions[colour + "K"])
+    if kingBoard == 0:
+        return None
+    index = kingBoard.bit_length() - 1
+    row = index // 8
+    column = index % 8
+    return(row, column) 
+
+def kingCheck(colour):
+    if colour == "w":
+        atkColour = "b"
+    else:
+        atkColour = "w"
+    king = findKing(colour)
+    if king == None:
+        return False
+    return isSquareAttacked(king[0], king[1], atkColour)
+
+def blockCheck(row, column):
+    piece = getPiece(row, column)
+    if piece == "":
+        return []
+
+    colour = piece[0]
+    anyMoves = calculateLegalMoves(row, column)
+    validMoves = []
+
+    currentBoard = piecePositions.copy()
+
+    for endRow, endColumn in anyMoves:
+        startPosition = numpy.uint64(1) << numpy.uint64(row * 8 + column)
+        targetPiece = getPiece(endRow, endColumn)
+        targetPosition = numpy.uint64(1) << numpy.uint64(endRow * 8 + endColumn)
+
+        if targetPiece != "":
+            piecePositions[targetPiece] &= ~targetPosition
+        piecePositions[piece] &= ~startPosition
+        piecePositions[piece] |= targetPosition
+        calculateTotalPieces()
+
+        if not kingCheck(colour):
+            validMoves.append((endRow, endColumn))
+
+        piecePositions.update(currentBoard)
+        calculateTotalPieces()
+
+    return validMoves
+
+canvas.bind("<Button-1>", onClick)
+calculateTotalPieces()
+drawBoard()
+canvas.pack()
+root.mainloop()
