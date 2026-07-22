@@ -1,4 +1,5 @@
 import tkinter as tk
+import pygame
 import numpy
 
 root = tk.Tk()
@@ -9,6 +10,7 @@ positionSize = windowSize / 8
 root.geometry(f"{windowSize}x{windowSize}+100+100")
 root.resizable(False, False)
 canvas = tk.Canvas(root, width=windowSize, height=windowSize, bg="white")
+pygame.mixer.init()
 activeOutline = None
 activeSquare = None
 moves = 0
@@ -50,6 +52,13 @@ piecePositions = {
 overlays = {
     "red": tk.PhotoImage(file="images/redOverlay.png"),
     "green": tk.PhotoImage(file="images/greenOverlay.png")
+}
+
+sounds = {
+    "move": pygame.mixer.Sound("sounds/Move.mp3"),
+    "capture": pygame.mixer.Sound("sounds/Capture.mp3"),
+    "check": pygame.mixer.Sound("sounds/Check.mp3"),
+    "checkmate": pygame.mixer.Sound("sounds/Checkmate.mp3"),
 }
 
 def drawBoard():
@@ -100,81 +109,107 @@ def onClick(event):
         activeOutline = None
 
     if activeSquare == None:
-            calculateTotalPieces()
-            piece = getPiece(row, column)
-            if piece != "":
-                if turnColour != piece[0]:
-                    return
-
-                activeSquare = [row, column]
-                activeOutline = canvas.create_rectangle(column * positionSize, row * positionSize, (column + 1) * positionSize, (row + 1) * positionSize, outline="#00ff00", width=4,)
-
-                possibleMoves = blockCheck(row, column)
-                showLegalMoves(possibleMoves)
-            return
+        handleSelection(row, column)
+        return
 
     startRow = activeSquare[0]
     startColumn = activeSquare[1]
 
-    movingPiece = getPiece(startRow, startColumn)
-    targetPiece = getPiece(row, column)
-    targetPosition = numpy.uint64(1) << numpy.uint64(row * 8 + column)
-
     if (row, column) in possibleMoves:
-
-        clearPossibleMoves()
-
-        if targetPiece != "":
-           piecePositions[targetPiece] &= ~targetPosition
-
-        piecePositions[movingPiece] &= ~(numpy.uint64(1) << numpy.uint64(startRow * 8 + startColumn))
-        piecePositions[movingPiece] |= targetPosition
-
-        if turnColour == "w":
-            turnColour = "b"
-        else:
-            turnColour = "w"
-
-        calculateTotalPieces()
-        activeSquare = None
-        canvas.delete("all")
-        moveIndicator.clear()
-        possibleMoves.clear()
-        drawBoard()
-        moves += 1
+        makeMove(startRow, startColumn, row, column)
+        gameState()
         print(moves)
-        if kingCheck(turnColour):
-            king = findKing(turnColour)
-            canvas.create_image(king[1] * positionSize + positionSize / 2, king[0] * positionSize + positionSize / 2, image=overlays["red"])
-            canMove = False
-            for r in range(8):
-                for c in range(8):
-                    p = getPiece(r, c)
-                    if p != "" and p[0] == turnColour:
-                        if len(blockCheck(r, c)) > 0:
-                            canMove = True
-                            break
-                if canMove:
-                    break
-
-            if canMove == False:
-                if turnColour == "w":
-                    winner = "Black"
-                else:
-                    winner = "White"
-                canvas.create_text(windowSize / 2, windowSize / 2, text=f"Checkmate!\n{winner} wins!", fill="#FF0000", font=("dynapuff", 64, "bold"), justify="center", tags="gameover")
 
     else:
-        if targetPiece != "":
-            if targetPiece[0] == turnColour:
-                activeSquare = [row, column]
-                activeOutline = canvas.create_rectangle(column * positionSize, row * positionSize, (column + 1) * positionSize, (row + 1) * positionSize, outline="#00ff00", width=4,)
-                possibleMoves = blockCheck(row, column)
-                showLegalMoves(possibleMoves)
-            else:
-                activeSquare = None
-                clearPossibleMoves()
-            
+        handleSelection(row, column)
+
+def handleSelection(row, column):
+    global activeSquare
+    global activeOutline
+    global possibleMoves
+
+    piece = getPiece(row, column)
+
+    if piece == "" or piece[0] != turnColour:
+        activeSquare = None
+        activeOutline = None
+        clearPossibleMoves()
+        return
+
+    activeSquare = [row, column]
+    activeOutline = canvas.create_rectangle(column * positionSize, row * positionSize, (column + 1) * positionSize, (row + 1) * positionSize, outline="#00ff00", width=4,)
+    possibleMoves = blockCheck(row, column)
+    showLegalMoves(possibleMoves)
+
+def makeMove(startRow, startColumn, endRow, endColumn):
+    global turnColour
+    global activeSquare
+    global moves
+    
+    movingPiece = getPiece(startRow, startColumn)
+    target = getPiece(endRow, endColumn)
+    targetPos = numpy.uint64(1) << numpy.uint64(endRow * 8 + endColumn)
+
+    clearPossibleMoves()
+
+    if target != "":
+        piecePositions[target] &= ~targetPos
+        sounds["capture"].play()
+    else:
+        sounds["move"].play()
+
+    piecePositions[movingPiece] &= ~(numpy.uint64(1) << numpy.uint64(startRow * 8 + startColumn))
+    piecePositions[movingPiece] |= targetPos
+
+    turnColour = "b" if turnColour == "w" else "w"
+    activeSquare = None
+    redrawBoard()
+    moves += 1
+
+def redrawBoard():
+    global activeOutline
+    activeOutline = None
+    calculateTotalPieces()
+    canvas.delete("all")
+    moveIndicator.clear()
+    possibleMoves.clear()
+    drawBoard()
+
+def gameState():
+    global turnColour
+    if not kingCheck(turnColour):
+        return
+
+    king = findKing(turnColour)
+    canvas.create_image(king[1] * positionSize + positionSize / 2, king[0] * positionSize + positionSize / 2, image=overlays["red"])
+    if not legalMoves(turnColour):
+        if turnColour == "w":
+            winner = "Black"
+        else:
+            winner = "White"
+        canvas.create_text(windowSize / 2, windowSize / 2, text=f"Checkmate!\n{winner} wins!", fill="#FF0000", font=("dynapuff", 64, "bold"), justify="center", tags="gameover")
+        sounds["checkmate"].play()
+    else:
+        sounds["check"].play()
+
+def legalMoves(colour):
+    for piece, bitboard in piecePositions.items():
+        if piece[0] == colour:    
+            board = int(bitboard)
+            while board:
+                lsb = board & -board
+                index = lsb.bit_length() - 1
+
+                row = index // 8
+                column = index % 8
+
+                if blockCheck(row, column):
+                    return True
+
+                board &= board - 1
+
+    return False
+
 def calculateLegalMoves(row, column):
     possibleMoves = []
     piece = getPiece(row, column)
