@@ -462,7 +462,6 @@ def previousMove(event): # Need event as variable so that it can be bound to roo
     global moves
 
     if len(moveHistory) == 0:
-        print("stop trying to go back on the first move aadi")
         return
 
     previousPos = moveHistory.pop()
@@ -495,7 +494,6 @@ def redoMove(event): # Again event isn't used
     global moves
 
     if len(redoHistory) == 0:
-        print("ok but what are you even doing atp...")
         return
 
     move = redoHistory.pop()
