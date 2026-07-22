@@ -51,6 +51,15 @@ piecePositions = {
     "wP": numpy.uint64(0x00FF000000000000)
 }
 
+castleRights = {
+    "wKl": True,
+    "wK": True,
+    "wKr": True,
+    "bKl": True,
+    "bK": True,
+    "bKr": True,
+}
+
 overlays = {
     "red": tk.PhotoImage(file="images/redOverlay.png"),
     "green": tk.PhotoImage(file="images/greenOverlay.png")
@@ -153,12 +162,70 @@ def makeMove(startRow, startColumn, endRow, endColumn):
     target = getPiece(endRow, endColumn)
     targetPos = numpy.uint64(1) << numpy.uint64(endRow * 8 + endColumn)
 
+    if movingPiece == "wK":
+        castleRights["wK"] = False
+        castleRights["wKl"] = False
+        castleRights["wKr"] = False
+
+    elif movingPiece == "bK":
+        castleRights["bK"] = False
+        castleRights["bKl"] = False
+        castleRights["bKr"] = False
+
+    elif movingPiece == "wR":
+        if startRow == 7 and startColumn == 0:
+            castleRights["wKl"] = False
+        elif startRow == 7 and startColumn == 7:
+            castleRights["wKr"] = False
+
+    elif movingPiece == "bR":
+        if startRow == 0 and startColumn == 0:
+            castleRights["bKl"] = False
+        elif startRow == 0 and startColumn == 7:
+                castleRights["bKr"] = False
+
+    if movingPiece == "wK" and startRow == 7 and startColumn == 4 and endRow == 7 and endColumn == 6:
+        rookStart = numpy.uint64(1) << numpy.uint64(7 * 8 + 7)
+        rookEnd   = numpy.uint64(1) << numpy.uint64(7 * 8 + 5)
+        piecePositions["wR"] &= ~rookStart
+        piecePositions["wR"] |= rookEnd
+
+    elif movingPiece == "wK" and startRow == 7 and startColumn == 4 and endRow == 7 and endColumn == 2:
+        rookStart = numpy.uint64(1) << numpy.uint64(7 * 8 + 0)
+        rookEnd   = numpy.uint64(1) << numpy.uint64(7 * 8 + 3)
+        piecePositions["wR"] &= ~rookStart
+        piecePositions["wR"] |= rookEnd
+
+    elif movingPiece == "bK" and startRow == 0 and startColumn == 4 and endRow == 0 and endColumn == 6:
+        rookStart = numpy.uint64(1) << numpy.uint64(0 * 8 + 7)
+        rookEnd   = numpy.uint64(1) << numpy.uint64(0 * 8 + 5)
+        piecePositions["bR"] &= ~rookStart
+        piecePositions["bR"] |= rookEnd
+
+    elif movingPiece == "bK" and startRow == 0 and startColumn == 4 and endRow == 0 and endColumn == 2:
+        rookStart = numpy.uint64(1) << numpy.uint64(0 * 8 + 0)
+        rookEnd   = numpy.uint64(1) << numpy.uint64(0 * 8 + 3)
+        piecePositions["bR"] &= ~rookStart
+        piecePositions["bR"] |= rookEnd
+
     clearPossibleMoves()
 
     saveMove(movingPiece, startRow, startColumn, endRow, endColumn, target, turnColour, moves)
     redoHistory.clear()
 
     if target != "":
+        if target == "wR":
+            if endRow == 7 and endColumn == 0:
+                castleRights["wKl"] = False
+            elif endRow == 7 and endColumn == 7:
+                castleRights["wKr"] = False
+
+        elif target == "bR":
+                if endRow == 0 and endColumn == 0:
+                    castleRights["bKl"] = False
+                elif endRow == 0 and endColumn == 7:
+                    castleRights["bKr"] = False
+
         piecePositions[target] &= ~targetPos
         sounds["capture"].play()
     else:
@@ -211,7 +278,7 @@ def legalMoves(colour):
 
     return False
 
-def calculateLegalMoves(row, column):
+def calculateLegalMoves(row, column, includeCastling):
     possibleMoves = []
     piece = getPiece(row, column)
     if piece == "":
@@ -245,9 +312,11 @@ def calculateLegalMoves(row, column):
 
             if potRow >= 0 and potRow < 8 and potColumn >= 0 and potColumn < 8:
                 target = getPiece(potRow, potColumn)
-
                 if target == "" or target[0] != pieceColour:
                     possibleMoves.append((potRow, potColumn))
+
+        if includeCastling:
+            addCastleMoves(pieceColour, possibleMoves)
 
     elif pieceType == "R":
         slidingMoves(row, column, rookDirections, pieceColour, possibleMoves)
@@ -340,10 +409,11 @@ def isSquareAttacked(row, column, atkColour):
         if piece[0] == atkColour:
             board = int(bitboard)
             while board > 0:
-                index = board.bit_length() - 1
+                lsb = board & -board
+                index = lsb.bit_length() - 1
                 pieceRow = index // 8
                 pieceColumn = index % 8
-                moves = calculateLegalMoves(pieceRow, pieceColumn)
+                moves = calculateLegalMoves(pieceRow, pieceColumn, False)
                 if (row, column) in moves:
                     return True
                 
@@ -375,7 +445,7 @@ def blockCheck(row, column):
         return []
 
     colour = piece[0]
-    anyMoves = calculateLegalMoves(row, column)
+    anyMoves = calculateLegalMoves(row, column, True)
     validMoves = []
 
     currentBoard = piecePositions.copy()
@@ -471,6 +541,31 @@ def redoMove(event): # Again event isn't used
     sounds["move"].play()
     redrawBoard()
     gameState()
+
+def addCastleMoves(pieceColour, possibleMoves):
+    row = 7 if pieceColour == "w" else 0
+    enemy = "b" if pieceColour == "w" else "w"
+
+    if (
+        castleRights[pieceColour + "Kr"]
+        and getPiece(row, 5) == ""
+        and getPiece(row, 6) == ""
+        and not kingCheck(pieceColour)
+        and not isSquareAttacked(row, 5, enemy)
+        and not isSquareAttacked(row, 6, enemy)
+    ):
+        possibleMoves.append((row, 6))
+
+    if (
+        castleRights[pieceColour + "Kl"]
+        and getPiece(row, 1) == ""
+        and getPiece(row, 2) == ""
+        and getPiece(row, 3) == ""
+        and not kingCheck(pieceColour)
+        and not isSquareAttacked(row, 3, enemy)
+        and not isSquareAttacked(row, 2, enemy)
+    ):
+        possibleMoves.append((row, 2))
 
 redrawBoard()
 canvas.bind("<Button-1>", onClick)
