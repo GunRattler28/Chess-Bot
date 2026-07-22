@@ -275,25 +275,10 @@ def calculateLegalMoves(row, column, includeCastling):
     queenDirections = rookDirections + bishopDirections
 
     if pieceType == "H":
-        for rowChange, columnChange in knightMoves:
-            potRow = row + rowChange
-            potColumn = column + columnChange
-
-            if potRow >= 0 and potRow < 8 and potColumn >= 0 and potColumn < 8:
-                target = getPiece(potRow, potColumn)
-
-                if target == "" or target[0] != pieceColour:
-                    possibleMoves.append((potRow, potColumn))
+        instaMoves(knightMoves, row, column, pieceColour, possibleMoves)
 
     elif pieceType == "K":
-        for rowChange, columnChange in kingMoves:
-            potRow = row + rowChange
-            potColumn = column + columnChange
-
-            if potRow >= 0 and potRow < 8 and potColumn >= 0 and potColumn < 8:
-                target = getPiece(potRow, potColumn)
-                if target == "" or target[0] != pieceColour:
-                    possibleMoves.append((potRow, potColumn))
+        instaMoves(kingMoves, row, column, pieceColour, possibleMoves)
 
         if includeCastling:
             addCastleMoves(pieceColour, possibleMoves)
@@ -374,6 +359,16 @@ def slidingMoves(row, column, movements, colour, possibleMoves):
             potRow += rowChange
             potColumn += columnChange
 
+def instaMoves(moveset, row, column, pieceColour, possibleMoves):
+    for rowChange, columnChange in moveset:
+        potRow = row + rowChange
+        potColumn = column + columnChange
+
+        if potRow >= 0 and potRow < 8 and potColumn >= 0 and potColumn < 8:
+            target = getPiece(potRow, potColumn)
+            if target == "" or target[0] != pieceColour:
+                possibleMoves.append((potRow, potColumn))
+
 def clearPossibleMoves():
     global moveIndicator
     global possibleMoves
@@ -410,10 +405,7 @@ def findKing(colour):
     return(row, column) 
 
 def kingCheck(colour):
-    if colour == "w":
-        atkColour = "b"
-    else:
-        atkColour = "w"
+    atkColour = "w" if colour == "b" else "b"
     king = findKing(colour)
     if king == None:
         return False
@@ -535,27 +527,10 @@ def addCastleMoves(pieceColour, possibleMoves):
     row = 7 if pieceColour == "w" else 0
     enemy = "b" if pieceColour == "w" else "w"
 
-    if (
-        castleRights[pieceColour + "Kr"]
-        and getPiece(row, 5) == ""
-        and getPiece(row, 6) == ""
-        and not kingCheck(pieceColour)
-        and not isSquareAttacked(row, 5, enemy)
-        and not isSquareAttacked(row, 6, enemy)
-        and getPiece(row,7) == pieceColour + "R"
-    ):
+    if (castleRights[pieceColour + "Kr"] and getPiece(row, 5) == "" and getPiece(row, 6) == "" and not kingCheck(pieceColour) and not isSquareAttacked(row, 5, enemy) and not isSquareAttacked(row, 6, enemy) and getPiece(row,7) == pieceColour + "R"):
         possibleMoves.append((row, 6))
 
-    if (
-        castleRights[pieceColour + "Kl"]
-        and getPiece(row, 1) == ""
-        and getPiece(row, 2) == ""
-        and getPiece(row, 3) == ""
-        and not kingCheck(pieceColour)
-        and not isSquareAttacked(row, 3, enemy)
-        and not isSquareAttacked(row, 2, enemy)
-        and getPiece(row,0) == pieceColour + "R"
-    ):
+    if (castleRights[pieceColour + "Kl"] and getPiece(row, 1) == "" and getPiece(row, 2) == "" and getPiece(row, 3) == "" and not kingCheck(pieceColour) and not isSquareAttacked(row, 3, enemy) and not isSquareAttacked(row, 2, enemy) and getPiece(row,0) == pieceColour + "R"):
         possibleMoves.append((row, 2))
 
 def moveCastleRook(piece, start, end, undo=False):
