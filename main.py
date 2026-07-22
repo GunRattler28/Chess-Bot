@@ -162,6 +162,9 @@ def makeMove(startRow, startColumn, endRow, endColumn):
     target = getPiece(endRow, endColumn)
     targetPos = numpy.uint64(1) << numpy.uint64(endRow * 8 + endColumn)
 
+    moveCastleRook(movingPiece, (startRow, startColumn), (endRow, endColumn))
+    start = startRow, startColumn
+    end = endRow, endColumn
     if movingPiece == "wK":
         castleRights["wK"] = False
         castleRights["wKl"] = False
@@ -173,59 +176,35 @@ def makeMove(startRow, startColumn, endRow, endColumn):
         castleRights["bKr"] = False
 
     elif movingPiece == "wR":
-        if startRow == 7 and startColumn == 0:
+        if start == (7, 0):
             castleRights["wKl"] = False
-        elif startRow == 7 and startColumn == 7:
+        elif start == (7, 7):
             castleRights["wKr"] = False
 
     elif movingPiece == "bR":
-        if startRow == 0 and startColumn == 0:
+        if start == (0, 0):
             castleRights["bKl"] = False
-        elif startRow == 0 and startColumn == 7:
-                castleRights["bKr"] = False
+        elif start == (0, 7):
+            castleRights["bKr"] = False
 
-    if movingPiece == "wK" and startRow == 7 and startColumn == 4 and endRow == 7 and endColumn == 6:
-        rookStart = numpy.uint64(1) << numpy.uint64(7 * 8 + 7)
-        rookEnd   = numpy.uint64(1) << numpy.uint64(7 * 8 + 5)
-        piecePositions["wR"] &= ~rookStart
-        piecePositions["wR"] |= rookEnd
+    if target == "wR":
+        if end == (7, 0):
+            castleRights["wKl"] = False
+        elif end == (7, 7):
+            castleRights["wKr"] = False
 
-    elif movingPiece == "wK" and startRow == 7 and startColumn == 4 and endRow == 7 and endColumn == 2:
-        rookStart = numpy.uint64(1) << numpy.uint64(7 * 8 + 0)
-        rookEnd   = numpy.uint64(1) << numpy.uint64(7 * 8 + 3)
-        piecePositions["wR"] &= ~rookStart
-        piecePositions["wR"] |= rookEnd
-
-    elif movingPiece == "bK" and startRow == 0 and startColumn == 4 and endRow == 0 and endColumn == 6:
-        rookStart = numpy.uint64(1) << numpy.uint64(0 * 8 + 7)
-        rookEnd   = numpy.uint64(1) << numpy.uint64(0 * 8 + 5)
-        piecePositions["bR"] &= ~rookStart
-        piecePositions["bR"] |= rookEnd
-
-    elif movingPiece == "bK" and startRow == 0 and startColumn == 4 and endRow == 0 and endColumn == 2:
-        rookStart = numpy.uint64(1) << numpy.uint64(0 * 8 + 0)
-        rookEnd   = numpy.uint64(1) << numpy.uint64(0 * 8 + 3)
-        piecePositions["bR"] &= ~rookStart
-        piecePositions["bR"] |= rookEnd
-
+    elif target == "bR":
+        if end == (0, 0):
+            castleRights["bKl"] = False
+        elif end == (0, 7):
+            castleRights["bKr"] = False
+            
     clearPossibleMoves()
 
     saveMove(movingPiece, startRow, startColumn, endRow, endColumn, target, turnColour, moves)
     redoHistory.clear()
 
     if target != "":
-        if target == "wR":
-            if endRow == 7 and endColumn == 0:
-                castleRights["wKl"] = False
-            elif endRow == 7 and endColumn == 7:
-                castleRights["wKr"] = False
-
-        elif target == "bR":
-                if endRow == 0 and endColumn == 0:
-                    castleRights["bKl"] = False
-                elif endRow == 0 and endColumn == 7:
-                    castleRights["bKr"] = False
-
         piecePositions[target] &= ~targetPos
         sounds["capture"].play()
     else:
@@ -445,23 +424,6 @@ def blockCheck(row, column):
     if piece == "":
         return []
 
-    # Simulate rook movement for castling
-    if piece == "wK" and row == 7 and column == 4:
-        if endRow == 7 and endColumn == 6:
-            piecePositions["wR"] &= ~(numpy.uint64(1) << numpy.uint64(7 * 8 + 7))
-            piecePositions["wR"] |=  (numpy.uint64(1) << numpy.uint64(7 * 8 + 5))
-        elif endRow == 7 and endColumn == 2:
-            piecePositions["wR"] &= ~(numpy.uint64(1) << numpy.uint64(7 * 8 + 0))
-            piecePositions["wR"] |=  (numpy.uint64(1) << numpy.uint64(7 * 8 + 3))
-
-    elif piece == "bK" and row == 0 and column == 4:
-        if endRow == 0 and endColumn == 6:
-            piecePositions["bR"] &= ~(numpy.uint64(1) << numpy.uint64(0 * 8 + 7))
-            piecePositions["bR"] |=  (numpy.uint64(1) << numpy.uint64(0 * 8 + 5))
-        elif endRow == 0 and endColumn == 2:
-            piecePositions["bR"] &= ~(numpy.uint64(1) << numpy.uint64(0 * 8 + 0))
-            piecePositions["bR"] |=  (numpy.uint64(1) << numpy.uint64(0 * 8 + 3))
-
     colour = piece[0]
     anyMoves = calculateLegalMoves(row, column, True)
     validMoves = []
@@ -472,7 +434,7 @@ def blockCheck(row, column):
         startPosition = numpy.uint64(1) << numpy.uint64(row * 8 + column)
         targetPiece = getPiece(endRow, endColumn)
         targetPosition = numpy.uint64(1) << numpy.uint64(endRow * 8 + endColumn)
-
+        moveCastleRook(piece, (row, column), (endRow, endColumn))
         if targetPiece != "":
             piecePositions[targetPiece] &= ~targetPosition
         piecePositions[piece] &= ~startPosition
@@ -529,33 +491,7 @@ def previousMove(event): # Need event as variable so that it can be bound to roo
     if capturedPiece != "":
         piecePositions[capturedPiece] |= endPos
 
-    if piece == "wK" and start == (7,4) and end == (7,6):
-        rookStart = numpy.uint64(1) << numpy.uint64(7 * 8 + 7)
-        rookEnd   = numpy.uint64(1) << numpy.uint64(7 * 8 + 5)
-
-        piecePositions["wR"] &= ~rookStart
-        piecePositions["wR"] |= rookEnd
-
-    elif piece == "wK" and start == (7,4) and end == (7,2):
-        rookStart = numpy.uint64(1) << numpy.uint64(7 * 8 + 3)
-        rookEnd   = numpy.uint64(1) << numpy.uint64(7 * 8 + 0)
-
-        piecePositions["wR"] &= ~rookStart
-        piecePositions["wR"] |= rookEnd
-
-    elif piece == "bK" and start == (0,4) and end == (0,6):
-        rookStart = numpy.uint64(1) << numpy.uint64(0 * 8 + 5)
-        rookEnd   = numpy.uint64(1) << numpy.uint64(0 * 8 + 7)
-
-        piecePositions["bR"] &= ~rookStart
-        piecePositions["bR"] |= rookEnd
-
-    elif piece == "bK" and start == (0,4) and end == (0,2):
-        rookStart = numpy.uint64(1) << numpy.uint64(0 * 8 + 0)
-        rookEnd   = numpy.uint64(1) << numpy.uint64(0 * 8 + 3)
-
-        piecePositions["bR"] &= ~rookStart
-        piecePositions["bR"] |= rookEnd
+    moveCastleRook(piece, start, end, undo=True)
     
     sounds["move"].play()
     redoHistory.append(previousPos)
@@ -586,33 +522,7 @@ def redoMove(event): # Again event isn't used
     if capturedPiece != "":
         piecePositions[capturedPiece] &= ~endPos
 
-    if piece == "wK" and start == (7,4) and end == (7,6):
-        rookStart = numpy.uint64(1) << numpy.uint64(7 * 8 + 5)
-        rookEnd   = numpy.uint64(1) << numpy.uint64(7 * 8 + 7)
-
-        piecePositions["wR"] &= ~rookStart
-        piecePositions["wR"] |= rookEnd
-
-    elif piece == "wK" and start == (7,4) and end == (7,2):
-        rookStart = numpy.uint64(1) << numpy.uint64(7 * 8 + 3)
-        rookEnd   = numpy.uint64(1) << numpy.uint64(7 * 8 + 0)
-
-        piecePositions["wR"] &= ~rookStart
-        piecePositions["wR"] |= rookEnd
-
-    elif piece == "bK" and start == (0,4) and end == (0,6):
-        rookStart = numpy.uint64(1) << numpy.uint64(0 * 8 + 5)
-        rookEnd   = numpy.uint64(1) << numpy.uint64(0 * 8 + 7)
-
-        piecePositions["bR"] &= ~rookStart
-        piecePositions["bR"] |= rookEnd
-
-    elif piece == "bK" and start == (0,4) and end == (0,2):
-        rookStart = numpy.uint64(1) << numpy.uint64(0 * 8 + 3)
-        rookEnd   = numpy.uint64(1) << numpy.uint64(0 * 8 + 0)
-
-        piecePositions["bR"] &= ~rookStart
-        piecePositions["bR"] |= rookEnd
+    moveCastleRook(piece, start, end)
 
     piecePositions[piece] &= numpy.uint64(~startPos)
     piecePositions[piece] |= endPos
@@ -647,6 +557,39 @@ def addCastleMoves(pieceColour, possibleMoves):
         and getPiece(row,0) == pieceColour + "R"
     ):
         possibleMoves.append((row, 2))
+
+def moveCastleRook(piece, start, end, undo=False):
+    if piece not in ("wK", "bK"):
+        return
+
+    if piece == "wK":
+        row = 7
+    else:
+        row = 0
+
+    if start == (row, 4) and end == (row, 6):
+        if undo:
+            rookStart = (row, 5)
+            rookEnd = (row, 7)
+        else:
+            rookStart = (row, 7)
+            rookEnd = (row, 5)
+
+    elif start == (row, 4) and end == (row, 2):
+        if undo:
+            rookStart = (row, 3)
+            rookEnd = (row, 0)
+        else:
+            rookStart = (row, 0)
+            rookEnd = (row, 3)
+
+    else:
+        return
+
+    startBit = numpy.uint64(1) << numpy.uint64(rookStart[0] * 8 + rookStart[1])
+    endBit = numpy.uint64(1) << numpy.uint64(rookEnd[0] * 8 + rookEnd[1])
+    piecePositions[piece[0] + "R"] &= ~startBit
+    piecePositions[piece[0] + "R"] |= endBit
 
 redrawBoard()
 canvas.bind("<Button-1>", onClick)
