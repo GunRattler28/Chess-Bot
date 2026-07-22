@@ -18,6 +18,8 @@ turnColour = "w"
 totalPieces = None
 moveIndicator = []
 possibleMoves = []
+moveHistory = []
+redoHistory = []
 
 pieces = {
     "bQ": tk.PhotoImage(file="images/pieces/bqueen.png"),
@@ -145,12 +147,16 @@ def makeMove(startRow, startColumn, endRow, endColumn):
     global turnColour
     global activeSquare
     global moves
-    
+    global redoHistory
+
     movingPiece = getPiece(startRow, startColumn)
     target = getPiece(endRow, endColumn)
     targetPos = numpy.uint64(1) << numpy.uint64(endRow * 8 + endColumn)
 
     clearPossibleMoves()
+
+    saveMove(movingPiece, startRow, startColumn, endRow, endColumn, target, turnColour, moves)
+    redoHistory.clear()
 
     if target != "":
         piecePositions[target] &= ~targetPos
@@ -160,7 +166,6 @@ def makeMove(startRow, startColumn, endRow, endColumn):
 
     piecePositions[movingPiece] &= ~(numpy.uint64(1) << numpy.uint64(startRow * 8 + startColumn))
     piecePositions[movingPiece] |= targetPos
-
     turnColour = "b" if turnColour == "w" else "w"
     activeSquare = None
     redrawBoard()
@@ -183,11 +188,7 @@ def gameState():
     king = findKing(turnColour)
     canvas.create_image(king[1] * positionSize + positionSize / 2, king[0] * positionSize + positionSize / 2, image=overlays["red"])
     if not legalMoves(turnColour):
-        if turnColour == "w":
-            winner = "Black"
-        else:
-            winner = "White"
-        canvas.create_text(windowSize / 2, windowSize / 2, text=f"Checkmate!\n{winner} wins!", fill="#FF0000", font=("dynapuff", 64, "bold"), justify="center", tags="gameover")
+        canvas.create_text(windowSize / 2, windowSize / 2, text=f"Checkmate!\n{("Black" if turnColour == "w" else "White")} wins!", fill="#FF0000", font=("dynapuff", 64, "bold"), justify="center", tags="gameover")
         sounds["checkmate"].play()
     else:
         sounds["check"].play()
@@ -398,8 +399,81 @@ def blockCheck(row, column):
 
     return validMoves
 
+def saveMove(piece, startRow, startColumn, endRow, endColumn, capturedPiece, turnColour, moves):
+    global moveHistory
+    state = {
+        "piece": piece,
+        "start": (startRow, startColumn),
+        "end": (endRow, endColumn),
+        "capturedPiece": capturedPiece,
+        "turnColour": turnColour,
+        "moves": moves
+    }
+    moveHistory.append(state)
+
+def previousMove(event): # Need event as variable so that it can be bound to root. Event isn't used
+    global moveHistory
+    global redoHistory
+    global piecePositions
+    global turnColour
+    global moves
+
+    if len(moveHistory) == 0:
+        print("stop trying to go back on the first move aadi")
+        return
+
+    previousPos = moveHistory.pop()
+    piece = previousPos["piece"]
+    start = previousPos["start"]
+    end = previousPos["end"]
+    capturedPiece = previousPos["capturedPiece"]
+    turnColour = previousPos["turnColour"]
+    moves = previousPos["moves"]
+    startPos = numpy.uint64(1) << numpy.uint64(start[0] * 8 + start[1])
+    endPos = numpy.uint64(1) << numpy.uint64(end[0] * 8 + end[1])
+
+    piecePositions[piece] &= ~endPos
+    piecePositions[piece] |= startPos
+
+    if capturedPiece != "":
+        piecePositions[capturedPiece] |= endPos
+    
+    sounds["move"].play()
+    redoHistory.append(previousPos)
+    redrawBoard()
+
+def redoMove(event): # Again event isn't used
+    global redoHistory
+    global turnColour
+    global moves
+
+    if len(redoHistory) == 0:
+        print("ok but what are you even doing atp...")
+        return
+
+    move = redoHistory.pop()
+    piece = move["piece"]
+    start = move["start"]
+    end = move["end"]
+    capturedPiece = move["capturedPiece"]
+    turnColour = move["turnColour"]
+    moves = move["moves"]
+
+    startPos = numpy.uint64(1) << numpy.uint64(start[0] * 8 + start[1])
+    endPos = numpy.uint64(1) << numpy.uint64(end[0] * 8 + end[1])
+
+    if capturedPiece != "":
+        piecePositions[capturedPiece] &= ~endPos
+
+    piecePositions[piece] &= numpy.uint64(~startPos)
+    piecePositions[piece] |= endPos
+    moveHistory.append(move)
+    sounds["move"].play()
+    redrawBoard()
+
+redrawBoard()
 canvas.bind("<Button-1>", onClick)
-calculateTotalPieces()
-drawBoard()
+root.bind("<Left>", previousMove)
+root.bind("<Right>", redoMove)
 canvas.pack()
 root.mainloop()
