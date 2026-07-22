@@ -168,8 +168,8 @@ def makeMove(startRow, startColumn, endRow, endColumn):
     piecePositions[movingPiece] |= targetPos
     turnColour = "b" if turnColour == "w" else "w"
     activeSquare = None
-    redrawBoard()
     moves += 1
+    redrawBoard()
 
 def redrawBoard():
     global activeOutline
@@ -456,8 +456,8 @@ def redoMove(event): # Again event isn't used
     start = move["start"]
     end = move["end"]
     capturedPiece = move["capturedPiece"]
-    turnColour = move["turnColour"]
-    moves = move["moves"]
+    turnColour = "b" if move["turnColour"] == "w" else "w"
+    moves = move["moves"] + 1
 
     startPos = numpy.uint64(1) << numpy.uint64(start[0] * 8 + start[1])
     endPos = numpy.uint64(1) << numpy.uint64(end[0] * 8 + end[1])
@@ -470,6 +470,7 @@ def redoMove(event): # Again event isn't used
     moveHistory.append(move)
     sounds["move"].play()
     redrawBoard()
+    gameState()
 
 redrawBoard()
 canvas.bind("<Button-1>", onClick)
