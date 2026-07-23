@@ -1,4 +1,5 @@
 import tkinter as tk
+from tkinter import simpledialog
 import pygame
 
 root = tk.Tk()
@@ -204,6 +205,13 @@ def makeMove(startRow, startColumn, endRow, endColumn):
     piecePositions[movingPiece] |= targetPos
     squarePiece[startRow * 8 + startColumn] = ""
     squarePiece[endRow * 8 + endColumn] = movingPiece
+
+    if isPromotable(movingPiece, endRow):
+        promotedPiece = choosePromotion(turnColour)
+        piecePositions[movingPiece] &= ~targetPos
+        piecePositions[promotedPiece] |= targetPos
+        squarePiece[endRow * 8 + endColumn] = promotedPiece
+        moveHistory[-1]["promotion"] = promotedPiece
     
     moveHistory[-1]["castleRightsAfter"] = castleRights.copy()
     turnColour = "b" if turnColour == "w" else "w"    
@@ -444,7 +452,8 @@ def saveMove(piece, startRow, startColumn, endRow, endColumn, capturedPiece, tur
         "capturedPiece": capturedPiece,
         "turnColour": turnColour,
         "moves": moves,
-        "castleRightsBefore": castleRights.copy()
+        "castleRightsBefore": castleRights.copy(),
+        "promotion": None
     }
     moveHistory.append(state)
 
@@ -472,11 +481,20 @@ def previousMove(event): # Need event as variable so that it can be bound to roo
     castleRights.clear()
     castleRights.update(previousPos["castleRightsBefore"])
 
-    piecePositions[piece] &= ~endPos
-    piecePositions[piece] |= startPos
     squarePiece[end[0] * 8 + end[1]] = ""
     squarePiece[start[0] * 8 + start[1]] = piece
 
+    if previousPos["promotion"] != None:
+        promoted = previousPos["promotion"]
+        piecePositions[promoted] &= ~endPos
+        piecePositions[piece] |= startPos
+        squarePiece[end[0] * 8 + end[1]] = ""
+        squarePiece[start[0] * 8 + start[1]] = piece
+
+    else:
+        piecePositions[piece] &= ~endPos
+        piecePositions[piece] |= startPos
+        
     if capturedPiece != "":
         piecePositions[capturedPiece] |= endPos
         squarePiece[end[0] * 8 + end[1]] = capturedPiece
@@ -525,10 +543,20 @@ def redoMove(event): # Again event isn't used
 
     moveCastleRook(piece, start, end)
 
-    piecePositions[piece] &= ~startPos
-    piecePositions[piece] |= endPos
-    squarePiece[start[0] * 8 + start[1]] = ""
-    squarePiece[end[0] * 8 + end[1]] = piece
+    if move["promotion"] != None:
+        promoted = move["promotion"]
+
+        piecePositions[piece] &= ~startPos
+        piecePositions[promoted] |= endPos
+
+        squarePiece[start[0] * 8 + start[1]] = ""
+        squarePiece[end[0] * 8 + end[1]] = promoted
+
+    else:    
+        piecePositions[piece] &= ~startPos
+        piecePositions[piece] |= endPos
+        squarePiece[start[0] * 8 + start[1]] = ""
+        squarePiece[end[0] * 8 + end[1]] = piece
 
     moveHistory.append(move)
     newHash = hashBoard()
@@ -595,6 +623,22 @@ def updateSquareTable():
             index = lsb.bit_length() - 1
             squarePiece[index] = piece
             bitboard &= bitboard - 1
+
+def isPromotable(piece, row):
+    if piece == "wP" and row == 0:
+        return True
+    elif piece == "bP" and row == 7:
+        return True
+    return False
+
+def choosePromotion(colour):
+    choices = ["Q", "H", "R", "B"]
+    choice = simpledialog.askstring("promotionChoice", "Pick a piece to promote to: ")
+    choice = choice.upper()
+    if choice not in choices:
+        choice = "Q"
+
+    return colour + choice
 
 updateSquareTable()
 redrawBoard()
