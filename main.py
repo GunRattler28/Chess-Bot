@@ -20,7 +20,7 @@ moveIndicator = []
 possibleMoves = []
 moveHistory = []
 redoHistory = []
-positionHistory = []
+positionHistory = {}
 
 pieces = {
     "bQ": tk.PhotoImage(file="images/pieces/bqueen.png"),
@@ -219,9 +219,12 @@ def makeMove(startRow, startColumn, endRow, endColumn):
     activeSquare = None
     moves += 1
     redrawBoard()
-    hash = hashBoard()
-    positionHistory.append(hash)
-    if positionHistory.count(hash) >= 3:
+    newHash = hashBoard()
+    if newHash in positionHistory:
+        positionHistory[newHash] += 1
+    else:
+        positionHistory[newHash] = 1
+    if positionHistory[newHash] >= 3:
         canvas.create_text(windowSize / 2, windowSize / 2, text=f"Three-fold \nRepetition!\nNobody wins!", fill="#FF0000", font=("dynapuff", 64, "bold"), justify="center", tags="gameover")
 
 def redrawBoard():
@@ -475,6 +478,7 @@ def previousMove(event): # Need event as variable so that it can be bound to roo
         return
 
     previousPos = moveHistory.pop()
+    currentHash = hashBoard()
     piece = previousPos["piece"]
     start = previousPos["start"]
     end = previousPos["end"]
@@ -495,8 +499,14 @@ def previousMove(event): # Need event as variable so that it can be bound to roo
     moveCastleRook(piece, start, end, undo=True)
     
     sounds["move"].play()
-    prevState = positionHistory.pop()
-    redoHistory.append((previousPos, prevState))
+    positionHistory[currentHash] -= 1
+    if positionHistory[currentHash] == 0:
+        del positionHistory[currentHash]
+    newHash = hashBoard()
+    if newHash in positionHistory:
+        positionHistory[newHash] += 1
+    else:
+        positionHistory[newHash] = 1
     redrawBoard()
 
 def redoMove(event): # Again event isn't used
@@ -507,7 +517,7 @@ def redoMove(event): # Again event isn't used
     if len(redoHistory) == 0:
         return
 
-    move, state = redoHistory.pop()
+    move = redoHistory.pop()
     piece = move["piece"]
     start = move["start"]
     end = move["end"]
@@ -528,7 +538,11 @@ def redoMove(event): # Again event isn't used
     piecePositions[piece] &= numpy.uint64(~startPos)
     piecePositions[piece] |= endPos
     moveHistory.append(move)
-    positionHistory.append(state)
+    newHash = hashBoard()
+    if newHash in positionHistory:
+        positionHistory[newHash] += 1
+    else:
+        positionHistory[newHash] = 1
     sounds["move"].play()
     redrawBoard()
     gameState()
@@ -580,7 +594,8 @@ def hashBoard(): # hash brown??
     return hash((tuple(piecePositions.values()), turnColour, tuple(castleRights.values())))
 
 redrawBoard()
-positionHistory.append(hashBoard())
+startHash = hashBoard()
+positionHistory[startHash] = 1
 canvas.bind("<Button-1>", onClick)
 root.bind("<Left>", previousMove)
 root.bind("<Right>", redoMove)
