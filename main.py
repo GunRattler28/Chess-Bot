@@ -1,6 +1,5 @@
 import tkinter as tk
 import pygame
-import numpy
 
 root = tk.Tk()
 root.title("Gun's Chess Bot")
@@ -15,7 +14,6 @@ activeOutline = None
 activeSquare = None
 moves = 0
 turnColour = "w"
-totalPieces = None
 moveIndicator = []
 possibleMoves = []
 moveHistory = []
@@ -38,18 +36,18 @@ pieces = {
 }
 
 piecePositions = {
-    "bQ": numpy.uint64(0x0000000000000008),
-    "bK": numpy.uint64(0x0000000000000010), 
-    "bB": numpy.uint64(0x0000000000000024),
-    "bH": numpy.uint64(0x0000000000000042), 
-    "bR": numpy.uint64(0x0000000000000081), 
-    "bP": numpy.uint64(0x000000000000FF00),
-    "wQ": numpy.uint64(0x0800000000000000), 
-    "wK": numpy.uint64(0x1000000000000000), 
-    "wB": numpy.uint64(0x2400000000000000), 
-    "wH": numpy.uint64(0x4200000000000000), 
-    "wR": numpy.uint64(0x8100000000000000), 
-    "wP": numpy.uint64(0x00FF000000000000)
+    "bQ": 0x0000000000000008,
+    "bK": 0x0000000000000010, 
+    "bB": 0x0000000000000024,
+    "bH": 0x0000000000000042, 
+    "bR": 0x0000000000000081, 
+    "bP": 0x000000000000FF00,
+    "wQ": 0x0800000000000000, 
+    "wK": 0x1000000000000000, 
+    "wB": 0x2400000000000000, 
+    "wH": 0x4200000000000000, 
+    "wR": 0x8100000000000000, 
+    "wP": 0x00FF000000000000
 }
 
 castleRights = {
@@ -73,6 +71,12 @@ sounds = {
     "checkmate": pygame.mixer.Sound("sounds/Checkmate.mp3"),
 }
 
+knightMoves = [(2, 1), (2, -1), (-2, 1), (-2, -1), (1, 2), (1, -2), (-1, 2), (-1, -2)]
+kingMoves = [(1,0), (-1,0), (0,1), (0,-1), (1,1), (1,-1), (-1,1), (-1,-1)]
+rookDirections = [(1,0), (-1,0), (0,1), (0,-1)]
+bishopDirections = [(1,1), (1,-1), (-1,1), (-1,-1)]
+queenDirections = rookDirections + bishopDirections
+
 def drawBoard():
     for column in range(0, 8):
         for row in range(0, 8):
@@ -85,17 +89,8 @@ def drawBoard():
             if (piece != ""):
                 canvas.create_image(column * positionSize + positionSize / 2, row * positionSize + positionSize / 2, image= pieces[piece])
 
-def calculateTotalPieces():
-    global totalPieces
-    totalPieces = numpy.uint64(0)
-    for each in piecePositions.values():
-        totalPieces |= each
-
 def getPiece(row, column):
-    position = numpy.uint64(1) << numpy.uint64(row * 8 + column)
-    if not (totalPieces & position):                                   # efficient. Brother would be proud
-        return ""
-    
+    position = 1 << row * 8 + column
     for pieceBoard, bitBoard in piecePositions.items():
         if (bitBoard & position):
             return pieceBoard
@@ -161,7 +156,7 @@ def makeMove(startRow, startColumn, endRow, endColumn):
 
     movingPiece = getPiece(startRow, startColumn)
     target = getPiece(endRow, endColumn)
-    targetPos = numpy.uint64(1) << numpy.uint64(endRow * 8 + endColumn)
+    targetPos = 1 << endRow * 8 + endColumn
 
     moveCastleRook(movingPiece, (startRow, startColumn), (endRow, endColumn))
     start = startRow, startColumn
@@ -211,7 +206,7 @@ def makeMove(startRow, startColumn, endRow, endColumn):
     else:
         sounds["move"].play()
 
-    piecePositions[movingPiece] &= ~(numpy.uint64(1) << numpy.uint64(startRow * 8 + startColumn))
+    piecePositions[movingPiece] &= ~(1 << startRow * 8 + startColumn)
     piecePositions[movingPiece] |= targetPos
     
     moveHistory[-1]["castleRightsAfter"] = castleRights.copy()
@@ -230,7 +225,6 @@ def makeMove(startRow, startColumn, endRow, endColumn):
 def redrawBoard():
     global activeOutline
     activeOutline = None
-    calculateTotalPieces()
     canvas.delete("all")
     moveIndicator.clear()
     possibleMoves.clear()
@@ -281,11 +275,6 @@ def calculateLegalMoves(row, column, includeCastling):
     pieceType = piece[-1]
     pieceColour = piece[0]
 
-    knightMoves = [(2, 1), (2, -1), (-2, 1), (-2, -1), (1, 2), (1, -2), (-1, 2), (-1, -2)]
-    kingMoves = [(1,0), (-1,0), (0,1), (0,-1), (1,1), (1,-1), (-1,1), (-1,-1)]
-    rookDirections = [(1,0), (-1,0), (0,1), (0,-1)]
-    bishopDirections = [(1,1), (1,-1), (-1,1), (-1,-1)]
-    queenDirections = rookDirections + bishopDirections
 
     if pieceType == "H":
         instaMoves(knightMoves, row, column, pieceColour, possibleMoves)
@@ -434,23 +423,20 @@ def blockCheck(row, column):
     validMoves = []
 
     currentBoard = piecePositions.copy()
-
     for endRow, endColumn in anyMoves:
-        startPosition = numpy.uint64(1) << numpy.uint64(row * 8 + column)
+        startPosition = 1 << row * 8 + column
         targetPiece = getPiece(endRow, endColumn)
-        targetPosition = numpy.uint64(1) << numpy.uint64(endRow * 8 + endColumn)
+        targetPosition = 1 << endRow * 8 + endColumn
         moveCastleRook(piece, (row, column), (endRow, endColumn))
         if targetPiece != "":
             piecePositions[targetPiece] &= ~targetPosition
         piecePositions[piece] &= ~startPosition
         piecePositions[piece] |= targetPosition
-        calculateTotalPieces()
 
         if not kingCheck(colour):
             validMoves.append((endRow, endColumn))
 
         piecePositions.update(currentBoard)
-        calculateTotalPieces()
 
     return validMoves
 
@@ -478,6 +464,7 @@ def previousMove(event): # Need event as variable so that it can be bound to roo
         return
 
     previousPos = moveHistory.pop()
+    redoHistory.append(previousPos)
     currentHash = hashBoard()
     piece = previousPos["piece"]
     start = previousPos["start"]
@@ -485,8 +472,8 @@ def previousMove(event): # Need event as variable so that it can be bound to roo
     capturedPiece = previousPos["capturedPiece"]
     turnColour = previousPos["turnColour"]
     moves = previousPos["moves"]
-    startPos = numpy.uint64(1) << numpy.uint64(start[0] * 8 + start[1])
-    endPos = numpy.uint64(1) << numpy.uint64(end[0] * 8 + end[1])
+    startPos = 1 << start[0] * 8 + start[1]
+    endPos = 1 << end[0] * 8 + end[1]
     castleRights.clear()
     castleRights.update(previousPos["castleRightsBefore"])
 
@@ -495,10 +482,11 @@ def previousMove(event): # Need event as variable so that it can be bound to roo
 
     if capturedPiece != "":
         piecePositions[capturedPiece] |= endPos
+        sounds["capture"].play()
+    else:
+        sounds["move"].play()
 
     moveCastleRook(piece, start, end, undo=True)
-    
-    sounds["move"].play()
     positionHistory[currentHash] -= 1
     if positionHistory[currentHash] == 0:
         del positionHistory[currentHash]
@@ -527,23 +515,26 @@ def redoMove(event): # Again event isn't used
     castleRights.clear()
     castleRights.update(move["castleRightsAfter"])
 
-    startPos = numpy.uint64(1) << numpy.uint64(start[0] * 8 + start[1])
-    endPos = numpy.uint64(1) << numpy.uint64(end[0] * 8 + end[1])
+    startPos = 1 << start[0] * 8 + start[1]
+    endPos = 1 << end[0] * 8 + end[1]
 
     if capturedPiece != "":
         piecePositions[capturedPiece] &= ~endPos
+        sounds["capture"].play()
+    else:
+        sounds["move"].play()
 
     moveCastleRook(piece, start, end)
 
-    piecePositions[piece] &= numpy.uint64(~startPos)
+    piecePositions[piece] &= ~startPos
     piecePositions[piece] |= endPos
+
     moveHistory.append(move)
     newHash = hashBoard()
     if newHash in positionHistory:
         positionHistory[newHash] += 1
     else:
         positionHistory[newHash] = 1
-    sounds["move"].play()
     redrawBoard()
     gameState()
 
@@ -585,8 +576,8 @@ def moveCastleRook(piece, start, end, undo=False):
     else:
         return
 
-    startBit = numpy.uint64(1) << numpy.uint64(rookStart[0] * 8 + rookStart[1])
-    endBit = numpy.uint64(1) << numpy.uint64(rookEnd[0] * 8 + rookEnd[1])
+    startBit = 1 << rookStart[0] * 8 + rookStart[1]
+    endBit = 1 << rookEnd[0] * 8 + rookEnd[1]
     piecePositions[piece[0] + "R"] &= ~startBit
     piecePositions[piece[0] + "R"] |= endBit
 
