@@ -1,5 +1,4 @@
 import tkinter as tk
-from tkinter import simpledialog
 import pygame
 
 root = tk.Tk()
@@ -9,8 +8,11 @@ windowSize = 800
 positionSize = windowSize / 8
 root.geometry(f"{windowSize}x{windowSize}+100+100")
 root.resizable(False, False)
-canvas = tk.Canvas(root, width=windowSize, height=windowSize, bg="white")
+canvas = tk.Canvas(root, width=windowSize, height=windowSize, bg="#ffffff")
+promotionFrame = tk.Frame(root, highlightbackground="#ff0000", highlightthickness=10, bg="#ffffff")
+promotionFrame.place_forget()
 pygame.mixer.init()
+promotionActive = False
 activeOutline = None
 activeSquare = None
 moves = 0
@@ -98,6 +100,10 @@ def onClick(event):
     global turnColour
     global moveIndicator
     global possibleMoves
+    global promotionActive
+
+    if promotionActive:
+        return
 
     x = event.x
     y = event.y
@@ -417,6 +423,7 @@ def kingCheck(colour):
     return isSquareAttacked(king[0], king[1], atkColour)
 
 def blockCheck(row, column):
+    global squarePiece
     piece = squarePiece[row * 8 + column]
     if piece == "":
         return []
@@ -426,6 +433,8 @@ def blockCheck(row, column):
     validMoves = []
 
     currentBoard = piecePositions.copy()
+    currentCastleRights = castleRights.copy()
+    currentSquarePiece = squarePiece.copy()
     for endRow, endColumn in anyMoves:
         startPosition = 1 << row * 8 + column
         targetPiece = squarePiece[endRow * 8 + endColumn]
@@ -440,6 +449,8 @@ def blockCheck(row, column):
             validMoves.append((endRow, endColumn))
 
         piecePositions.update(currentBoard)
+        castleRights.update(currentCastleRights)
+        squarePiece = currentSquarePiece
 
     return validMoves
 
@@ -610,7 +621,7 @@ def moveCastleRook(piece, start, end, undo=False):
     piecePositions[piece[0] + "R"] &= ~startBit
     piecePositions[piece[0] + "R"] |= endBit
 
-def hashBoard(): # hash brown??
+def hashBoard(): # hash... brown??
     return hash((tuple(piecePositions.values()), turnColour, tuple(castleRights.values())))
 
 def updateSquareTable():
@@ -632,13 +643,36 @@ def isPromotable(piece, row):
     return False
 
 def choosePromotion(colour):
-    choices = ["Q", "H", "R", "B"]
-    choice = simpledialog.askstring("promotionChoice", "Pick a piece to promote to: ")
-    choice = choice.upper()
-    if choice not in choices:
-        choice = "Q"
+    global promotionFrame
+    global promotionActive
 
-    return colour + choice
+    promotionActive = True
+
+    selectedPiece = tk.StringVar()
+
+    def select(piece):
+        selectedPiece.set(colour + piece)
+        promotionFrame.place_forget()
+
+    for widget in promotionFrame.winfo_children():
+        widget.destroy()
+
+    piecesToChoose = ["Q", "H", "R", "B"]
+
+    buttonFrame = tk.Frame(promotionFrame, bg="#ffffff")
+    buttonFrame.pack()
+
+    for piece in piecesToChoose:
+        button = tk.Button(buttonFrame, image=pieces[colour + piece], command=lambda p=piece: select(p))
+        button.bind("<Enter>", lambda event: event.widget.config(bg="#0088ff"))
+        button.bind("<Leave>", lambda event: event.widget.config(bg="#ffffff"))
+        button.pack(side="left")
+
+    promotionFrame.place(x=windowSize / 2 - 220, y=windowSize / 2 - 100)
+
+    root.wait_variable(selectedPiece)
+    promotionActive = False
+    return selectedPiece.get()
 
 updateSquareTable()
 redrawBoard()
