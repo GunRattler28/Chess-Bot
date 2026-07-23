@@ -20,6 +20,7 @@ moveIndicator = []
 possibleMoves = []
 moveHistory = []
 redoHistory = []
+positionHistory = []
 
 pieces = {
     "bQ": tk.PhotoImage(file="images/pieces/bqueen.png"),
@@ -212,11 +213,16 @@ def makeMove(startRow, startColumn, endRow, endColumn):
 
     piecePositions[movingPiece] &= ~(numpy.uint64(1) << numpy.uint64(startRow * 8 + startColumn))
     piecePositions[movingPiece] |= targetPos
+    
     moveHistory[-1]["castleRightsAfter"] = castleRights.copy()
-    turnColour = "b" if turnColour == "w" else "w"
+    turnColour = "b" if turnColour == "w" else "w"    
     activeSquare = None
     moves += 1
     redrawBoard()
+    hash = hashBoard()
+    positionHistory.append(hash)
+    if positionHistory.count(hash) >= 3:
+        canvas.create_text(windowSize / 2, windowSize / 2, text=f"Three-fold \nRepetition!\nNobody wins!", fill="#FF0000", font=("dynapuff", 64, "bold"), justify="center", tags="gameover")
 
 def redrawBoard():
     global activeOutline
@@ -235,7 +241,7 @@ def gameState():
         canvas.create_image(king[1] * positionSize + positionSize / 2, king[0] * positionSize + positionSize / 2, image=overlays["red"])
 
     if not legalMoves(turnColour):
-        if kingCheck(turnColour):
+        if inCheck:
             canvas.create_text(windowSize / 2, windowSize / 2, text=f"Checkmate!\n{("Black" if turnColour == "w" else "White")} wins!", fill="#FF0000", font=("dynapuff", 64, "bold"), justify="center", tags="gameover")
             sounds["checkmate"].play()
         else:
@@ -489,7 +495,8 @@ def previousMove(event): # Need event as variable so that it can be bound to roo
     moveCastleRook(piece, start, end, undo=True)
     
     sounds["move"].play()
-    redoHistory.append(previousPos)
+    prevState = positionHistory.pop()
+    redoHistory.append((previousPos, prevState))
     redrawBoard()
 
 def redoMove(event): # Again event isn't used
@@ -500,7 +507,7 @@ def redoMove(event): # Again event isn't used
     if len(redoHistory) == 0:
         return
 
-    move = redoHistory.pop()
+    move, state = redoHistory.pop()
     piece = move["piece"]
     start = move["start"]
     end = move["end"]
@@ -521,6 +528,7 @@ def redoMove(event): # Again event isn't used
     piecePositions[piece] &= numpy.uint64(~startPos)
     piecePositions[piece] |= endPos
     moveHistory.append(move)
+    positionHistory.append(state)
     sounds["move"].play()
     redrawBoard()
     gameState()
@@ -568,7 +576,11 @@ def moveCastleRook(piece, start, end, undo=False):
     piecePositions[piece[0] + "R"] &= ~startBit
     piecePositions[piece[0] + "R"] |= endBit
 
+def hashBoard(): # hash brown??
+    return hash((tuple(piecePositions.values()), turnColour, tuple(castleRights.values())))
+
 redrawBoard()
+positionHistory.append(hashBoard())
 canvas.bind("<Button-1>", onClick)
 root.bind("<Left>", previousMove)
 root.bind("<Right>", redoMove)
