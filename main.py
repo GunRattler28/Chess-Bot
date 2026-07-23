@@ -229,15 +229,19 @@ def redrawBoard():
 
 def gameState():
     global turnColour
-    if not kingCheck(turnColour):
-        return
+    inCheck = kingCheck(turnColour)
+    if inCheck:
+        king = findKing(turnColour)
+        canvas.create_image(king[1] * positionSize + positionSize / 2, king[0] * positionSize + positionSize / 2, image=overlays["red"])
 
-    king = findKing(turnColour)
-    canvas.create_image(king[1] * positionSize + positionSize / 2, king[0] * positionSize + positionSize / 2, image=overlays["red"])
     if not legalMoves(turnColour):
-        canvas.create_text(windowSize / 2, windowSize / 2, text=f"Checkmate!\n{("Black" if turnColour == "w" else "White")} wins!", fill="#FF0000", font=("dynapuff", 64, "bold"), justify="center", tags="gameover")
-        sounds["checkmate"].play()
-    else:
+        if kingCheck(turnColour):
+            canvas.create_text(windowSize / 2, windowSize / 2, text=f"Checkmate!\n{("Black" if turnColour == "w" else "White")} wins!", fill="#FF0000", font=("dynapuff", 64, "bold"), justify="center", tags="gameover")
+            sounds["checkmate"].play()
+        else:
+            canvas.create_text(windowSize / 2, windowSize / 2, text=f"Stalemate!\nNobody wins!", fill="#FF0000", font=("dynapuff", 64, "bold"), justify="center", tags="gameover")
+            sounds["checkmate"].play()
+    elif inCheck:
         sounds["check"].play()
 
 def legalMoves(colour):
