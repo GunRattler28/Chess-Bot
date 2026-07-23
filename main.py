@@ -19,6 +19,7 @@ possibleMoves = []
 moveHistory = []
 redoHistory = []
 positionHistory = {}
+squarePiece = [""] * 64
 
 pieces = {
     "bQ": tk.PhotoImage(file="images/pieces/bqueen.png"),
@@ -85,17 +86,9 @@ def drawBoard():
             else:
                 canvas.create_rectangle(column * positionSize, row * positionSize, (column + 1) * positionSize, (row + 1) * positionSize, fill="#0088ff")
 
-            piece = getPiece(row, column)
+            piece = squarePiece[row * 8 + column]
             if (piece != ""):
                 canvas.create_image(column * positionSize + positionSize / 2, row * positionSize + positionSize / 2, image= pieces[piece])
-
-def getPiece(row, column):
-    position = 1 << row * 8 + column
-    for pieceBoard, bitBoard in piecePositions.items():
-        if (bitBoard & position):
-            return pieceBoard
-        
-    return ""
 
 def onClick(event):
     global activeOutline
@@ -135,7 +128,7 @@ def handleSelection(row, column):
     global activeOutline
     global possibleMoves
 
-    piece = getPiece(row, column)
+    piece = squarePiece[row * 8 + column]
 
     if piece == "" or piece[0] != turnColour:
         activeSquare = None
@@ -154,8 +147,8 @@ def makeMove(startRow, startColumn, endRow, endColumn):
     global moves
     global redoHistory
 
-    movingPiece = getPiece(startRow, startColumn)
-    target = getPiece(endRow, endColumn)
+    movingPiece = squarePiece[startRow * 8 + startColumn]
+    target = squarePiece[endRow * 8 + endColumn]
     targetPos = 1 << endRow * 8 + endColumn
 
     moveCastleRook(movingPiece, (startRow, startColumn), (endRow, endColumn))
@@ -202,12 +195,15 @@ def makeMove(startRow, startColumn, endRow, endColumn):
 
     if target != "":
         piecePositions[target] &= ~targetPos
+        squarePiece[endRow * 8 + endColumn] = ""
         sounds["capture"].play()
     else:
         sounds["move"].play()
 
     piecePositions[movingPiece] &= ~(1 << startRow * 8 + startColumn)
     piecePositions[movingPiece] |= targetPos
+    squarePiece[startRow * 8 + startColumn] = ""
+    squarePiece[endRow * 8 + endColumn] = movingPiece
     
     moveHistory[-1]["castleRightsAfter"] = castleRights.copy()
     turnColour = "b" if turnColour == "w" else "w"    
@@ -267,9 +263,8 @@ def legalMoves(colour):
 
 def calculateLegalMoves(row, column, includeCastling):
     possibleMoves = []
-    piece = getPiece(row, column)
+    piece = squarePiece[row * 8+ column]
     if piece == "":
-        print('Something has gone wrong... calculateLegalMoves() got "" from getPiece()')
         return []
 
     pieceType = piece[-1]
@@ -303,15 +298,15 @@ def calculateLegalMoves(row, column, includeCastling):
         potRow = row + direction
 
         if 0 <= potRow < 8:
-            if getPiece(potRow, column) == "":
+            if squarePiece[potRow * 8+ column] == "":
                 possibleMoves.append((potRow, column))
 
                 if pieceColour == "w" and row == 6:
-                    if getPiece(potRow - 1, column) == "":
+                    if squarePiece[(potRow - 1) * 8 + column] == "":
                         possibleMoves.append((potRow - 1, column))
 
                 if pieceColour == "b" and row == 1:
-                    if getPiece(potRow + 1, column) == "":
+                    if squarePiece[(potRow + 1) * 8 + column] == "":
                         possibleMoves.append((potRow + 1, column))
 
         for columnChange in [-1, 1]:
@@ -320,7 +315,7 @@ def calculateLegalMoves(row, column, includeCastling):
             potColumn = column + columnChange
 
             if potRow >= 0 and potRow < 8 and potColumn >= 0 and potColumn < 8:
-                target = getPiece(potRow, potColumn)
+                target = squarePiece[potRow * 8 + potColumn]
                 if target != "" and target[0] != pieceColour:
                     possibleMoves.append((potRow, potColumn))
 
@@ -338,7 +333,7 @@ def showLegalMoves(possibleMoves):
         x = moveColumn * positionSize + positionSize / 2
         y = moveRow * positionSize + positionSize / 2
 
-        if getPiece(moveRow, moveColumn) != "":
+        if squarePiece[moveRow * 8 + moveColumn] != "":
             cirColour = overlays["red"]
         else:
             cirColour = overlays["green"]
@@ -350,7 +345,7 @@ def slidingMoves(row, column, movements, colour, possibleMoves):
         potRow = row + rowChange
         potColumn = column + columnChange
         while potRow >= 0 and potRow < 8 and potColumn >= 0 and potColumn < 8:
-            target = getPiece(potRow, potColumn)
+            target = squarePiece[potRow * 8 + potColumn]
             if target == "":
                 possibleMoves.append((potRow, potColumn))
             else:
@@ -367,7 +362,7 @@ def instaMoves(moveset, row, column, pieceColour, possibleMoves):
         potColumn = column + columnChange
 
         if potRow >= 0 and potRow < 8 and potColumn >= 0 and potColumn < 8:
-            target = getPiece(potRow, potColumn)
+            target = squarePiece[potRow * 8 + potColumn]
             if target == "" or target[0] != pieceColour:
                 possibleMoves.append((potRow, potColumn))
 
@@ -414,7 +409,7 @@ def kingCheck(colour):
     return isSquareAttacked(king[0], king[1], atkColour)
 
 def blockCheck(row, column):
-    piece = getPiece(row, column)
+    piece = squarePiece[row * 8 + column]
     if piece == "":
         return []
 
@@ -425,7 +420,7 @@ def blockCheck(row, column):
     currentBoard = piecePositions.copy()
     for endRow, endColumn in anyMoves:
         startPosition = 1 << row * 8 + column
-        targetPiece = getPiece(endRow, endColumn)
+        targetPiece = squarePiece[endRow * 8 + endColumn]
         targetPosition = 1 << endRow * 8 + endColumn
         moveCastleRook(piece, (row, column), (endRow, endColumn))
         if targetPiece != "":
@@ -479,9 +474,12 @@ def previousMove(event): # Need event as variable so that it can be bound to roo
 
     piecePositions[piece] &= ~endPos
     piecePositions[piece] |= startPos
+    squarePiece[end[0] * 8 + end[1]] = ""
+    squarePiece[start[0] * 8 + start[1]] = piece
 
     if capturedPiece != "":
         piecePositions[capturedPiece] |= endPos
+        squarePiece[end[0] * 8 + end[1]] = capturedPiece
         sounds["capture"].play()
     else:
         sounds["move"].play()
@@ -520,6 +518,7 @@ def redoMove(event): # Again event isn't used
 
     if capturedPiece != "":
         piecePositions[capturedPiece] &= ~endPos
+        squarePiece[end[0] * 8 + end[1]] = ""
         sounds["capture"].play()
     else:
         sounds["move"].play()
@@ -528,6 +527,8 @@ def redoMove(event): # Again event isn't used
 
     piecePositions[piece] &= ~startPos
     piecePositions[piece] |= endPos
+    squarePiece[start[0] * 8 + start[1]] = ""
+    squarePiece[end[0] * 8 + end[1]] = piece
 
     moveHistory.append(move)
     newHash = hashBoard()
@@ -542,10 +543,10 @@ def addCastleMoves(pieceColour, possibleMoves):
     row = 7 if pieceColour == "w" else 0
     enemy = "b" if pieceColour == "w" else "w"
 
-    if (castleRights[pieceColour + "Kr"] and getPiece(row, 5) == "" and getPiece(row, 6) == "" and not kingCheck(pieceColour) and not isSquareAttacked(row, 5, enemy) and not isSquareAttacked(row, 6, enemy) and getPiece(row,7) == pieceColour + "R"):
+    if (castleRights[pieceColour + "Kr"] and squarePiece[row * 8 + 5] == "" and squarePiece[row * 8 + 6] == "" and not kingCheck(pieceColour) and not isSquareAttacked(row, 5, enemy) and not isSquareAttacked(row * 8 + 6, enemy) and squarePiece[row * 8 + 7] == pieceColour + "R"):
         possibleMoves.append((row, 6))
 
-    if (castleRights[pieceColour + "Kl"] and getPiece(row, 1) == "" and getPiece(row, 2) == "" and getPiece(row, 3) == "" and not kingCheck(pieceColour) and not isSquareAttacked(row, 3, enemy) and not isSquareAttacked(row, 2, enemy) and getPiece(row,0) == pieceColour + "R"):
+    if (castleRights[pieceColour + "Kl"] and squarePiece[row * 8 + 1] == "" and squarePiece[row * 8 + 2] == "" and squarePiece[row * 8 + 3] == "" and not kingCheck(pieceColour) and not isSquareAttacked(row, 3, enemy) and not isSquareAttacked(row, 2, enemy) and squarePiece[row * 8 + 0] == pieceColour + "R"):
         possibleMoves.append((row, 2))
 
 def moveCastleRook(piece, start, end, undo=False):
@@ -584,6 +585,18 @@ def moveCastleRook(piece, start, end, undo=False):
 def hashBoard(): # hash brown??
     return hash((tuple(piecePositions.values()), turnColour, tuple(castleRights.values())))
 
+def updateSquareTable():
+    global squarePiece
+    squarePiece = [""] * 64
+
+    for piece, bitboard in piecePositions.items():
+        while bitboard:
+            lsb = bitboard & -bitboard
+            index = lsb.bit_length() - 1
+            squarePiece[index] = piece
+            bitboard &= bitboard - 1
+
+updateSquareTable()
 redrawBoard()
 startHash = hashBoard()
 positionHistory[startHash] = 1
