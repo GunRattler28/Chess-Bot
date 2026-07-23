@@ -434,8 +434,8 @@ def blockCheck(row, column):
 
     currentBoard = piecePositions.copy()
     currentCastleRights = castleRights.copy()
-    currentSquarePiece = squarePiece.copy()
     for endRow, endColumn in anyMoves:
+        currentSquarePiece = squarePiece.copy()
         startPosition = 1 << row * 8 + column
         targetPiece = squarePiece[endRow * 8 + endColumn]
         targetPosition = 1 << endRow * 8 + endColumn
@@ -444,13 +444,15 @@ def blockCheck(row, column):
             piecePositions[targetPiece] &= ~targetPosition
         piecePositions[piece] &= ~startPosition
         piecePositions[piece] |= targetPosition
+        squarePiece[endRow * 8 + endColumn] = ""
+        squarePiece[endRow * 8 + endColumn] = piece
 
         if not kingCheck(colour):
             validMoves.append((endRow, endColumn))
 
         piecePositions.update(currentBoard)
         castleRights.update(currentCastleRights)
-        squarePiece = currentSquarePiece
+        squarePiece = currentSquarePiece.copy()
 
     return validMoves
 
@@ -582,7 +584,7 @@ def addCastleMoves(pieceColour, possibleMoves):
     row = 7 if pieceColour == "w" else 0
     enemy = "b" if pieceColour == "w" else "w"
 
-    if (castleRights[pieceColour + "Kr"] and squarePiece[row * 8 + 5] == "" and squarePiece[row * 8 + 6] == "" and not kingCheck(pieceColour) and not isSquareAttacked(row, 5, enemy) and not isSquareAttacked(row * 8 + 6, enemy) and squarePiece[row * 8 + 7] == pieceColour + "R"):
+    if (castleRights[pieceColour + "Kr"] and squarePiece[row * 8 + 5] == "" and squarePiece[row * 8 + 6] == "" and not kingCheck(pieceColour) and not isSquareAttacked(row, 5, enemy) and not isSquareAttacked(row, 6, enemy) and squarePiece[row * 8 + 7] == pieceColour + "R"):
         possibleMoves.append((row, 6))
 
     if (castleRights[pieceColour + "Kl"] and squarePiece[row * 8 + 1] == "" and squarePiece[row * 8 + 2] == "" and squarePiece[row * 8 + 3] == "" and not kingCheck(pieceColour) and not isSquareAttacked(row, 3, enemy) and not isSquareAttacked(row, 2, enemy) and squarePiece[row * 8 + 0] == pieceColour + "R"):
@@ -620,6 +622,8 @@ def moveCastleRook(piece, start, end, undo=False):
     endBit = 1 << rookEnd[0] * 8 + rookEnd[1]
     piecePositions[piece[0] + "R"] &= ~startBit
     piecePositions[piece[0] + "R"] |= endBit
+    squarePiece[rookStart[0] * 8 + rookStart[1]] = ""
+    squarePiece[rookEnd[0] * 8 + rookEnd[1]] = piece[0] + "R"
 
 def hashBoard(): # hash... brown??
     return hash((tuple(piecePositions.values()), turnColour, tuple(castleRights.values())))
