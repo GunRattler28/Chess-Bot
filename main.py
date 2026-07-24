@@ -23,6 +23,10 @@ moveHistory = []
 redoHistory = []
 positionHistory = {}
 squarePiece = [""] * 64
+lines = []
+rightClickStart = None
+temporaryLine = None
+strategyCircles = []
 
 pieces = {
     "bQ": tk.PhotoImage(file="images/pieces/bqueen.png"),
@@ -129,9 +133,14 @@ def onClick(event):
     global moveIndicator
     global possibleMoves
     global promotionActive
+    global lines
+    global strategyCircles
 
     if promotionActive:
         return
+
+    if len(lines) > 0 or len(strategyCircles):
+        clearArrows()
 
     x = event.x
     y = event.y
@@ -728,11 +737,81 @@ def choosePromotion(colour):
     promotionActive = False
     return selectedPiece.get()
 
+def clearArrows():
+    global lines
+    global strategyCircles
+    for line in lines:
+        canvas.delete(line)
+    for circle in strategyCircles:
+        canvas.delete(circle)
+    strategyCircles = []
+    lines = []
+
+def onRightClick(event):
+    global rightClickStart
+    if promotionActive:
+        return
+
+    row = event.y // positionSize
+    column = event.x // positionSize
+    rightClickStart = (row, column)
+
+def onRightDrag(event):
+    global rightClickStart
+    global temporaryLine
+
+    if rightClickStart == None:
+        return
+
+    startRow = rightClickStart[0] * positionSize + positionSize / 2
+    startColumn = rightClickStart[1] * positionSize + positionSize / 2
+
+    if temporaryLine:
+        canvas.delete(temporaryLine)
+
+    temporaryLine = canvas.create_line(startColumn, startRow, event.x, event.y, fill="#00bb00", width=20, arrow=tk.LAST, arrowshape=(25, 25, 10), stipple="gray75")
+
+def onRightRelease(event):
+    global rightClickStart
+    global temporaryLine
+    global lines
+    global strategyCircles
+
+    if temporaryLine:
+        canvas.delete(temporaryLine)
+        temporaryLine = None
+
+    endRow = event.y // positionSize
+    endColumn = event.x // positionSize
+    startRow = rightClickStart[0]
+    startColumn = rightClickStart[1]
+    if not (0 <= endRow < 8 and 0 <= endColumn < 8):
+        rightClickStart = None
+        return
+
+    if (startRow, startColumn) == (endRow, endColumn):
+        stratCircle = canvas.create_image(endColumn * positionSize + positionSize / 2, endRow * positionSize + positionSize / 2, image=overlays["green"])
+        strategyCircles.append(stratCircle)
+        rightClickStart = None
+        return
+
+    startX = startColumn * positionSize + positionSize / 2
+    startY = startRow * positionSize + positionSize / 2
+    endX = endColumn * positionSize + positionSize / 2
+    endY = endRow * positionSize + positionSize / 2
+
+    line = canvas.create_line(startX, startY, endX, endY, fill="#00ff00", width= 20, arrow=tk.LAST, arrowshape=(25, 25, 10), stipple="gray75")
+    lines.append(line)
+    rightClickStart = None
+
 updateSquareTable()
 redrawBoard()
 startHash = hashBoard()
 positionHistory[startHash] = 1
 canvas.bind("<Button-1>", onClick)
+canvas.bind("<Button-3>", onRightClick)
+canvas.bind("<B3-Motion>", onRightDrag)
+canvas.bind("<ButtonRelease-3>", onRightRelease)
 root.bind("<Left>", previousMove)
 root.bind("<Right>", redoMove)
 canvas.pack()
