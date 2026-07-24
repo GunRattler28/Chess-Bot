@@ -81,6 +81,34 @@ rookDirections = [(1,0), (-1,0), (0,1), (0,-1)]
 bishopDirections = [(1,1), (1,-1), (-1,1), (-1,-1)]
 queenDirections = rookDirections + bishopDirections
 
+def createAttackTables(offset):
+    table = [0] * 64
+    for square in range(64):
+        row = square // 8
+        column = square % 8
+        mask = 0
+        for rowChange, columnChange in offset:
+            newRow = row + rowChange
+            newColumn = column + columnChange
+            if 0 <= newRow < 8 and 0 <= newColumn < 8:
+                mask |= 1 << (newRow * 8 + newColumn)
+        table[square] = mask
+    return table
+
+knightAtk = createAttackTables(knightMoves)
+kingAtk = createAttackTables(kingMoves)
+
+def getOccupied():
+    whiteOccupied = 0
+    blackOccupied = 0
+    for name, bitboard in piecePositions.items():
+        if name[0] == "w":
+            whiteOccupied |= bitboard
+        else:
+            blackOccupied |= bitboard
+    occupied = whiteOccupied | blackOccupied
+    return (whiteOccupied, blackOccupied, occupied)
+
 def drawBoard():
     for column in range(0, 8):
         for row in range(0, 8):
@@ -156,7 +184,7 @@ def makeMove(startRow, startColumn, endRow, endColumn):
 
     movingPiece = squarePiece[startRow * 8 + startColumn]
     target = squarePiece[endRow * 8 + endColumn]
-    targetPos = 1 << endRow * 8 + endColumn
+    targetPos = 1 << (endRow * 8 + endColumn)
 
     moveCastleRook(movingPiece, (startRow, startColumn), (endRow, endColumn))
     start = startRow, startColumn
@@ -207,7 +235,7 @@ def makeMove(startRow, startColumn, endRow, endColumn):
     else:
         sounds["move"].play()
 
-    piecePositions[movingPiece] &= ~(1 << startRow * 8 + startColumn)
+    piecePositions[movingPiece] &= ~(1 << (startRow * 8 + startColumn))
     piecePositions[movingPiece] |= targetPos
     squarePiece[startRow * 8 + startColumn] = ""
     squarePiece[endRow * 8 + endColumn] = movingPiece
@@ -277,31 +305,32 @@ def legalMoves(colour):
 
 def calculateLegalMoves(row, column, includeCastling):
     possibleMoves = []
-    piece = squarePiece[row * 8+ column]
+    piece = squarePiece[row * 8 + column]
     if piece == "":
         return []
 
     pieceType = piece[-1]
     pieceColour = piece[0]
-
+    whiteOccupied, blackOccupied, occupied = getOccupied()
+    friendlyOccupied = whiteOccupied if pieceColour == "w" else blackOccupied
 
     if pieceType == "H":
-        instaMoves(knightMoves, row, column, pieceColour, possibleMoves)
+        instaMoves(knightAtk[row * 8 + column], friendlyOccupied, possibleMoves)
 
     elif pieceType == "K":
-        instaMoves(kingMoves, row, column, pieceColour, possibleMoves)
+        instaMoves(kingAtk[row * 8 + column], friendlyOccupied, possibleMoves)
 
         if includeCastling:
             addCastleMoves(pieceColour, possibleMoves)
 
     elif pieceType == "R":
-        slidingMoves(row, column, rookDirections, pieceColour, possibleMoves)
+        slidingMoves(row, column, rookDirections, friendlyOccupied, occupied, possibleMoves)
 
     elif pieceType == "B":
-        slidingMoves(row, column, bishopDirections, pieceColour, possibleMoves)
+        slidingMoves(row, column, bishopDirections, friendlyOccupied, occupied, possibleMoves)
 
     elif pieceType == "Q":
-        slidingMoves(row, column, queenDirections, pieceColour, possibleMoves)
+        slidingMoves(row, column, queenDirections, friendlyOccupied, occupied, possibleMoves)
 
     elif pieceType == "P":
         if pieceColour == "w":
@@ -354,31 +383,32 @@ def showLegalMoves(possibleMoves):
 
         moveIndicator.append(canvas.create_image(x, y, image=cirColour))
 
-def slidingMoves(row, column, movements, colour, possibleMoves):
+def slidingMoves(row, column, movements, friendlyOccupied, occupied, possibleMoves):
     for rowChange, columnChange in movements:
         potRow = row + rowChange
         potColumn = column + columnChange
         while potRow >= 0 and potRow < 8 and potColumn >= 0 and potColumn < 8:
-            target = squarePiece[potRow * 8 + potColumn]
-            if target == "":
-                possibleMoves.append((potRow, potColumn))
-            else:
-                if target[0] != colour:
-                    possibleMoves.append((potRow, potColumn))
+            targetIndex = potRow * 8 + potColumn
+            targetBit = 1 << targetIndex
+
+            if targetBit & friendlyOccupied:
+                break
+
+            possibleMoves.append((potRow, potColumn))
+
+            if targetBit & occupied:
                 break
 
             potRow += rowChange
             potColumn += columnChange
 
-def instaMoves(moveset, row, column, pieceColour, possibleMoves):
-    for rowChange, columnChange in moveset:
-        potRow = row + rowChange
-        potColumn = column + columnChange
-
-        if potRow >= 0 and potRow < 8 and potColumn >= 0 and potColumn < 8:
-            target = squarePiece[potRow * 8 + potColumn]
-            if target == "" or target[0] != pieceColour:
-                possibleMoves.append((potRow, potColumn))
+def instaMoves(atkMask, friendOccupied, possibleMoves):
+    legalMask = atkMask & ~friendOccupied
+    while legalMask:
+        lsb = legalMask & -legalMask
+        index = lsb.bit_length() - 1
+        possibleMoves.append((index // 8, index % 8))
+        legalMask &= legalMask - 1
 
 def clearPossibleMoves():
     global moveIndicator
@@ -391,16 +421,36 @@ def clearPossibleMoves():
     possibleMoves.clear()
 
 def isSquareAttacked(row, column, atkColour):
+    whiteOccupied, blackOccupied, occupied = getOccupied()
+    friendlyOccupied = whiteOccupied if atkColour == "w" else blackOccupied
     for piece, bitboard in piecePositions.items():
         if piece[0] == atkColour:
             board = int(bitboard)
+            pieceType = piece[1]
             while board > 0:
                 lsb = board & -board
                 index = lsb.bit_length() - 1
                 pieceRow = index // 8
                 pieceColumn = index % 8
-                moves = calculateLegalMoves(pieceRow, pieceColumn, False)
-                if (row, column) in moves:
+                pieceMoves = []
+                if pieceType == "H":
+                    instaMoves(knightAtk[index], friendlyOccupied, pieceMoves)
+                elif pieceType == "K":
+                    instaMoves(kingAtk[index], friendlyOccupied, pieceMoves)
+                elif pieceType == "R":
+                    slidingMoves(pieceRow, pieceColumn, rookDirections, friendlyOccupied, occupied, pieceMoves)
+                elif pieceType == "B":
+                    slidingMoves(pieceRow, pieceColumn, bishopDirections, friendlyOccupied, occupied, pieceMoves)
+                elif pieceType == "Q":
+                    slidingMoves(pieceRow, pieceColumn, queenDirections, friendlyOccupied, occupied, pieceMoves)
+                elif pieceType == "P":
+                    pDir = -1 if atkColour == "w" else 1
+                    for dc in [-1, 1]:
+                        r, c = pieceRow + pDir, pieceColumn + dc
+                        if 0 <= r < 8 and 0 <= c < 8:
+                            pieceMoves.append((r, c))
+
+                if (row, column) in pieceMoves:
                     return True
                 
                 board = board & ~(1 << index)
@@ -436,15 +486,15 @@ def blockCheck(row, column):
     currentCastleRights = castleRights.copy()
     for endRow, endColumn in anyMoves:
         currentSquarePiece = squarePiece.copy()
-        startPosition = 1 << row * 8 + column
+        startPosition = 1 << (row * 8 + column)
         targetPiece = squarePiece[endRow * 8 + endColumn]
-        targetPosition = 1 << endRow * 8 + endColumn
+        targetPosition = 1 << (endRow * 8 + endColumn)
         moveCastleRook(piece, (row, column), (endRow, endColumn))
         if targetPiece != "":
             piecePositions[targetPiece] &= ~targetPosition
         piecePositions[piece] &= ~startPosition
         piecePositions[piece] |= targetPosition
-        squarePiece[endRow * 8 + endColumn] = ""
+        squarePiece[row * 8 + column] = ""
         squarePiece[endRow * 8 + endColumn] = piece
 
         if not kingCheck(colour):
@@ -489,8 +539,8 @@ def previousMove(event): # Need event as variable so that it can be bound to roo
     capturedPiece = previousPos["capturedPiece"]
     turnColour = previousPos["turnColour"]
     moves = previousPos["moves"]
-    startPos = 1 << start[0] * 8 + start[1]
-    endPos = 1 << end[0] * 8 + end[1]
+    startPos = 1 << (start[0] * 8 + start[1])
+    endPos = 1 << (end[0] * 8 + end[1])
     castleRights.clear()
     castleRights.update(previousPos["castleRightsBefore"])
 
@@ -544,8 +594,8 @@ def redoMove(event): # Again event isn't used
     castleRights.clear()
     castleRights.update(move["castleRightsAfter"])
 
-    startPos = 1 << start[0] * 8 + start[1]
-    endPos = 1 << end[0] * 8 + end[1]
+    startPos = 1 << (start[0] * 8 + start[1])
+    endPos = 1 << (end[0] * 8 + end[1])
 
     if capturedPiece != "":
         piecePositions[capturedPiece] &= ~endPos
@@ -618,8 +668,8 @@ def moveCastleRook(piece, start, end, undo=False):
     else:
         return
 
-    startBit = 1 << rookStart[0] * 8 + rookStart[1]
-    endBit = 1 << rookEnd[0] * 8 + rookEnd[1]
+    startBit = 1 << (rookStart[0] * 8 + rookStart[1])
+    endBit = 1 << (rookEnd[0] * 8 + rookEnd[1])
     piecePositions[piece[0] + "R"] &= ~startBit
     piecePositions[piece[0] + "R"] |= endBit
     squarePiece[rookStart[0] * 8 + rookStart[1]] = ""
