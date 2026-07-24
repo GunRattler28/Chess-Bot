@@ -672,7 +672,7 @@ def choosePromotion(colour):
         button.bind("<Leave>", lambda event: event.widget.config(bg="#ffffff"))
         button.pack(side="left")
 
-    promotionFrame.place(x=windowSize / 2 - 220, y=windowSize / 2 - 100)
+    promotionFrame.place(x=windowSize / 2 - 220, y=windowSize / 2 - 60)
 
     root.wait_variable(selectedPiece)
     promotionActive = False
