@@ -1,17 +1,20 @@
-import tkinter as tk
 import pygame
+import pygame.freetype
+import math
 
-root = tk.Tk()
-root.title("Gun's Chess Bot")
+pygame.init()
+pygame.mixer.init()
+pygame.key.set_repeat(300, 25)
 
 windowSize = 800
 positionSize = windowSize / 8
-root.geometry(f"{windowSize}x{windowSize}+100+100")
-root.resizable(False, False)
-canvas = tk.Canvas(root, width=windowSize, height=windowSize, bg="#ffffff")
-promotionFrame = tk.Frame(root, highlightbackground="#ff0000", highlightthickness=10, bg="#ffffff")
-promotionFrame.place_forget()
-pygame.mixer.init()
+screen = pygame.display.set_mode((windowSize, windowSize))
+pygame.display.set_caption("Gun's Chess Bot")
+clock = pygame.time.Clock()
+pygame.font.init()
+gameFont = pygame.freetype.SysFont("dynapuffregular", 64, bold=True) 
+
+gameOverMessage = None
 promotionActive = False
 activeOutline = None
 activeSquare = None
@@ -29,18 +32,18 @@ temporaryLine = None
 strategyCircles = []
 
 pieces = {
-    "bQ": tk.PhotoImage(file="images/pieces/bqueen.png"),
-    "bK": tk.PhotoImage(file="images/pieces/bking.png"),
-    "bB": tk.PhotoImage(file="images/pieces/bbishop.png"),
-    "bH": tk.PhotoImage(file="images/pieces/bhorse.png"),
-    "bR": tk.PhotoImage(file="images/pieces/brook.png"),
-    "bP": tk.PhotoImage(file="images/pieces/bpawn.png"),
-    "wQ": tk.PhotoImage(file="images/pieces/wqueen.png"), 
-    "wK": tk.PhotoImage(file="images/pieces/wking.png"),
-    "wB": tk.PhotoImage(file="images/pieces/wbishop.png"),
-    "wH": tk.PhotoImage(file="images/pieces/whorse.png"),
-    "wR": tk.PhotoImage(file="images/pieces/wrook.png"),
-    "wP": tk.PhotoImage(file="images/pieces/wpawn.png")
+    "bQ": pygame.transform.scale(pygame.image.load("images/pieces/bqueen.png").convert_alpha(), (positionSize, positionSize)),
+    "bK": pygame.transform.scale(pygame.image.load("images/pieces/bking.png").convert_alpha(), (positionSize, positionSize)),
+    "bB": pygame.transform.scale(pygame.image.load("images/pieces/bbishop.png").convert_alpha(), (positionSize, positionSize)),
+    "bH": pygame.transform.scale(pygame.image.load("images/pieces/bhorse.png").convert_alpha(), (positionSize, positionSize)),
+    "bR": pygame.transform.scale(pygame.image.load("images/pieces/brook.png").convert_alpha(), (positionSize, positionSize)),
+    "bP": pygame.transform.scale(pygame.image.load("images/pieces/bpawn.png").convert_alpha(), (positionSize, positionSize)),
+    "wQ": pygame.transform.scale(pygame.image.load("images/pieces/wqueen.png").convert_alpha(), (positionSize, positionSize)), 
+    "wK": pygame.transform.scale(pygame.image.load("images/pieces/wking.png").convert_alpha(), (positionSize, positionSize)),
+    "wB": pygame.transform.scale(pygame.image.load("images/pieces/wbishop.png").convert_alpha(), (positionSize, positionSize)),
+    "wH": pygame.transform.scale(pygame.image.load("images/pieces/whorse.png").convert_alpha(), (positionSize, positionSize)),
+    "wR": pygame.transform.scale(pygame.image.load("images/pieces/wrook.png").convert_alpha(), (positionSize, positionSize)),
+    "wP": pygame.transform.scale(pygame.image.load("images/pieces/wpawn.png").convert_alpha(), (positionSize, positionSize))
 }
 
 piecePositions = {
@@ -68,8 +71,8 @@ castleRights = {
 }
 
 overlays = {
-    "red": tk.PhotoImage(file="images/redOverlay.png"),
-    "green": tk.PhotoImage(file="images/greenOverlay.png")
+    "red": pygame.transform.scale(pygame.image.load("images/redOverlay.png").convert_alpha(), (positionSize, positionSize)),
+    "green": pygame.transform.scale(pygame.image.load("images/greenOverlay.png").convert_alpha(), (positionSize, positionSize))
 }
 
 sounds = {
@@ -117,15 +120,15 @@ def drawBoard():
     for column in range(0, 8):
         for row in range(0, 8):
             if ((row + column) % 2 == 0):
-                canvas.create_rectangle(column * positionSize, row * positionSize, (column + 1) * positionSize, (row + 1) * positionSize, fill="#ffffff")
+                pygame.draw.rect(screen, "#ffffff", (column * positionSize, row * positionSize, positionSize, positionSize))
             else:
-                canvas.create_rectangle(column * positionSize, row * positionSize, (column + 1) * positionSize, (row + 1) * positionSize, fill="#0088ff")
+                pygame.draw.rect(screen, "#0088ff", (column * positionSize, row * positionSize, positionSize, positionSize))
 
             piece = squarePiece[row * 8 + column]
             if (piece != ""):
-                canvas.create_image(column * positionSize + positionSize / 2, row * positionSize + positionSize / 2, image= pieces[piece])
+                screen.blit(pieces[piece], (column * positionSize, row * positionSize))
 
-def onClick(event):
+def onClick(x, y):
     global activeOutline
     global activeSquare
     global moves
@@ -142,15 +145,8 @@ def onClick(event):
     if len(lines) > 0 or len(strategyCircles):
         clearArrows()
 
-    x = event.x
-    y = event.y
-
     row = int(y // positionSize)
     column = int(x // positionSize)
-
-    if activeOutline != None:
-        canvas.delete(activeOutline)
-        activeOutline = None
 
     if activeSquare == None:
         handleSelection(row, column)
@@ -177,19 +173,18 @@ def handleSelection(row, column):
     if piece == "" or piece[0] != turnColour:
         activeSquare = None
         activeOutline = None
-        clearPossibleMoves()
+        possibleMoves.clear()
         return
 
     activeSquare = [row, column]
-    activeOutline = canvas.create_rectangle(column * positionSize, row * positionSize, (column + 1) * positionSize, (row + 1) * positionSize, outline="#00ff00", width=4,)
     possibleMoves = blockCheck(row, column)
-    showLegalMoves(possibleMoves)
 
 def makeMove(startRow, startColumn, endRow, endColumn):
     global turnColour
     global activeSquare
     global moves
     global redoHistory
+    global gameOverMessage
 
     movingPiece = squarePiece[startRow * 8 + startColumn]
     target = squarePiece[endRow * 8 + endColumn]
@@ -231,8 +226,8 @@ def makeMove(startRow, startColumn, endRow, endColumn):
             castleRights["bKl"] = False
         elif end == (0, 7):
             castleRights["bKr"] = False
-            
-    clearPossibleMoves()
+
+    possibleMoves.clear()
 
     saveMove(movingPiece, startRow, startColumn, endRow, endColumn, target, turnColour, moves)
     redoHistory.clear()
@@ -260,39 +255,37 @@ def makeMove(startRow, startColumn, endRow, endColumn):
     turnColour = "b" if turnColour == "w" else "w"    
     activeSquare = None
     moves += 1
-    redrawBoard()
+    
     newHash = hashBoard()
     if newHash in positionHistory:
         positionHistory[newHash] += 1
     else:
         positionHistory[newHash] = 1
     if positionHistory[newHash] >= 3:
-        canvas.create_text(windowSize / 2, windowSize / 2, text=f"Three-fold \nRepetition!\nNobody wins!", fill="#FF0000", font=("dynapuff", 64, "bold"), justify="center", tags="gameover")
-
-def redrawBoard():
+        gameOverMessage = f"Three-fold \nRepetition!\nNobody  wins!"
     global activeOutline
     activeOutline = None
-    canvas.delete("all")
     moveIndicator.clear()
     possibleMoves.clear()
     drawBoard()
 
 def gameState():
     global turnColour
+    global gameOverMessage
     inCheck = kingCheck(turnColour)
-    if inCheck:
-        king = findKing(turnColour)
-        canvas.create_image(king[1] * positionSize + positionSize / 2, king[0] * positionSize + positionSize / 2, image=overlays["red"])
 
     if not legalMoves(turnColour):
         if inCheck:
-            canvas.create_text(windowSize / 2, windowSize / 2, text=f"Checkmate!\n{("Black" if turnColour == "w" else "White")} wins!", fill="#FF0000", font=("dynapuff", 64, "bold"), justify="center", tags="gameover")
+            winner = "Black" if turnColour == "w" else "White"
+            gameOverMessage = f"Checkmate!\n{winner}  wins!"
             sounds["checkmate"].play()
         else:
-            canvas.create_text(windowSize / 2, windowSize / 2, text=f"Stalemate!\nNobody wins!", fill="#FF0000", font=("dynapuff", 64, "bold"), justify="center", tags="gameover")
+            gameOverMessage = f"Stalemate!\nNobody  wins!"
             sounds["checkmate"].play()
     elif inCheck:
         sounds["check"].play()
+    else:
+        gameOverMessage = None
 
 def legalMoves(colour):
     for piece, bitboard in piecePositions.items():
@@ -373,25 +366,6 @@ def calculateLegalMoves(row, column, includeCastling):
 
     return possibleMoves
 
-def showLegalMoves(possibleMoves):
-    global moveIndicator
-    
-    for indicator in moveIndicator:
-        canvas.delete(indicator)
-
-    moveIndicator.clear()
-
-    for moveRow, moveColumn in possibleMoves:
-        x = moveColumn * positionSize + positionSize / 2
-        y = moveRow * positionSize + positionSize / 2
-
-        if squarePiece[moveRow * 8 + moveColumn] != "":
-            cirColour = overlays["red"]
-        else:
-            cirColour = overlays["green"]
-
-        moveIndicator.append(canvas.create_image(x, y, image=cirColour))
-
 def slidingMoves(row, column, movements, friendlyOccupied, occupied, possibleMoves):
     for rowChange, columnChange in movements:
         potRow = row + rowChange
@@ -418,16 +392,6 @@ def instaMoves(atkMask, friendOccupied, possibleMoves):
         index = lsb.bit_length() - 1
         possibleMoves.append((index // 8, index % 8))
         legalMask &= legalMask - 1
-
-def clearPossibleMoves():
-    global moveIndicator
-    global possibleMoves
-
-    for indicator in moveIndicator:
-        canvas.delete(indicator)
-
-    moveIndicator.clear()
-    possibleMoves.clear()
 
 def isSquareAttacked(row, column, atkColour):
     whiteOccupied, blackOccupied, occupied = getOccupied()
@@ -529,7 +493,7 @@ def saveMove(piece, startRow, startColumn, endRow, endColumn, capturedPiece, tur
     }
     moveHistory.append(state)
 
-def previousMove(event): # Need event as variable so that it can be bound to root. Event isn't used
+def previousMove():
     global moveHistory
     global redoHistory
     global piecePositions
@@ -583,9 +547,8 @@ def previousMove(event): # Need event as variable so that it can be bound to roo
         positionHistory[newHash] += 1
     else:
         positionHistory[newHash] = 1
-    redrawBoard()
 
-def redoMove(event): # Again event isn't used
+def redoMove():
     global redoHistory
     global turnColour
     global moves
@@ -636,7 +599,7 @@ def redoMove(event): # Again event isn't used
         positionHistory[newHash] += 1
     else:
         positionHistory[newHash] = 1
-    redrawBoard()
+    
     gameState()
 
 def addCastleMoves(pieceColour, possibleMoves):
@@ -706,113 +669,187 @@ def isPromotable(piece, row):
     return False
 
 def choosePromotion(colour):
-    global promotionFrame
     global promotionActive
-
     promotionActive = True
-
-    selectedPiece = tk.StringVar()
-
-    def select(piece):
-        selectedPiece.set(colour + piece)
-        promotionFrame.place_forget()
-
-    for widget in promotionFrame.winfo_children():
-        widget.destroy()
-
     piecesToChoose = ["Q", "H", "R", "B"]
+    
+    menuWidth = positionSize * 4
+    menuX = (windowSize - menuWidth) // 2
+    menuY = (windowSize - positionSize) // 2
+    
+    chosenPiece = None
+    
+    while promotionActive:
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                pygame.quit()
+                quit()
+            elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+                mouseX, mouseY = event.pos
+                if menuY <= mouseY <= menuY + positionSize:
+                    if menuX <= mouseX <= menuX + menuWidth:
+                        index = int((mouseX - menuX) // positionSize)
+                        chosenPiece = colour + piecesToChoose[index]
+                        promotionActive = False
 
-    buttonFrame = tk.Frame(promotionFrame, bg="#ffffff")
-    buttonFrame.pack()
-
-    for piece in piecesToChoose:
-        button = tk.Button(buttonFrame, image=pieces[colour + piece], command=lambda p=piece: select(p))
-        button.bind("<Enter>", lambda event: event.widget.config(bg="#0088ff"))
-        button.bind("<Leave>", lambda event: event.widget.config(bg="#ffffff"))
-        button.pack(side="left")
-
-    promotionFrame.place(x=windowSize / 2 - 220, y=windowSize / 2 - 60)
-
-    root.wait_variable(selectedPiece)
-    promotionActive = False
-    return selectedPiece.get()
+        pygame.draw.rect(screen, (255, 255, 255), (menuX, menuY, menuWidth, positionSize))
+        pygame.draw.rect(screen, (0, 0, 0), (menuX, menuY, menuWidth, positionSize), 4)
+        
+        for i, piece in enumerate(piecesToChoose):
+            screen.blit(pieces[colour + piece], (menuX + (i * positionSize), menuY))
+            
+        pygame.display.flip()
+        clock.tick(60)
+        
+    return chosenPiece
 
 def clearArrows():
-    global lines
-    global strategyCircles
-    for line in lines:
-        canvas.delete(line)
-    for circle in strategyCircles:
-        canvas.delete(circle)
-    strategyCircles = []
-    lines = []
+    global lines, strategyCircles
+    strategyCircles.clear()
+    lines.clear()
 
-def onRightClick(event):
+def onRightClick(x, y):
     global rightClickStart
-    if promotionActive:
+    if promotionActive: 
         return
+    rightClickStart = (int(y // positionSize), int(x // positionSize))
 
-    row = event.y // positionSize
-    column = event.x // positionSize
-    rightClickStart = (row, column)
-
-def onRightDrag(event):
-    global rightClickStart
+def onRightDrag(x, y):
     global temporaryLine
+    if rightClickStart:
+        temporaryLine = (x, y) # Just store the current mouse coordinates
 
-    if rightClickStart == None:
-        return
+def onRightRelease(x, y):
+    global rightClickStart, temporaryLine
+    if not rightClickStart: return
 
-    startRow = rightClickStart[0] * positionSize + positionSize / 2
-    startColumn = rightClickStart[1] * positionSize + positionSize / 2
+    endRow, endColumn = int(y // positionSize), int(x // positionSize)
+    startRow, startColumn = rightClickStart
+    
+    if 0 <= endRow < 8 and 0 <= endColumn < 8:
+        if (startRow, startColumn) == (endRow, endColumn):
+            if (startRow, startColumn) in strategyCircles:
+                strategyCircles.remove((endRow, endColumn))
+            else:
+                strategyCircles.append((endRow, endColumn))
+        else:
+            lines.append(((startRow, startColumn), (endRow, endColumn)))
 
-    if temporaryLine:
-        canvas.delete(temporaryLine)
-
-    temporaryLine = canvas.create_line(startColumn, startRow, event.x, event.y, fill="#00bb00", width=20, arrow=tk.LAST, arrowshape=(25, 25, 10), stipple="gray75")
-
-def onRightRelease(event):
-    global rightClickStart
-    global temporaryLine
-    global lines
-    global strategyCircles
-
-    if temporaryLine:
-        canvas.delete(temporaryLine)
-        temporaryLine = None
-
-    endRow = event.y // positionSize
-    endColumn = event.x // positionSize
-    startRow = rightClickStart[0]
-    startColumn = rightClickStart[1]
-    if not (0 <= endRow < 8 and 0 <= endColumn < 8):
-        rightClickStart = None
-        return
-
-    if (startRow, startColumn) == (endRow, endColumn):
-        stratCircle = canvas.create_image(endColumn * positionSize + positionSize / 2, endRow * positionSize + positionSize / 2, image=overlays["green"])
-        strategyCircles.append(stratCircle)
-        rightClickStart = None
-        return
-
-    startX = startColumn * positionSize + positionSize / 2
-    startY = startRow * positionSize + positionSize / 2
-    endX = endColumn * positionSize + positionSize / 2
-    endY = endRow * positionSize + positionSize / 2
-
-    line = canvas.create_line(startX, startY, endX, endY, fill="#00ff00", width= 20, arrow=tk.LAST, arrowshape=(25, 25, 10), stipple="gray75")
-    lines.append(line)
     rightClickStart = None
+    temporaryLine = None
+
+def drawHighlights():
+    if activeSquare:
+        r, c = activeSquare
+        pygame.draw.rect(screen, (0, 255, 0), (c * positionSize, r * positionSize, positionSize, positionSize), 4)
+
+    for moveRow, moveColumn in possibleMoves:
+        x, y = moveColumn * positionSize, moveRow * positionSize
+        if squarePiece[moveRow * 8 + moveColumn] != "":
+            screen.blit(overlays["red"], (x, y))
+        else:
+            screen.blit(overlays["green"], (x, y))
+
+    if kingCheck(turnColour):
+        king = findKing(turnColour)
+        if king:
+            screen.blit(overlays["red"], (king[1] * positionSize, king[0] * positionSize))
+
+def drawArrow(surface, color, start, end, thickness=25, arrowSize=50):
+    dx = end[0] - start[0]
+    dy = end[1] - start[1]
+    length = math.hypot(dx, dy)
+    if length == 0:
+        return
+    dir_x = dx / length
+    dir_y = dy / length
+    shaft_end = (end[0] - dir_x * (arrowSize * 0.6), end[1] - dir_y * (arrowSize * 0.6))
+    radius = thickness // 2
+    pygame.draw.circle(surface, color, start, radius)
+    pygame.draw.line(surface, color, start, shaft_end, thickness)
+    rotation = math.atan2(dy, dx)
+    p1 = (end[0] - arrowSize * math.cos(rotation + math.pi / 4), end[1] - arrowSize * math.sin(rotation + math.pi / 4))
+    p2 = (end[0] - arrowSize * math.cos(rotation - math.pi / 4), end[1] - arrowSize * math.sin(rotation - math.pi / 4))
+    pygame.draw.polygon(surface, color, [end, p1, p2])
+
+def drawArrows():
+    for row, column in strategyCircles:
+        screen.blit(overlays["green"], (column * positionSize, row * positionSize))
+
+    arrowSurf = pygame.Surface((windowSize, windowSize), pygame.SRCALPHA)
+    arrowColor = (0, 255, 0, 150) 
+    
+    for (startR, startC), (endR, endC) in lines:
+        startX = startC * positionSize + positionSize / 2
+        startY = startR * positionSize + positionSize / 2
+        endX = endC * positionSize + positionSize / 2
+        endY = endR * positionSize + positionSize / 2
+        drawArrow(arrowSurf, arrowColor, (startX, startY), (endX, endY))
+
+    if rightClickStart and temporaryLine:
+        startR, startC = rightClickStart
+        startX = startC * positionSize + positionSize / 2
+        startY = startR * positionSize + positionSize / 2
+        drawArrow(arrowSurf, (0, 187, 0, 150), (startX, startY), temporaryLine)
+        
+    screen.blit(arrowSurf, (0, 0))
 
 updateSquareTable()
-redrawBoard()
 startHash = hashBoard()
 positionHistory[startHash] = 1
-canvas.bind("<Button-1>", onClick)
-canvas.bind("<Button-3>", onRightClick)
-canvas.bind("<B3-Motion>", onRightDrag)
-canvas.bind("<ButtonRelease-3>", onRightRelease)
-root.bind("<Left>", previousMove)
-root.bind("<Right>", redoMove)
-canvas.pack()
-root.mainloop()
+
+running = True
+while running:
+    for event in pygame.event.get():
+        if event.type == pygame.QUIT:
+            running = False
+            
+        elif event.type == pygame.MOUSEBUTTONDOWN:
+            if event.button == 1:
+                onClick(event.pos[0], event.pos[1]) 
+            elif event.button == 3:
+                onRightClick(event.pos[0], event.pos[1])
+                
+        elif event.type == pygame.MOUSEMOTION:
+            if rightClickStart:
+                onRightDrag(event.pos[0], event.pos[1])
+                
+        elif event.type == pygame.MOUSEBUTTONUP:
+            if event.button == 3:
+                onRightRelease(event.pos[0], event.pos[1])
+                
+        elif event.type == pygame.KEYDOWN:
+            if event.key == pygame.K_LEFT:
+                previousMove()
+            elif event.key == pygame.K_RIGHT:
+                redoMove()
+
+    screen.fill((255, 255, 255))
+    drawBoard()
+    drawHighlights()
+    drawArrows()
+    if gameOverMessage:
+        gamelines = gameOverMessage.split("\n")
+        rendered_lines = []
+        total_height = 0
+        
+        for line in gamelines:
+            surf, rect = gameFont.render(line, fgcolor=(255, 0, 0), style=pygame.freetype.STYLE_STRONG)
+            rendered_lines.append((surf, rect))
+            total_height += rect.height + 8
+
+        bgSurface = pygame.Surface((windowSize, windowSize), pygame.SRCALPHA)
+        bgSurface.fill((0, 0, 0, 150))
+        screen.blit(bgSurface, (0, 0))
+
+        current_y = (windowSize - total_height) / 2
+        for surf, rect in rendered_lines:
+            rect.centerx = windowSize / 2
+            rect.y = current_y
+            screen.blit(surf, rect)
+            current_y += rect.height + 8
+
+    pygame.display.flip()
+    clock.tick(60)
+    
+pygame.quit()
