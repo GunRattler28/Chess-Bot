@@ -786,7 +786,7 @@ def drawArrow(surface, color, start, end, thickness=25, arrowSize=50):
     dir_x = dx / length
     dir_y = dy / length
     shaft_end = (end[0] - dir_x * (arrowSize * 0.6), end[1] - dir_y * (arrowSize * 0.6))
-    radius = thickness // 2
+    radius = thickness / 2
     pygame.draw.circle(surface, color, start, radius)
     pygame.draw.line(surface, color, start, shaft_end, thickness)
     rotation = math.atan2(dy, dx)
