@@ -783,12 +783,23 @@ def drawArrow(surface, color, start, end, thickness=25, arrowSize=50):
     length = math.hypot(dx, dy)
     if length == 0:
         return
+        
     dir_x = dx / length
     dir_y = dy / length
     shaft_end = (end[0] - dir_x * (arrowSize * 0.6), end[1] - dir_y * (arrowSize * 0.6))
     radius = thickness / 2
+    
+    norm_x = -dir_y
+    norm_y = dir_x
+    
+    p_start_1 = (start[0] + norm_x * radius, start[1] + norm_y * radius)
+    p_start_2 = (start[0] - norm_x * radius, start[1] - norm_y * radius)
+    p_end_1 = (shaft_end[0] + norm_x * radius, shaft_end[1] + norm_y * radius)
+    p_end_2 = (shaft_end[0] - norm_x * radius, shaft_end[1] - norm_y * radius)
+    
     pygame.draw.circle(surface, color, start, radius)
-    pygame.draw.line(surface, color, start, shaft_end, thickness)
+    pygame.draw.polygon(surface, color, [p_start_1, p_end_1, p_end_2, p_start_2])
+    
     rotation = math.atan2(dy, dx)
     p1 = (end[0] - arrowSize * math.cos(rotation + math.pi / 4), end[1] - arrowSize * math.sin(rotation + math.pi / 4))
     p2 = (end[0] - arrowSize * math.cos(rotation - math.pi / 4), end[1] - arrowSize * math.sin(rotation - math.pi / 4))
