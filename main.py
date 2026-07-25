@@ -6,10 +6,13 @@ pygame.init()
 pygame.mixer.init()
 pygame.key.set_repeat(300, 25)
 
+redraw = True
 windowSize = 800
 positionSize = windowSize / 8
 screen = pygame.display.set_mode((windowSize, windowSize))
 pygame.display.set_caption("Gun's Chess Bot")
+icon = pygame.image.load('images/icon.png')
+pygame.display.set_icon(icon)
 clock = pygame.time.Clock()
 pygame.font.init()
 gameFont = pygame.freetype.SysFont("dynapuffregular", 64, bold=True) 
@@ -164,6 +167,7 @@ def onClick(x, y):
         handleSelection(row, column)
 
 def handleSelection(row, column):
+    global redraw
     global activeSquare
     global activeOutline
     global possibleMoves
@@ -174,12 +178,15 @@ def handleSelection(row, column):
         activeSquare = None
         activeOutline = None
         possibleMoves.clear()
+        redraw = True
         return
 
     activeSquare = [row, column]
     possibleMoves = blockCheck(row, column)
+    redraw = True
 
 def makeMove(startRow, startColumn, endRow, endColumn):
+    global redraw
     global turnColour
     global activeSquare
     global moves
@@ -268,6 +275,7 @@ def makeMove(startRow, startColumn, endRow, endColumn):
     moveIndicator.clear()
     possibleMoves.clear()
     drawBoard()
+    redraw = True
 
 def gameState():
     global turnColour
@@ -494,6 +502,7 @@ def saveMove(piece, startRow, startColumn, endRow, endColumn, capturedPiece, tur
     moveHistory.append(state)
 
 def previousMove():
+    global redraw
     global moveHistory
     global redoHistory
     global piecePositions
@@ -548,7 +557,10 @@ def previousMove():
     else:
         positionHistory[newHash] = 1
 
+    redraw = True
+
 def redoMove():
+    global redraw
     global redoHistory
     global turnColour
     global moves
@@ -601,6 +613,7 @@ def redoMove():
         positionHistory[newHash] = 1
     
     gameState()
+    redraw = True
 
 def addCastleMoves(pieceColour, possibleMoves):
     row = 7 if pieceColour == "w" else 0
@@ -704,9 +717,12 @@ def choosePromotion(colour):
     return chosenPiece
 
 def clearArrows():
-    global lines, strategyCircles
+    global redraw
+    global lines
+    global strategyCircles
     strategyCircles.clear()
     lines.clear()
+    redraw = True
 
 def onRightClick(x, y):
     global rightClickStart
@@ -715,13 +731,18 @@ def onRightClick(x, y):
     rightClickStart = (int(y // positionSize), int(x // positionSize))
 
 def onRightDrag(x, y):
+    global redraw
     global temporaryLine
     if rightClickStart:
-        temporaryLine = (x, y) # Just store the current mouse coordinates
+        temporaryLine = (x, y)
+    redraw = True
 
 def onRightRelease(x, y):
-    global rightClickStart, temporaryLine
-    if not rightClickStart: return
+    global redraw
+    global rightClickStart
+    global temporaryLine
+    if not rightClickStart: 
+        return
 
     endRow, endColumn = int(y // positionSize), int(x // positionSize)
     startRow, startColumn = rightClickStart
@@ -737,6 +758,7 @@ def onRightRelease(x, y):
 
     rightClickStart = None
     temporaryLine = None
+    redraw = True
 
 def drawHighlights():
     if activeSquare:
@@ -824,32 +846,34 @@ while running:
             elif event.key == pygame.K_RIGHT:
                 redoMove()
 
-    screen.fill((255, 255, 255))
-    drawBoard()
-    drawHighlights()
-    drawArrows()
-    if gameOverMessage:
-        gamelines = gameOverMessage.split("\n")
-        rendered_lines = []
-        total_height = 0
-        
-        for line in gamelines:
-            surf, rect = gameFont.render(line, fgcolor=(255, 0, 0), style=pygame.freetype.STYLE_STRONG)
-            rendered_lines.append((surf, rect))
-            total_height += rect.height + 8
+    if redraw:
+        screen.fill((255, 255, 255))
+        drawBoard()
+        drawHighlights()
+        drawArrows()
+        if gameOverMessage:
+            gamelines = gameOverMessage.split("\n")
+            rendered_lines = []
+            total_height = 0
+            
+            for line in gamelines:
+                surf, rect = gameFont.render(line, fgcolor=(255, 0, 0), style=pygame.freetype.STYLE_STRONG)
+                rendered_lines.append((surf, rect))
+                total_height += rect.height + 8
 
-        bgSurface = pygame.Surface((windowSize, windowSize), pygame.SRCALPHA)
-        bgSurface.fill((0, 0, 0, 150))
-        screen.blit(bgSurface, (0, 0))
+            bgSurface = pygame.Surface((windowSize, windowSize), pygame.SRCALPHA)
+            bgSurface.fill((0, 0, 0, 150))
+            screen.blit(bgSurface, (0, 0))
 
-        current_y = (windowSize - total_height) / 2
-        for surf, rect in rendered_lines:
-            rect.centerx = windowSize / 2
-            rect.y = current_y
-            screen.blit(surf, rect)
-            current_y += rect.height + 8
+            current_y = (windowSize - total_height) / 2
+            for surf, rect in rendered_lines:
+                rect.centerx = windowSize / 2
+                rect.y = current_y
+                screen.blit(surf, rect)
+                current_y += rect.height + 8
 
-    pygame.display.flip()
-    clock.tick(60)
-    
+        pygame.display.flip()
+        redraw = False
+
+    clock.tick(60)    
 pygame.quit()
