@@ -463,29 +463,55 @@ def blockCheck(row, column):
     anyMoves = calculateLegalMoves(row, column, True)
     validMoves = []
 
-    currentBoard = piecePositions.copy()
-    currentCastleRights = castleRights.copy()
     for endRow, endColumn in anyMoves:
-        currentSquarePiece = squarePiece.copy()
-        startPosition = 1 << (row * 8 + column)
         targetPiece = squarePiece[endRow * 8 + endColumn]
-        targetPosition = 1 << (endRow * 8 + endColumn)
-        moveCastleRook(piece, (row, column), (endRow, endColumn))
-        if targetPiece != "":
-            piecePositions[targetPiece] &= ~targetPosition
-        piecePositions[piece] &= ~startPosition
-        piecePositions[piece] |= targetPosition
-        squarePiece[row * 8 + column] = ""
-        squarePiece[endRow * 8 + endColumn] = piece
+        start = (row, column)
+        end = (endRow, endColumn)
+
+        simulateMove(piece, start, end, targetPiece)
 
         if not kingCheck(colour):
-            validMoves.append((endRow, endColumn))
+            validMoves.append(end)
 
-        piecePositions.update(currentBoard)
-        castleRights.update(currentCastleRights)
-        squarePiece = currentSquarePiece.copy()
+        undoMove(piece, start, end, targetPiece)
 
     return validMoves
+
+def simulateMove(piece, start, end, captured):
+    startIndex = start[0] * 8 + start[1]
+    endIndex = end[0] * 8 + end[1]
+    startBit = 1 << startIndex
+    endBit = 1 << endIndex
+
+    if captured:
+        piecePositions[captured] &= ~endBit
+
+    piecePositions[piece] &= ~startBit
+    piecePositions[piece] |= endBit
+
+    squarePiece[startIndex] = ""
+    squarePiece[endIndex] = piece
+
+    if piece in ("wK", "bK"):
+        moveCastleRook(piece, start, end)
+
+def undoMove(piece, start, end, captured):
+    startIndex = start[0] * 8 + start[1]
+    endIndex = end[0] * 8 + end[1]
+    startBit = 1 << startIndex
+    endBit = 1 << endIndex
+
+    piecePositions[piece] &= ~endBit
+    piecePositions[piece] |= startBit
+
+    if captured:
+        piecePositions[captured] |= endBit
+
+    squarePiece[startIndex] = piece
+    squarePiece[endIndex] = captured or ""
+
+    if piece in ("wK", "bK"):
+        moveCastleRook(piece, start, end, undo=True)
 
 def saveMove(piece, startRow, startColumn, endRow, endColumn, capturedPiece, turnColour, moves):
     global moveHistory
