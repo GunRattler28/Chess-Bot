@@ -91,6 +91,29 @@ rookDirections = [(1,0), (-1,0), (0,1), (0,-1)]
 bishopDirections = [(1,1), (1,-1), (-1,1), (-1,-1)]
 queenDirections = rookDirections + bishopDirections
 
+def getPiece(row, column):
+    if not (0 <= row < 8 and 0 <= column < 8):
+        return ""
+    return squarePiece[row * 8 + column]
+
+
+def getPieceFromBitboards(row, column):
+    if not (0 <= row < 8 and 0 <= column < 8):
+        return ""
+
+    bit = 1 << (row * 8 + column)
+    for piece, bitboard in piecePositions.items():
+        if bitboard & bit:
+            return piece
+    return ""
+
+
+def setPiece(row, column, piece):
+    if not (0 <= row < 8 and 0 <= column < 8):
+        return
+    squarePiece[row * 8 + column] = piece
+
+
 def createAttackTables(offset):
     table = [0] * 64
     for square in range(64):
@@ -127,7 +150,7 @@ def drawBoard():
             else:
                 pygame.draw.rect(screen, "#0088ff", (column * positionSize, row * positionSize, positionSize, positionSize))
 
-            piece = squarePiece[row * 8 + column]
+            piece = getPiece(row, column)
             if (piece != ""):
                 screen.blit(pieces[piece], (column * positionSize, row * positionSize))
 
@@ -172,7 +195,7 @@ def handleSelection(row, column):
     global activeOutline
     global possibleMoves
 
-    piece = squarePiece[row * 8 + column]
+    piece = getPiece(row, column)
 
     if piece == "" or piece[0] != turnColour:
         activeSquare = None
@@ -193,8 +216,8 @@ def makeMove(startRow, startColumn, endRow, endColumn):
     global redoHistory
     global gameOverMessage
 
-    movingPiece = squarePiece[startRow * 8 + startColumn]
-    target = squarePiece[endRow * 8 + endColumn]
+    movingPiece = getPiece(startRow, startColumn)
+    target = getPiece(endRow, endColumn)
     targetPos = 1 << (endRow * 8 + endColumn)
 
     moveCastleRook(movingPiece, (startRow, startColumn), (endRow, endColumn))
@@ -241,26 +264,27 @@ def makeMove(startRow, startColumn, endRow, endColumn):
 
     if target != "":
         piecePositions[target] &= ~targetPos
-        squarePiece[endRow * 8 + endColumn] = ""
+        setPiece(endRow, endColumn, "")
         sounds["capture"].play()
     else:
         sounds["move"].play()
 
     piecePositions[movingPiece] &= ~(1 << (startRow * 8 + startColumn))
     piecePositions[movingPiece] |= targetPos
-    squarePiece[startRow * 8 + startColumn] = ""
-    squarePiece[endRow * 8 + endColumn] = movingPiece
+    setPiece(startRow, startColumn, "")
+    setPiece(endRow, endColumn, movingPiece)
 
     if isPromotable(movingPiece, endRow):
         promotedPiece = choosePromotion(turnColour)
         piecePositions[movingPiece] &= ~targetPos
         piecePositions[promotedPiece] |= targetPos
-        squarePiece[endRow * 8 + endColumn] = promotedPiece
+        setPiece(endRow, endColumn, promotedPiece)
         moveHistory[-1]["promotion"] = promotedPiece
     
     moveHistory[-1]["castleRightsAfter"] = castleRights.copy()
     turnColour = "b" if turnColour == "w" else "w"    
     activeSquare = None
+    updateSquareTable()
     moves += 1
     
     newHash = hashBoard()
@@ -315,7 +339,7 @@ def legalMoves(colour):
 
 def calculateLegalMoves(row, column, includeCastling):
     possibleMoves = []
-    piece = squarePiece[row * 8 + column]
+    piece = getPiece(row, column)
     if piece == "":
         return []
 
@@ -351,15 +375,15 @@ def calculateLegalMoves(row, column, includeCastling):
         potRow = row + direction
 
         if 0 <= potRow < 8:
-            if squarePiece[potRow * 8+ column] == "":
+            if getPiece(potRow, column) == "":
                 possibleMoves.append((potRow, column))
 
                 if pieceColour == "w" and row == 6:
-                    if squarePiece[(potRow - 1) * 8 + column] == "":
+                    if getPiece(potRow - 1, column) == "":
                         possibleMoves.append((potRow - 1, column))
 
                 if pieceColour == "b" and row == 1:
-                    if squarePiece[(potRow + 1) * 8 + column] == "":
+                    if getPiece(potRow + 1, column) == "":
                         possibleMoves.append((potRow + 1, column))
 
         for columnChange in [-1, 1]:
@@ -368,7 +392,7 @@ def calculateLegalMoves(row, column, includeCastling):
             potColumn = column + columnChange
 
             if potRow >= 0 and potRow < 8 and potColumn >= 0 and potColumn < 8:
-                target = squarePiece[potRow * 8 + potColumn]
+                target = getPiece(potRow, potColumn)
                 if target != "" and target[0] != pieceColour:
                     possibleMoves.append((potRow, potColumn))
 
@@ -455,7 +479,7 @@ def kingCheck(colour):
 
 def blockCheck(row, column):
     global squarePiece
-    piece = squarePiece[row * 8 + column]
+    piece = getPiece(row, column)
     if piece == "":
         return []
 
@@ -464,7 +488,7 @@ def blockCheck(row, column):
     validMoves = []
 
     for endRow, endColumn in anyMoves:
-        targetPiece = squarePiece[endRow * 8 + endColumn]
+        targetPiece = getPiece(endRow, endColumn)
         start = (row, column)
         end = (endRow, endColumn)
 
@@ -489,8 +513,8 @@ def simulateMove(piece, start, end, captured):
     piecePositions[piece] &= ~startBit
     piecePositions[piece] |= endBit
 
-    squarePiece[startIndex] = ""
-    squarePiece[endIndex] = piece
+    setPiece(start[0], start[1], "")
+    setPiece(end[0], end[1], piece)
 
     if piece in ("wK", "bK"):
         moveCastleRook(piece, start, end)
@@ -507,8 +531,8 @@ def undoMove(piece, start, end, captured):
     if captured:
         piecePositions[captured] |= endBit
 
-    squarePiece[startIndex] = piece
-    squarePiece[endIndex] = captured or ""
+    setPiece(start[0], start[1], piece)
+    setPiece(end[0], end[1], captured or "")
 
     if piece in ("wK", "bK"):
         moveCastleRook(piece, start, end, undo=True)
@@ -552,15 +576,15 @@ def previousMove():
     castleRights.clear()
     castleRights.update(previousPos["castleRightsBefore"])
 
-    squarePiece[end[0] * 8 + end[1]] = ""
-    squarePiece[start[0] * 8 + start[1]] = piece
+    setPiece(end[0], end[1], "")
+    setPiece(start[0], start[1], piece)
 
     if previousPos["promotion"] != None:
         promoted = previousPos["promotion"]
         piecePositions[promoted] &= ~endPos
         piecePositions[piece] |= startPos
-        squarePiece[end[0] * 8 + end[1]] = ""
-        squarePiece[start[0] * 8 + start[1]] = piece
+        setPiece(end[0], end[1], "")
+        setPiece(start[0], start[1], piece)
 
     else:
         piecePositions[piece] &= ~endPos
@@ -568,7 +592,7 @@ def previousMove():
         
     if capturedPiece != "":
         piecePositions[capturedPiece] |= endPos
-        squarePiece[end[0] * 8 + end[1]] = capturedPiece
+        setPiece(end[0], end[1], capturedPiece)
         sounds["capture"].play()
     else:
         sounds["move"].play()
@@ -578,6 +602,7 @@ def previousMove():
     if positionHistory[currentHash] == 0:
         del positionHistory[currentHash]
     newHash = hashBoard()
+    updateSquareTable()
     if newHash in positionHistory:
         positionHistory[newHash] += 1
     else:
@@ -609,7 +634,7 @@ def redoMove():
 
     if capturedPiece != "":
         piecePositions[capturedPiece] &= ~endPos
-        squarePiece[end[0] * 8 + end[1]] = ""
+        setPiece(end[0], end[1], "")
         sounds["capture"].play()
     else:
         sounds["move"].play()
@@ -622,17 +647,18 @@ def redoMove():
         piecePositions[piece] &= ~startPos
         piecePositions[promoted] |= endPos
 
-        squarePiece[start[0] * 8 + start[1]] = ""
-        squarePiece[end[0] * 8 + end[1]] = promoted
+        setPiece(start[0], start[1], "")
+        setPiece(end[0], end[1], promoted)
 
     else:    
         piecePositions[piece] &= ~startPos
         piecePositions[piece] |= endPos
-        squarePiece[start[0] * 8 + start[1]] = ""
-        squarePiece[end[0] * 8 + end[1]] = piece
+        setPiece(start[0], start[1], "")
+        setPiece(end[0], end[1], piece)
 
     moveHistory.append(move)
     newHash = hashBoard()
+    updateSquareTable()
     if newHash in positionHistory:
         positionHistory[newHash] += 1
     else:
@@ -645,10 +671,10 @@ def addCastleMoves(pieceColour, possibleMoves):
     row = 7 if pieceColour == "w" else 0
     enemy = "b" if pieceColour == "w" else "w"
 
-    if (castleRights[pieceColour + "Kr"] and squarePiece[row * 8 + 5] == "" and squarePiece[row * 8 + 6] == "" and not kingCheck(pieceColour) and not isSquareAttacked(row, 5, enemy) and not isSquareAttacked(row, 6, enemy) and squarePiece[row * 8 + 7] == pieceColour + "R"):
+    if (castleRights[pieceColour + "Kr"] and getPiece(row, 5) == "" and getPiece(row, 6) == "" and not kingCheck(pieceColour) and not isSquareAttacked(row, 5, enemy) and not isSquareAttacked(row, 6, enemy) and getPiece(row, 7) == pieceColour + "R"):
         possibleMoves.append((row, 6))
 
-    if (castleRights[pieceColour + "Kl"] and squarePiece[row * 8 + 1] == "" and squarePiece[row * 8 + 2] == "" and squarePiece[row * 8 + 3] == "" and not kingCheck(pieceColour) and not isSquareAttacked(row, 3, enemy) and not isSquareAttacked(row, 2, enemy) and squarePiece[row * 8 + 0] == pieceColour + "R"):
+    if (castleRights[pieceColour + "Kl"] and getPiece(row, 1) == "" and getPiece(row, 2) == "" and getPiece(row, 3) == "" and not kingCheck(pieceColour) and not isSquareAttacked(row, 3, enemy) and not isSquareAttacked(row, 2, enemy) and getPiece(row, 0) == pieceColour + "R"):
         possibleMoves.append((row, 2))
 
 def moveCastleRook(piece, start, end, undo=False):
@@ -683,8 +709,8 @@ def moveCastleRook(piece, start, end, undo=False):
     endBit = 1 << (rookEnd[0] * 8 + rookEnd[1])
     piecePositions[piece[0] + "R"] &= ~startBit
     piecePositions[piece[0] + "R"] |= endBit
-    squarePiece[rookStart[0] * 8 + rookStart[1]] = ""
-    squarePiece[rookEnd[0] * 8 + rookEnd[1]] = piece[0] + "R"
+    setPiece(rookStart[0], rookStart[1], "")
+    setPiece(rookEnd[0], rookEnd[1], piece[0] + "R")
 
 def hashBoard(): # hash... brown??
     return hash((tuple(piecePositions.values()), turnColour, tuple(castleRights.values())))
@@ -694,11 +720,12 @@ def updateSquareTable():
     squarePiece = [""] * 64
 
     for piece, bitboard in piecePositions.items():
-        while bitboard:
-            lsb = bitboard & -bitboard
+        board = int(bitboard)
+        while board:
+            lsb = board & -board
             index = lsb.bit_length() - 1
             squarePiece[index] = piece
-            bitboard &= bitboard - 1
+            board &= board - 1
 
 def isPromotable(piece, row):
     if piece == "wP" and row == 0:
@@ -793,7 +820,7 @@ def drawHighlights():
 
     for moveRow, moveColumn in possibleMoves:
         x, y = moveColumn * positionSize, moveRow * positionSize
-        if squarePiece[moveRow * 8 + moveColumn] != "":
+        if getPiece(moveRow, moveColumn) != "":
             screen.blit(overlays["red"], (x, y))
         else:
             screen.blit(overlays["green"], (x, y))
