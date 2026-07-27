@@ -986,20 +986,20 @@ while running:
         drawArrows()
         if gameOverMessage:
             gamelines = gameOverMessage.split("\n")
-            rendered_lines = []
-            total_height = 0
+            renderedLines = []
+            totalHeight = 0
             
             for line in gamelines:
                 surf, rect = gameFont.render(line, fgcolor=(255, 0, 0), style=pygame.freetype.STYLE_STRONG)
-                rendered_lines.append((surf, rect))
-                total_height += rect.height + 8
+                renderedLines.append((surf, rect))
+                totalHeight += rect.height + 8
 
             bgSurface = pygame.Surface((windowSize, windowSize), pygame.SRCALPHA)
             bgSurface.fill((0, 0, 0, 150))
             screen.blit(bgSurface, (0, 0))
 
-            current_y = (windowSize - total_height) / 2
-            for surf, rect in rendered_lines:
+            current_y = (windowSize - totalHeight) / 2
+            for surf, rect in renderedLines:
                 rect.centerx = windowSize / 2
                 rect.y = current_y
                 screen.blit(surf, rect)
