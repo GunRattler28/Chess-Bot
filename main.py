@@ -34,6 +34,8 @@ rightClickStart = None
 temporaryLine = None
 strategyCircles = []
 
+enPassantTarget = None
+
 pieces = {
     "bQ": pygame.transform.scale(pygame.image.load("images/pieces/bqueen.png").convert_alpha(), (positionSize, positionSize)),
     "bK": pygame.transform.scale(pygame.image.load("images/pieces/bking.png").convert_alpha(), (positionSize, positionSize)),
@@ -261,13 +263,31 @@ def makeMove(startRow, startColumn, endRow, endColumn):
 
     saveMove(movingPiece, startRow, startColumn, endRow, endColumn, target, turnColour, moves)
     redoHistory.clear()
+    global enPassantTarget
 
-    if target != "":
-        piecePositions[target] &= ~targetPos
-        setPiece(endRow, endColumn, "")
-        sounds["capture"].play()
-    else:
-        sounds["move"].play()
+    enPassantCapture = False
+    if movingPiece[-1] == "P":
+        direction = -1 if movingPiece[0] == "w" else 1
+        if target == "" and startColumn != endColumn and enPassantTarget == (endRow, endColumn):
+            capturedRow = endRow - direction
+            capturedCol = endColumn
+            capturedPiece = getPiece(capturedRow, capturedCol)
+            if capturedPiece != "":
+                capPos = 1 << (capturedRow * 8 + capturedCol)
+                piecePositions[capturedPiece] &= ~capPos
+                setPiece(capturedRow, capturedCol, "")
+                moveHistory[-1]["capturedPiece"] = capturedPiece
+                moveHistory[-1]["capturedSquare"] = (capturedRow, capturedCol)
+                enPassantCapture = True
+                sounds["capture"].play()
+
+    if not enPassantCapture:
+        if target != "":
+            piecePositions[target] &= ~targetPos
+            setPiece(endRow, endColumn, "")
+            sounds["capture"].play()
+        else:
+            sounds["move"].play()
 
     piecePositions[movingPiece] &= ~(1 << (startRow * 8 + startColumn))
     piecePositions[movingPiece] |= targetPos
@@ -282,6 +302,11 @@ def makeMove(startRow, startColumn, endRow, endColumn):
         moveHistory[-1]["promotion"] = promotedPiece
     
     moveHistory[-1]["castleRightsAfter"] = castleRights.copy()
+    if movingPiece[-1] == "P" and abs(endRow - startRow) == 2:
+        enPassantTarget = ((startRow + endRow) // 2, startColumn)
+    else:
+        enPassantTarget = None
+    moveHistory[-1]["enPassantAfter"] = enPassantTarget
     turnColour = "b" if turnColour == "w" else "w"    
     activeSquare = None
     updateSquareTable()
@@ -395,6 +420,10 @@ def calculateLegalMoves(row, column, includeCastling):
                 target = getPiece(potRow, potColumn)
                 if target != "" and target[0] != pieceColour:
                     possibleMoves.append((potRow, potColumn))
+                else:
+                    global enPassantTarget
+                    if enPassantTarget == (potRow, potColumn):
+                        possibleMoves.append((potRow, potColumn))
 
     return possibleMoves
 
@@ -492,23 +521,38 @@ def blockCheck(row, column):
         start = (row, column)
         end = (endRow, endColumn)
 
-        simulateMove(piece, start, end, targetPiece)
+        capturedSquare = None
+        capturedPiece = targetPiece
+        if piece[-1] == "P" and targetPiece == "" and start[1] != end[1]:
+            global enPassantTarget
+            if enPassantTarget == (endRow, endColumn):
+                direction = -1 if piece[0] == "w" else 1
+                capturedSquare = (endRow - direction, endColumn)
+                capturedPiece = getPiece(capturedSquare[0], capturedSquare[1])
+
+        simulateMove(piece, start, end, capturedPiece, capturedSquare)
 
         if not kingCheck(colour):
             validMoves.append(end)
 
-        undoMove(piece, start, end, targetPiece)
+        undoMove(piece, start, end, capturedPiece, capturedSquare)
 
     return validMoves
 
-def simulateMove(piece, start, end, captured):
+def simulateMove(piece, start, end, captured, capturedSquare=None):
     startIndex = start[0] * 8 + start[1]
     endIndex = end[0] * 8 + end[1]
     startBit = 1 << startIndex
     endBit = 1 << endIndex
 
     if captured:
-        piecePositions[captured] &= ~endBit
+        if capturedSquare:
+            capIndex = capturedSquare[0] * 8 + capturedSquare[1]
+            piecePositions[captured] &= ~(1 << capIndex)
+            setPiece(capturedSquare[0], capturedSquare[1], "")
+        else:
+            piecePositions[captured] &= ~endBit
+            setPiece(end[0], end[1], "")
 
     piecePositions[piece] &= ~startBit
     piecePositions[piece] |= endBit
@@ -519,7 +563,7 @@ def simulateMove(piece, start, end, captured):
     if piece in ("wK", "bK"):
         moveCastleRook(piece, start, end)
 
-def undoMove(piece, start, end, captured):
+def undoMove(piece, start, end, captured, capturedSquare=None):
     startIndex = start[0] * 8 + start[1]
     endIndex = end[0] * 8 + end[1]
     startBit = 1 << startIndex
@@ -529,10 +573,17 @@ def undoMove(piece, start, end, captured):
     piecePositions[piece] |= startBit
 
     if captured:
-        piecePositions[captured] |= endBit
+        if capturedSquare:
+            capIndex = capturedSquare[0] * 8 + capturedSquare[1]
+            piecePositions[captured] |= 1 << capIndex
+            setPiece(capturedSquare[0], capturedSquare[1], captured)
+        else:
+            piecePositions[captured] |= endBit
+            setPiece(end[0], end[1], captured)
 
     setPiece(start[0], start[1], piece)
-    setPiece(end[0], end[1], captured or "")
+    if not captured or (captured and capturedSquare):
+        setPiece(end[0], end[1], "" if captured and capturedSquare else (captured or ""))
 
     if piece in ("wK", "bK"):
         moveCastleRook(piece, start, end, undo=True)
@@ -544,6 +595,8 @@ def saveMove(piece, startRow, startColumn, endRow, endColumn, capturedPiece, tur
         "start": (startRow, startColumn),
         "end": (endRow, endColumn),
         "capturedPiece": capturedPiece,
+        "capturedSquare": None,
+        "enPassantBefore": enPassantTarget,
         "turnColour": turnColour,
         "moves": moves,
         "castleRightsBefore": castleRights.copy(),
@@ -575,6 +628,8 @@ def previousMove():
     endPos = 1 << (end[0] * 8 + end[1])
     castleRights.clear()
     castleRights.update(previousPos["castleRightsBefore"])
+    global enPassantTarget
+    enPassantTarget = previousPos.get("enPassantBefore", None)
 
     setPiece(end[0], end[1], "")
     setPiece(start[0], start[1], piece)
@@ -591,8 +646,14 @@ def previousMove():
         piecePositions[piece] |= startPos
         
     if capturedPiece != "":
-        piecePositions[capturedPiece] |= endPos
-        setPiece(end[0], end[1], capturedPiece)
+        capSquare = previousPos.get("capturedSquare")
+        if capSquare:
+            capPos = 1 << (capSquare[0] * 8 + capSquare[1])
+            piecePositions[capturedPiece] |= capPos
+            setPiece(capSquare[0], capSquare[1], capturedPiece)
+        else:
+            piecePositions[capturedPiece] |= endPos
+            setPiece(end[0], end[1], capturedPiece)
         sounds["capture"].play()
     else:
         sounds["move"].play()
@@ -628,13 +689,21 @@ def redoMove():
     moves = move["moves"] + 1
     castleRights.clear()
     castleRights.update(move["castleRightsAfter"])
+    global enPassantTarget
+    enPassantTarget = move.get("enPassantAfter", None)
 
     startPos = 1 << (start[0] * 8 + start[1])
     endPos = 1 << (end[0] * 8 + end[1])
 
     if capturedPiece != "":
-        piecePositions[capturedPiece] &= ~endPos
-        setPiece(end[0], end[1], "")
+        capSquare = move.get("capturedSquare")
+        if capSquare:
+            capPos = 1 << (capSquare[0] * 8 + capSquare[1])
+            piecePositions[capturedPiece] &= ~capPos
+            setPiece(capSquare[0], capSquare[1], "")
+        else:
+            piecePositions[capturedPiece] &= ~endPos
+            setPiece(end[0], end[1], "")
         sounds["capture"].play()
     else:
         sounds["move"].play()
@@ -713,7 +782,7 @@ def moveCastleRook(piece, start, end, undo=False):
     setPiece(rookEnd[0], rookEnd[1], piece[0] + "R")
 
 def hashBoard(): # hash... brown??
-    return hash((tuple(piecePositions.values()), turnColour, tuple(castleRights.values())))
+    return hash((tuple(piecePositions.values()), turnColour, tuple(castleRights.values()), enPassantTarget))
 
 def updateSquareTable():
     global squarePiece
