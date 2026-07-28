@@ -22,6 +22,7 @@ promotionActive = False
 activeOutline = None
 activeSquare = None
 moves = 0
+halfmoveClock = 0
 turnColour = "w"
 moveIndicator = []
 possibleMoves = []
@@ -215,6 +216,7 @@ def makeMove(startRow, startColumn, endRow, endColumn):
     global turnColour
     global activeSquare
     global moves
+    global halfmoveClock
     global redoHistory
     global gameOverMessage
 
@@ -261,7 +263,7 @@ def makeMove(startRow, startColumn, endRow, endColumn):
 
     possibleMoves.clear()
 
-    saveMove(movingPiece, startRow, startColumn, endRow, endColumn, target, turnColour, moves)
+    saveMove(movingPiece, startRow, startColumn, endRow, endColumn, target, turnColour, moves, halfmoveClock)
     redoHistory.clear()
     global enPassantTarget
 
@@ -311,6 +313,11 @@ def makeMove(startRow, startColumn, endRow, endColumn):
     activeSquare = None
     updateSquareTable()
     moves += 1
+    if movingPiece[-1] == "P" or target != "" or enPassantCapture:
+        halfmoveClock = 0
+    else:
+        halfmoveClock += 1
+    moveHistory[-1]["halfmoveClockAfter"] = halfmoveClock
     
     newHash = hashBoard()
     if newHash in positionHistory:
@@ -341,6 +348,9 @@ def gameState():
             sounds["checkmate"].play()
     elif inCheck:
         sounds["check"].play()
+    elif halfmoveClock >= 100:
+        gameOverMessage = "50-move rule\nDraw!"
+        sounds["checkmate"].play()
     elif insufficientMat():
         gameOverMessage = f"Insufficient  Material! \n Nobody  wins"
         sounds["checkmate"].play()
@@ -600,7 +610,7 @@ def undoMove(piece, start, end, captured, capturedSquare=None):
     if piece in ("wK", "bK"):
         moveCastleRook(piece, start, end, undo=True)
 
-def saveMove(piece, startRow, startColumn, endRow, endColumn, capturedPiece, turnColour, moves):
+def saveMove(piece, startRow, startColumn, endRow, endColumn, capturedPiece, turnColour, moves, halfmoveClockBefore):
     global moveHistory
     state = {
         "piece": piece,
@@ -611,6 +621,8 @@ def saveMove(piece, startRow, startColumn, endRow, endColumn, capturedPiece, tur
         "enPassantBefore": enPassantTarget,
         "turnColour": turnColour,
         "moves": moves,
+        "halfmoveClockBefore": halfmoveClockBefore,
+        "halfmoveClockAfter": None,
         "castleRightsBefore": castleRights.copy(),
         "promotion": None
     }
@@ -623,6 +635,7 @@ def previousMove():
     global piecePositions
     global turnColour
     global moves
+    global halfmoveClock
 
     if len(moveHistory) == 0:
         return
@@ -636,6 +649,7 @@ def previousMove():
     capturedPiece = previousPos["capturedPiece"]
     turnColour = previousPos["turnColour"]
     moves = previousPos["moves"]
+    halfmoveClock = previousPos.get("halfmoveClockBefore", 0)
     startPos = 1 << (start[0] * 8 + start[1])
     endPos = 1 << (end[0] * 8 + end[1])
     castleRights.clear()
@@ -689,6 +703,7 @@ def redoMove():
     global redoHistory
     global turnColour
     global moves
+    global halfmoveClock
 
     if len(redoHistory) == 0:
         return
@@ -700,6 +715,7 @@ def redoMove():
     capturedPiece = move["capturedPiece"]
     turnColour = "b" if move["turnColour"] == "w" else "w"
     moves = move["moves"] + 1
+    halfmoveClock = move.get("halfmoveClockAfter", 0)
     castleRights.clear()
     castleRights.update(move["castleRightsAfter"])
     global enPassantTarget
