@@ -28,7 +28,7 @@ moveIndicator = []
 possibleMoves = []
 moveHistory = []
 redoHistory = []
-positionHistory = {}
+positionHistory = []
 squarePiece = [""] * 64
 lines = []
 rightClickStart = None
@@ -219,6 +219,7 @@ def makeMove(startRow, startColumn, endRow, endColumn):
     global halfmoveClock
     global redoHistory
     global gameOverMessage
+    global positionHistory
 
     movingPiece = getPiece(startRow, startColumn)
     target = getPiece(endRow, endColumn)
@@ -318,14 +319,9 @@ def makeMove(startRow, startColumn, endRow, endColumn):
     else:
         halfmoveClock += 1
     moveHistory[-1]["halfmoveClockAfter"] = halfmoveClock
-    
+
     newHash = hashBoard()
-    if newHash in positionHistory:
-        positionHistory[newHash] += 1
-    else:
-        positionHistory[newHash] = 1
-    if positionHistory[newHash] >= 3:
-        gameOverMessage = f"Three-fold \nRepetition!\nNobody  wins!"
+    positionHistory.append(newHash)
     global activeOutline
     activeOutline = None
     moveIndicator.clear()
@@ -336,6 +332,13 @@ def makeMove(startRow, startColumn, endRow, endColumn):
 def gameState():
     global turnColour
     global gameOverMessage
+
+    currentHash = hashBoard()
+    if positionHistory.count(currentHash) >= 3:
+        gameOverMessage = f"Three-fold \nRepetition!\nNobody  wins!"
+        sounds["checkmate"].play()
+        return
+
     inCheck = kingCheck(turnColour)
 
     if not legalMoves(turnColour):
@@ -636,12 +639,15 @@ def previousMove():
     global turnColour
     global moves
     global halfmoveClock
+    global positionHistory
 
     if len(moveHistory) == 0:
         return
 
     previousPos = moveHistory.pop()
     redoHistory.append(previousPos)
+    if positionHistory:
+        positionHistory.pop()
     currentHash = hashBoard()
     piece = previousPos["piece"]
     start = previousPos["start"]
@@ -685,15 +691,7 @@ def previousMove():
         sounds["move"].play()
 
     moveCastleRook(piece, start, end, undo=True)
-    positionHistory[currentHash] -= 1
-    if positionHistory[currentHash] == 0:
-        del positionHistory[currentHash]
-    newHash = hashBoard()
     updateSquareTable()
-    if newHash in positionHistory:
-        positionHistory[newHash] += 1
-    else:
-        positionHistory[newHash] = 1
 
     gameState()
     redraw = True
@@ -704,6 +702,7 @@ def redoMove():
     global turnColour
     global moves
     global halfmoveClock
+    global positionHistory
 
     if len(redoHistory) == 0:
         return
@@ -757,10 +756,7 @@ def redoMove():
     moveHistory.append(move)
     newHash = hashBoard()
     updateSquareTable()
-    if newHash in positionHistory:
-        positionHistory[newHash] += 1
-    else:
-        positionHistory[newHash] = 1
+    positionHistory.append(newHash)
     
     gameState()
     redraw = True
@@ -980,7 +976,7 @@ def drawArrows():
 
 updateSquareTable()
 startHash = hashBoard()
-positionHistory[startHash] = 1
+positionHistory.append(startHash)
 
 running = True
 while running:
