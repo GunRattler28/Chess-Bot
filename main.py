@@ -341,8 +341,20 @@ def gameState():
             sounds["checkmate"].play()
     elif inCheck:
         sounds["check"].play()
+    elif insufficientMat():
+        gameOverMessage = f"Insufficient  Material! \n Nobody  wins"
+        sounds["checkmate"].play()
     else:
         gameOverMessage = None
+
+def insufficientMat():
+    if (piecePositions["bP"] or piecePositions["bR"] or piecePositions["bQ"] or piecePositions["wP"] or piecePositions["wR"] or piecePositions["wQ"]): 
+        return False
+    totKnights = piecePositions["bH"] | piecePositions["wH"]
+    totBishops = piecePositions["bB"] | piecePositions["wB"]
+
+    if totBishops == 0 and totKnights == 0:
+        return True
 
 def legalMoves(colour):
     for piece, bitboard in piecePositions.items():
@@ -669,6 +681,7 @@ def previousMove():
     else:
         positionHistory[newHash] = 1
 
+    gameState()
     redraw = True
 
 def redoMove():
@@ -1006,7 +1019,6 @@ while running:
                 current_y += rect.height + 8
 
         pygame.display.flip()
-        redraw = False
 
     clock.tick(60)    
 pygame.quit()
