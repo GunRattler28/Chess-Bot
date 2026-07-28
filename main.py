@@ -34,7 +34,6 @@ lines = []
 rightClickStart = None
 temporaryLine = None
 strategyCircles = []
-
 enPassantTarget = None
 
 pieces = {
@@ -828,6 +827,16 @@ def isPromotable(piece, row):
         return True
     return False
 
+def blur_surface(surface, scale_factor=3):
+    if scale_factor <= 1:
+        return surface.copy()
+
+    width = max(1, int(surface.get_width() / scale_factor))
+    height = max(1, int(surface.get_height() / scale_factor))
+    scaled = pygame.transform.smoothscale(surface, (width, height))
+    return pygame.transform.smoothscale(scaled, surface.get_size())
+
+
 def choosePromotion(colour):
     global promotionActive
     promotionActive = True
@@ -836,6 +845,11 @@ def choosePromotion(colour):
     menuWidth = positionSize * 4
     menuX = (windowSize - menuWidth) // 2
     menuY = (windowSize - positionSize) // 2
+
+    background = screen.copy()
+    blurredBackground = blur_surface(background, 3)
+    overlay = pygame.Surface(screen.get_size(), pygame.SRCALPHA)
+    overlay.fill((0, 0, 0, 90))
     
     chosenPiece = None
     
@@ -852,6 +866,8 @@ def choosePromotion(colour):
                         chosenPiece = colour + piecesToChoose[index]
                         promotionActive = False
 
+        screen.blit(blurredBackground, (0, 0))
+        screen.blit(overlay, (0, 0))
         pygame.draw.rect(screen, (255, 255, 255), (menuX, menuY, menuWidth, positionSize))
         pygame.draw.rect(screen, (0, 0, 0), (menuX, menuY, menuWidth, positionSize), 4)
         
@@ -924,29 +940,35 @@ def drawHighlights():
         if king:
             screen.blit(overlays["red"], (king[1] * positionSize, king[0] * positionSize))
 
+def squareCenter(square):
+    row, column = square
+    offset = positionSize / 2
+    return (column * positionSize + offset, row * positionSize + offset)
+
+
 def drawArrow(surface, color, start, end, thickness=25, arrowSize=50):
     dx = end[0] - start[0]
     dy = end[1] - start[1]
     length = math.hypot(dx, dy)
     if length == 0:
         return
-        
-    dir_x = dx / length
-    dir_y = dy / length
-    shaft_end = (end[0] - dir_x * (arrowSize * 0.6), end[1] - dir_y * (arrowSize * 0.6))
+
+    direction = (dx / length, dy / length)
+    perpendicular = (-direction[1], direction[0])
+    shaft_end = (
+        end[0] - direction[0] * (arrowSize * 0.6),
+        end[1] - direction[1] * (arrowSize * 0.6),
+    )
     radius = thickness / 2
-    
-    norm_x = -dir_y
-    norm_y = dir_x
-    
-    p_start_1 = (start[0] + norm_x * radius, start[1] + norm_y * radius)
-    p_start_2 = (start[0] - norm_x * radius, start[1] - norm_y * radius)
-    p_end_1 = (shaft_end[0] + norm_x * radius, shaft_end[1] + norm_y * radius)
-    p_end_2 = (shaft_end[0] - norm_x * radius, shaft_end[1] - norm_y * radius)
-    
+
+    positionStartA = (start[0] + perpendicular[0] * radius, start[1] + perpendicular[1] * radius)
+    positionStartB = (start[0] - perpendicular[0] * radius, start[1] - perpendicular[1] * radius)
+    positionEndA = (shaft_end[0] + perpendicular[0] * radius, shaft_end[1] + perpendicular[1] * radius)
+    positionEndB = (shaft_end[0] - perpendicular[0] * radius, shaft_end[1] - perpendicular[1] * radius)
+
     pygame.draw.circle(surface, color, start, radius)
-    pygame.draw.polygon(surface, color, [p_start_1, p_end_1, p_end_2, p_start_2])
-    
+    pygame.draw.polygon(surface, color, [positionStartA, positionEndA, positionEndB, positionStartB])
+
     rotation = math.atan2(dy, dx)
     p1 = (end[0] - arrowSize * math.cos(rotation + math.pi / 4), end[1] - arrowSize * math.sin(rotation + math.pi / 4))
     p2 = (end[0] - arrowSize * math.cos(rotation - math.pi / 4), end[1] - arrowSize * math.sin(rotation - math.pi / 4))
@@ -957,21 +979,14 @@ def drawArrows():
         screen.blit(overlays["green"], (column * positionSize, row * positionSize))
 
     arrowSurf = pygame.Surface((windowSize, windowSize), pygame.SRCALPHA)
-    arrowColor = (0, 255, 0, 150) 
-    
-    for (startR, startC), (endR, endC) in lines:
-        startX = startC * positionSize + positionSize / 2
-        startY = startR * positionSize + positionSize / 2
-        endX = endC * positionSize + positionSize / 2
-        endY = endR * positionSize + positionSize / 2
-        drawArrow(arrowSurf, arrowColor, (startX, startY), (endX, endY))
+    arrowColor = (0, 255, 0, 150)
+
+    for startSquare, endSquare in lines:
+        drawArrow(arrowSurf, arrowColor, squareCenter(startSquare), squareCenter(endSquare))
 
     if rightClickStart and temporaryLine:
-        startR, startC = rightClickStart
-        startX = startC * positionSize + positionSize / 2
-        startY = startR * positionSize + positionSize / 2
-        drawArrow(arrowSurf, (0, 187, 0, 150), (startX, startY), temporaryLine)
-        
+        drawArrow(arrowSurf, (0, 187, 0, 150), squareCenter(rightClickStart), temporaryLine)
+
     screen.blit(arrowSurf, (0, 0))
 
 updateSquareTable()
