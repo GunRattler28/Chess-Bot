@@ -4,10 +4,11 @@ import math
 import moveGeneration
 import moveExecution
 import updateBoard
+import bot
 
 pygame.init()
 pygame.mixer.init()
-pygame.key.set_repeat(300, 25)
+pygame.key.set_repeat(0, 0)
 
 redraw = True
 windowSize = 800
@@ -91,7 +92,7 @@ def onClick(x, y):
     if (row, column) in possibleMoves:
         moveExecution.makeMove(startRow, startColumn, row, column)
         moveExecution.gameState()
-        print(updateBoard.moves)
+        print(f"Move: {updateBoard.moves} Material Difference: {bot.materialDif()}")
     else:
         handleSelection(row, column)
 

@@ -96,7 +96,7 @@ def saveMove(piece, startRow, startColumn, endRow, endColumn, capturedPiece, tur
     }
     updateBoard.moveHistory.append(state)
 
-def makeMove(startRow, startColumn, endRow, endColumn):
+def makeMove(startRow, startColumn, endRow, endColumn, sound=True, simulation=False):
     import gui
 
     movingPiece = updateBoard.getPiece(startRow, startColumn)
@@ -127,7 +127,8 @@ def makeMove(startRow, startColumn, endRow, endColumn):
 
     gui.possibleMoves.clear()
     saveMove(movingPiece, startRow, startColumn, endRow, endColumn, target, updateBoard.turnColour, updateBoard.moves, updateBoard.halfmoveClock)
-    updateBoard.redoHistory.clear()
+    if not simulation:
+        updateBoard.redoHistory.clear()
 
     enPassantCapture = False
     if movingPiece[-1] == "P":
@@ -142,22 +143,25 @@ def makeMove(startRow, startColumn, endRow, endColumn):
                 updateBoard.moveHistory[-1]["capturedPiece"] = capturedPiece
                 updateBoard.moveHistory[-1]["capturedSquare"] = (capturedRow, capturedCol)
                 enPassantCapture = True
-                gui.sounds["capture"].play()
+                if sound:
+                    gui.sounds["capture"].play()
 
     if not enPassantCapture:
         if target != "":
             updateBoard.piecePositions[target] &= ~targetPos
             updateBoard.setPiece(endRow, endColumn, "")
-            gui.sounds["capture"].play()
+            if sound:
+                gui.sounds["capture"].play()
         else:
-            gui.sounds["move"].play()
+            if sound:
+                gui.sounds["move"].play()
 
     updateBoard.piecePositions[movingPiece] &= ~(1 << (startRow * 8 + startColumn))
     updateBoard.piecePositions[movingPiece] |= targetPos
     updateBoard.setPiece(startRow, startColumn, "")
     updateBoard.setPiece(endRow, endColumn, movingPiece)
 
-    if isPromotable(movingPiece, endRow):
+    if isPromotable(movingPiece, endRow) and not simulation:
         promotedPiece = gui.choosePromotion(updateBoard.turnColour)
         updateBoard.piecePositions[movingPiece] &= ~targetPos
         updateBoard.piecePositions[promotedPiece] |= targetPos
@@ -189,13 +193,14 @@ def makeMove(startRow, startColumn, endRow, endColumn):
     gui.possibleMoves.clear()
     gui.redraw = True
 
-def gameState():
+def gameState(sound=True):
     import gui
 
     currentHash = updateBoard.hashBoard()
     if updateBoard.positionHistory.count(currentHash) >= 3:
         updateBoard.gameOverMessage = "Three-fold \nRepetition!\nNobody  wins!"
-        gui.sounds["checkmate"].play()
+        if sound:
+            gui.sounds["checkmate"].play()
         return
 
     inCheck = moveGeneration.kingCheck(updateBoard.turnColour)
@@ -204,28 +209,33 @@ def gameState():
         if inCheck:
             winner = "Black" if updateBoard.turnColour == "w" else "White"
             updateBoard.gameOverMessage = f"Checkmate!\n{winner}  wins!"
-            gui.sounds["checkmate"].play()
+            if sound:
+                gui.sounds["checkmate"].play()
         else:
             updateBoard.gameOverMessage = "Stalemate!\nNobody  wins!"
-            gui.sounds["checkmate"].play()
-    elif inCheck:
+            if sound:
+                gui.sounds["checkmate"].play()
+    elif inCheck and sound:
         gui.sounds["check"].play()
     elif updateBoard.halfmoveClock >= 100:
         updateBoard.gameOverMessage = "50-move rule\nDraw!"
-        gui.sounds["checkmate"].play()
+        if sound:
+            gui.sounds["checkmate"].play()
     elif insufficientMat():
         updateBoard.gameOverMessage = "Insufficient  Material! \n Nobody  wins"
-        gui.sounds["checkmate"].play()
+        if sound:
+            gui.sounds["checkmate"].play()
     else:
         updateBoard.gameOverMessage = None
 
-def previousMove():
+def previousMove(sound=True, simulation=False):
     import gui
     if len(updateBoard.moveHistory) == 0:
         return
 
     previousPos = updateBoard.moveHistory.pop()
-    updateBoard.redoHistory.append(previousPos)
+    if not simulation:
+        updateBoard.redoHistory.append(previousPos)
     if updateBoard.positionHistory:
         updateBoard.positionHistory.pop()
 
@@ -264,14 +274,26 @@ def previousMove():
         else:
             updateBoard.piecePositions[capturedPiece] |= endPos
             updateBoard.setPiece(end[0], end[1], capturedPiece)
-        gui.sounds["capture"].play()
+
+        if sound:
+            gui.sounds["capture"].play()
     else:
-        gui.sounds["move"].play()
+        if sound:
+            gui.sounds["move"].play()
 
     moveCastleRook(piece, start, end, undo=True)
     updateBoard.updateSquareTable()
-    gameState()
-    gui.redraw = True
+
+    gui.activeSquare = None
+    gui.activeOutline = None
+    gui.possibleMoves.clear()
+    gui.moveIndicator.clear()
+    gui.lines.clear()
+    gui.strategyCircles.clear()
+
+    if not simulation:
+        gameState(sound)
+        gui.redraw = True
 
 def redoMove():
     import gui
@@ -324,6 +346,13 @@ def redoMove():
     newHash = updateBoard.hashBoard()
     updateBoard.updateSquareTable()
     updateBoard.positionHistory.append(newHash)
+
+    gui.activeSquare = None
+    gui.activeOutline = None
+    gui.possibleMoves.clear()
+    gui.moveIndicator.clear()
+    gui.lines.clear()
+    gui.strategyCircles.clear()
     
     gameState()
     gui.redraw = True
