@@ -8,7 +8,6 @@ import bot
 
 pygame.init()
 pygame.mixer.init()
-pygame.key.set_repeat(0, 0)
 
 redraw = True
 windowSize = 800

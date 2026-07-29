@@ -1,81 +1,65 @@
 import pygame
+import moveGeneration
 import moveExecution
 import updateBoard
 import gui
 import bot
 
-bestMove = None
-lastActionTime = None
-currentTurn = updateBoard.turnColour
-heldHistoryKey = None
-lastHistoryStepTime = 0
-historyRepeatDelay = 0
-
 updateBoard.updateSquareTable()
 startHash = updateBoard.hashBoard()
 updateBoard.positionHistory.append(startHash)
 
+botColour = "b"
+botCooldownUntil = 0
+
+
+def runBotTurn():
+    if updateBoard.gameOverMessage:
+        return False
+
+    if updateBoard.turnColour != botColour:
+        return False
+
+    if pygame.time.get_ticks() < botCooldownUntil:
+        return False
+
+    bestMove = bot.findBestMove(3, botColour)
+    if bestMove is None:
+        return False
+
+    startRow, startCol, endRow, endCol = bestMove
+    moveExecution.makeMove(startRow, startCol, endRow, endCol)
+    moveExecution.gameState()
+    print(f"Move: {updateBoard.moves} Material Difference: {bot.materialDif()}")
+    return True
+
 running = True
-
 while running:
-    if updateBoard.turnColour != currentTurn:
-        bestMove = None
-        lastActionTime = None
-        currentTurn = updateBoard.turnColour
-
-    if updateBoard.turnColour == "b" and not updateBoard.gameOverMessage:
-        if bestMove is None and lastActionTime is None:
-            gui.drawBoard()
-            gui.drawHighlights()
-            pygame.display.flip()
-            bestMove = bot.findBestMove(3, "b")
-            if bestMove is not None:
-                lastActionTime = pygame.time.get_ticks()
-
-        if lastActionTime is not None:
-            currentTime = pygame.time.get_ticks()
-            if (currentTime - lastActionTime) >= 2000 and bestMove is not None:
-                startRow, startColumn, endRow, endColumn = bestMove
-                moveExecution.makeMove(startRow, startColumn, endRow, endColumn)
-                print(f"Move: {updateBoard.moves} Material Difference: {bot.materialDif()}")
-                bestMove = None
-                lastActionTime = None
-                gui.redraw = True
-
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             running = False
-
-        if updateBoard.turnColour == "w":
-            if event.type == pygame.MOUSEBUTTONDOWN:
-                if event.button == 1:
-                    gui.onClick(event.pos[0], event.pos[1]) 
-                elif event.button == 3:
-                    gui.onRightClick(event.pos[0], event.pos[1])
-                        
-            elif event.type == pygame.MOUSEMOTION:
-                if gui.rightClickStart:
-                    gui.onRightDrag(event.pos[0], event.pos[1])
-                    
-            elif event.type == pygame.MOUSEBUTTONUP:
-                if event.button == 3:
-                    gui.onRightRelease(event.pos[0], event.pos[1])
-
-        if event.type == pygame.KEYDOWN:
+            
+        elif event.type == pygame.MOUSEBUTTONDOWN:
+            if event.button == 1:
+                gui.onClick(event.pos[0], event.pos[1]) 
+            elif event.button == 3:
+                gui.onRightClick(event.pos[0], event.pos[1])
+                 
+        elif event.type == pygame.MOUSEMOTION:
+            if gui.rightClickStart:
+                gui.onRightDrag(event.pos[0], event.pos[1])
+                
+        elif event.type == pygame.MOUSEBUTTONUP:
+            if event.button == 3:
+                gui.onRightRelease(event.pos[0], event.pos[1])
+                
+        elif event.type == pygame.KEYDOWN:
             if event.key == pygame.K_LEFT:
-                heldHistoryKey = pygame.K_LEFT
                 moveExecution.previousMove()
-                bestMove = None
-                lastActionTime = None
+                botCooldownUntil = pygame.time.get_ticks() + 2000
             elif event.key == pygame.K_RIGHT:
-                heldHistoryKey = pygame.K_RIGHT
                 moveExecution.redoMove()
-                bestMove = None
-                lastActionTime = None
-
-        elif event.type == pygame.KEYUP:
-            if event.key in (pygame.K_LEFT, pygame.K_RIGHT):
-                heldHistoryKey = None
+                botCooldownUntil = pygame.time.get_ticks() + 2000
 
     if gui.redraw:
         gui.screen.fill((255, 255, 255))
@@ -106,6 +90,9 @@ while running:
 
         pygame.display.flip()
         gui.redraw = False
+
+    if updateBoard.turnColour == botColour and not updateBoard.gameOverMessage:
+        runBotTurn()
 
     gui.clock.tick(60)    
 
