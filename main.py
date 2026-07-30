@@ -1,9 +1,11 @@
 import pygame
-import moveGeneration
 import moveExecution
 import updateBoard
 import gui
 import bot
+
+global bestMove
+bestMove = None
 
 updateBoard.updateSquareTable()
 startHash = updateBoard.hashBoard()
@@ -12,26 +14,21 @@ updateBoard.positionHistory.append(startHash)
 botColour = "b"
 botCooldownUntil = 0
 
-
 def runBotTurn():
-    if updateBoard.gameOverMessage:
-        return False
-
-    if updateBoard.turnColour != botColour:
-        return False
-
+    global bestMove
     if pygame.time.get_ticks() < botCooldownUntil:
         return False
 
-    bestMove = bot.findBestMove(3, botColour)
     if bestMove is None:
-        return False
+        bestMove = bot.findBestMove(3, botColour)
 
-    startRow, startCol, endRow, endCol = bestMove
-    moveExecution.makeMove(startRow, startCol, endRow, endCol)
-    moveExecution.gameState()
-    print(f"Move: {updateBoard.moves} Material Difference: {bot.materialDif()}")
-    return True
+    if pygame.time.get_ticks() > botCooldownUntil:
+        startRow, startCol, endRow, endCol = bestMove
+        moveExecution.makeMove(startRow, startCol, endRow, endCol)
+        moveExecution.gameState()
+        print(f"Move: {updateBoard.moves} Material Difference: {bot.materialDif()}")
+        bestMove = None
+        return True
 
 running = True
 while running:
@@ -57,9 +54,11 @@ while running:
             if event.key == pygame.K_LEFT:
                 moveExecution.previousMove()
                 botCooldownUntil = pygame.time.get_ticks() + 2000
+                bestMove = None
             elif event.key == pygame.K_RIGHT:
                 moveExecution.redoMove()
                 botCooldownUntil = pygame.time.get_ticks() + 2000
+                bestMove = None
 
     if gui.redraw:
         gui.screen.fill((255, 255, 255))
