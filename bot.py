@@ -15,9 +15,9 @@ def materialDif():
     score = 0
     for piece, bitboard in updateBoard.piecePositions.items():
         colour = piece[0]
-        type = piece[1]
+        pType = piece[1]
         quantity = int(bitboard).bit_count()
-        value = quantity * pieceValues[type]
+        value = quantity * pieceValues[pType]
         if colour == "w":
             score += value
         else:
@@ -40,43 +40,55 @@ def getAllPossibleMoves(colour):
                 board &= board - 1
     return allMoves
 
-def minimax(depth, forColour):
+def scoreMove(move):
+    startRow, startCol, endRow, endCol = move
+    targetPiece = updateBoard.getPiece(endRow, endCol)
+    score = 0
+    if targetPiece != "":
+        targetType = targetPiece[1]
+        score += pieceValues[targetType] * 10
+        attacker = updateBoard.getPiece(startRow, startCol)
+        if attacker != "":
+            atkType = attacker[1]
+            score -= pieceValues[atkType]
+    return score
+
+def minimax(depth, maxMaterial, alpha=-999999, beta=999999):
     if depth == 0:
         return materialDif()
 
-    if forColour:
-        bestScore = -999999
-        moves = getAllPossibleMoves("w")
+    bestScore = -999999 if maxMaterial else 999999
+    currentColour = "w" if maxMaterial else "b"
+    
+    moves = sorted(getAllPossibleMoves(currentColour), key=scoreMove, reverse=True)
+    
+    for move in moves:
+        startRow, startCol, endRow, endCol = move
+        moveExecution.makeMove(startRow, startCol, endRow, endCol, sound=False, simulation=True)
         
-        for move in moves:
-            startRow, startCol, endRow, endCol = move
-            
-            moveExecution.makeMove(startRow, startCol, endRow, endCol, sound=False, simulation=True)
-            score = minimax(depth - 1, False)
-            moveExecution.previousMove(sound=False, simulation=True)
+        score = minimax(depth - 1, not maxMaterial, alpha, beta)
+        
+        moveExecution.previousMove(sound=False, simulation=True)
+        
+        if maxMaterial:
             bestScore = max(bestScore, score)
-            
-        return bestScore
-        
-    else:
-        bestScore = 999999
-        moves = getAllPossibleMoves("b")
-        
-        for move in moves:
-            startRow, startCol, endRow, endCol = move
-            
-            moveExecution.makeMove(startRow, startCol, endRow, endCol, sound=False, simulation=True)
-            score = minimax(depth - 1, True)
-            moveExecution.previousMove(sound=False, simulation=True)
+            alpha = max(alpha, score)
+        else:
             bestScore = min(bestScore, score)
-            
-        return bestScore
+            beta = min(beta, score)
+
+        if beta <= alpha:
+            break
+        
+    return bestScore
 
 def findBestMove(depth, botColour):
-    bestMove = None
     bestScore = -999999 if botColour == "w" else 999999
     
-    moves = getAllPossibleMoves(botColour)
+    alpha = -999999
+    beta = 999999
+    
+    moves = sorted(getAllPossibleMoves(botColour), key=scoreMove, reverse=True)
 
     savedRedo = updateBoard.redoHistory.copy()
     savedMoves = updateBoard.moveHistory.copy()
@@ -86,17 +98,24 @@ def findBestMove(depth, botColour):
     for move in moves:
         startRow, startCol, endRow, endCol = move
         moveExecution.makeMove(startRow, startCol, endRow, endCol, sound=False, simulation=True)
-        score = minimax(depth - 1, not botColour == "w")
+        
+        score = minimax(depth - 1, not (botColour == "w"), alpha, beta)
+        
         moveExecution.previousMove(sound=False, simulation=True)
         
         if botColour == "w":
             if score >= bestScore:
                 bestScore = score
                 bestMove = move
+            alpha = max(alpha, score)
         else:
             if score <= bestScore:
                 bestScore = score
                 bestMove = move
+            beta = min(beta, score)
+            
+        if beta <= alpha:
+            break
                 
     updateBoard.redoHistory = savedRedo
     updateBoard.moveHistory = savedMoves
