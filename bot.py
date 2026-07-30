@@ -74,11 +74,10 @@ def minimax(depth, forColour):
 
 def findBestMove(depth, botColour):
     bestMove = None
-    isMaximizing = (botColour == "w")
-    bestScore = -999999 if isMaximizing else 999999
+    bestScore = -999999 if botColour == "w" else 999999
     
     moves = getAllPossibleMoves(botColour)
-    
+
     savedRedo = updateBoard.redoHistory.copy()
     savedMoves = updateBoard.moveHistory.copy()
     savedPositions = updateBoard.positionHistory.copy()
@@ -87,10 +86,10 @@ def findBestMove(depth, botColour):
     for move in moves:
         startRow, startCol, endRow, endCol = move
         moveExecution.makeMove(startRow, startCol, endRow, endCol, sound=False, simulation=True)
-        score = minimax(depth - 1, not isMaximizing)
+        score = minimax(depth - 1, not botColour == "w")
         moveExecution.previousMove(sound=False, simulation=True)
         
-        if isMaximizing:
+        if botColour == "w":
             if score >= bestScore:
                 bestScore = score
                 bestMove = move
