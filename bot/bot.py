@@ -1,6 +1,4 @@
-import updateBoard
-import moveGeneration
-import moveExecution
+from engine import logic
 
 pieceValues = {
     "P": 10,
@@ -13,7 +11,7 @@ pieceValues = {
 
 def materialDif():
     score = 0
-    for piece, bitboard in updateBoard.piecePositions.items():
+    for piece, bitboard in logic.piecePositions.items():
         colour = piece[0]
         pType = piece[1]
         quantity = int(bitboard).bit_count()
@@ -26,7 +24,7 @@ def materialDif():
 
 def getAllPossibleMoves(colour):
     allMoves = []
-    for piece, bitboard in updateBoard.piecePositions.items():
+    for piece, bitboard in logic.piecePositions.items():
         if piece[0] == colour:
             board = int(bitboard)
             while board:
@@ -34,7 +32,7 @@ def getAllPossibleMoves(colour):
                 index = lsb.bit_length() - 1
                 row = index // 8
                 column = index % 8
-                pieceMoves = moveGeneration.blockCheck(row, column)
+                pieceMoves = logic.blockCheck(row, column)
                 for endRow, endColumn in pieceMoves:
                     allMoves.append((row, column, endRow, endColumn))
                 board &= board - 1
@@ -42,12 +40,12 @@ def getAllPossibleMoves(colour):
 
 def scoreMove(move):
     startRow, startCol, endRow, endCol = move
-    targetPiece = updateBoard.getPiece(endRow, endCol)
+    targetPiece = logic.getPiece(endRow, endCol)
     score = 0
     if targetPiece != "":
         targetType = targetPiece[1]
         score += pieceValues[targetType] * 10
-        attacker = updateBoard.getPiece(startRow, startCol)
+        attacker = logic.getPiece(startRow, startCol)
         if attacker != "":
             atkType = attacker[1]
             score -= pieceValues[atkType]
@@ -64,11 +62,11 @@ def minimax(depth, maxMaterial, alpha=-999999, beta=999999):
     
     for move in moves:
         startRow, startCol, endRow, endCol = move
-        moveExecution.makeMove(startRow, startCol, endRow, endCol, sound=False, simulation=True)
+        logic.makeMove(startRow, startCol, endRow, endCol, sound=False, simulation=True)
         
         score = minimax(depth - 1, not maxMaterial, alpha, beta)
         
-        moveExecution.previousMove(sound=False, simulation=True)
+        logic.previousMove(sound=False, simulation=True)
         
         if maxMaterial:
             bestScore = max(bestScore, score)
@@ -84,24 +82,23 @@ def minimax(depth, maxMaterial, alpha=-999999, beta=999999):
 
 def findBestMove(depth, botColour):
     bestScore = -999999 if botColour == "w" else 999999
-    
     alpha = -999999
     beta = 999999
     
     moves = sorted(getAllPossibleMoves(botColour), key=scoreMove, reverse=True)
 
-    savedRedo = updateBoard.redoHistory.copy()
-    savedMoves = updateBoard.moveHistory.copy()
-    savedPositions = updateBoard.positionHistory.copy()
-    savedGameOver = updateBoard.gameOverMessage
+    savedRedo = logic.redoHistory.copy()
+    savedMoves = logic.moveHistory.copy()
+    savedPositions = logic.positionHistory.copy()
+    savedGameOver = logic.gameOverMessage
     
     for move in moves:
         startRow, startCol, endRow, endCol = move
-        moveExecution.makeMove(startRow, startCol, endRow, endCol, sound=False, simulation=True)
+        logic.makeMove(startRow, startCol, endRow, endCol, sound=False, simulation=True)
         
         score = minimax(depth - 1, not (botColour == "w"), alpha, beta)
         
-        moveExecution.previousMove(sound=False, simulation=True)
+        logic.previousMove(sound=False, simulation=True)
         
         if botColour == "w":
             if score >= bestScore:
@@ -117,9 +114,9 @@ def findBestMove(depth, botColour):
         if beta <= alpha:
             break
                 
-    updateBoard.redoHistory = savedRedo
-    updateBoard.moveHistory = savedMoves
-    updateBoard.positionHistory = savedPositions
-    updateBoard.gameOverMessage = savedGameOver
+    logic.redoHistory = savedRedo
+    logic.moveHistory = savedMoves
+    logic.positionHistory = savedPositions
+    logic.gameOverMessage = savedGameOver
     
     return bestMove
