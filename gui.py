@@ -177,7 +177,7 @@ def onRightClick(x, y):
 def onRightDrag(x, y):
     global redraw, temporaryLine
     if rightClickStart:
-        temporaryLine = (x, y)
+        temporaryLine = squareCenter((int(y // positionSize), int(x // positionSize)))
     redraw = True
 
 def onRightRelease(x, y):

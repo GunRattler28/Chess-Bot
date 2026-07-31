@@ -78,7 +78,7 @@ while running:
                 botCooldownUntil = pygame.time.get_ticks() + 3000
                 bestMove = None
 
-    if gui.redraw:
+    if gui.redraw and not searching:
         gui.drawBoard()
         gui.drawHighlights()
         gui.drawArrows()
