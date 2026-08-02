@@ -1,35 +1,63 @@
+import pygame
 from engine import visuals, logic
-from bot import bot
+from bot.modules import material
 from engine.constants import positionSize
 
-def onClick(x, y):
+def handleInputs(inputs, board):
+    for event in pygame.event.get():
+        if event.type == pygame.QUIT:
+            inputs.running = False
+            
+        elif event.type == pygame.MOUSEBUTTONDOWN:
+            if event.button == 1 and not inputs.searching: onClick(event.pos[0], event.pos[1], board) 
+            elif event.button == 3: onRightClick(event.pos[0], event.pos[1])
+                
+        elif event.type == pygame.MOUSEMOTION:
+            if visuals.rightClickStart: onRightDrag(event.pos[0], event.pos[1])
+                
+        elif event.type == pygame.MOUSEBUTTONUP:
+            if event.button == 3: onRightRelease(event.pos[0], event.pos[1])
+                
+        elif event.type == pygame.KEYDOWN:
+            if event.key == pygame.K_LEFT:
+                board.previousMove()
+                inputs.botCooldownUntil = pygame.time.get_ticks() + 3000
+                inputs.bestMove = None
+                inputs.searching = False
+            elif event.key == pygame.K_RIGHT:
+                board.redoMove()
+                inputs.botCooldownUntil = pygame.time.get_ticks() + 3000
+                inputs.bestMove = None
+                inputs.searching = False
+
+def onClick(x, y, board):
     if visuals.promotionActive: return
     if len(visuals.lines) > 0 or len(visuals.strategyCircles) > 0: clearArrows()
 
     row, column = int(y // positionSize), int(x // positionSize)
 
     if visuals.activeSquare is None:
-        handleSelection(row, column)
+        handleSelection(board, row, column)
         return
 
     startRow, startColumn = visuals.activeSquare
     if (row, column) in visuals.possibleMoves:
-        logic.makeMove(startRow, startColumn, row, column)
-        logic.gameState()
-        print(f"Move: {logic.moves} Material Difference: {bot.materialDif()}")
+        board.makeMove(startRow, startColumn, row, column)
+        board.gameState()
+        print(f"Move: {board.moves} Material Difference: {material.materialDif(board.piecePositions)}")
     else:
-        handleSelection(row, column)
+        handleSelection(board, row, column)
 
-def handleSelection(row, column):
-    piece = logic.getPiece(row, column)
-    if piece == "" or piece[0] != logic.turnColour:
+def handleSelection(board, row, column):
+    piece = board.getPiece(row, column)
+    if piece == "" or piece[0] != board.turnColour:
         visuals.activeSquare = visuals.activeOutline = None
         visuals.possibleMoves.clear()
         visuals.redraw = True
         return
 
     visuals.activeSquare = [row, column]
-    visuals.possibleMoves = logic.blockCheck(row, column)
+    visuals.possibleMoves = board.blockCheck(row, column)
     visuals.redraw = True
 
 def clearArrows():

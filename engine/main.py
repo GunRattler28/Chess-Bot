@@ -12,77 +12,54 @@ import threading
 from engine import visuals, inputHandler, logic, constants
 from engine.constants import botColour
 from bot import bot
+from bot.modules import material
 
-global bestMove
-bestMove = None
-global searching
-searching = False
-global searchThread
-searchThread = None
+class mainLoop:
+    def __init__(self):
+        self.bestMove = None
+        self.searching = False
+        self.searchThread = None
+        self.board = logic.logic()
+        self.board.updateSquareTable()
+        startHash = self.board.hashBoard()
+        self.board.positionHistory.append(startHash)
+        self.botCooldownUntil = 0
+        self.running = True
 
-logic.updateSquareTable()
-startHash = logic.hashBoard()
-logic.positionHistory.append(startHash)
+    def searchMove(self, currentMoveCount):
+        boardCopy = self.board.clone()
+        calculatedMove = bot.findBestMove(boardCopy, 4, botColour)
+        if self.searching and self.board.moves == currentMoveCount:
+            self.bestMove = calculatedMove
+        self.searching = False
 
-botCooldownUntil = 0
+    def runBotTurn(self, board):
+        if self.bestMove is None and not self.searching:
+            self.searching = True
+            self.botCooldownUntil = pygame.time.get_ticks() + 3000 
+            self.searchThread = threading.Thread(target=self.searchMove, args=(board.moves,), daemon=True)
+            self.searchThread.start()
 
-def searchMove():
-    global bestMove, searching
-    bestMove = bot.findBestMove(4, botColour)
-    searching = False
-
-def runBotTurn():
-    global bestMove, searching, searchThread
-
-    if bestMove is None and not searching:
-        searching = True
-        searchThread = threading.Thread(target=searchMove, daemon=True)
-        searchThread.start()
-
-    if pygame.time.get_ticks() > botCooldownUntil:
-        if bestMove is None: return False
-        
-        startRow, startCol, endRow, endCol = bestMove
-        logic.makeMove(startRow, startCol, endRow, endCol)
-        logic.gameState()
-        print(f"Move: {logic.moves} Material Difference: {bot.materialDif()}")
-        bestMove = None
-        return True
-    return False
-
-running = True
-while running:
-    for event in pygame.event.get():
-        if event.type == pygame.QUIT:
-            running = False
+        if self.bestMove is not None and pygame.time.get_ticks() > self.botCooldownUntil:
+            startRow, startCol, endRow, endCol = self.bestMove
+            piece = board.getPiece(startRow, startCol)
+            if piece != "" and piece[0] == botColour:
+                board.makeMove(startRow, startCol, endRow, endCol)
+                board.gameState()
+                print(f"Move: {board.moves} Material Difference: {material.materialDif(board.piecePositions)}")
             
-        elif event.type == pygame.MOUSEBUTTONDOWN:
-            if event.button == 1 and not searching: inputHandler.onClick(event.pos[0], event.pos[1]) 
-            elif event.button == 3: inputHandler.onRightClick(event.pos[0], event.pos[1])
-                 
-        elif event.type == pygame.MOUSEMOTION:
-            if visuals.rightClickStart: inputHandler.onRightDrag(event.pos[0], event.pos[1])
-                
-        elif event.type == pygame.MOUSEBUTTONUP:
-            if event.button == 3: inputHandler.onRightRelease(event.pos[0], event.pos[1])
-                
-        elif event.type == pygame.KEYDOWN:
-            if event.key == pygame.K_LEFT and not searching:
-                logic.previousMove()
-                botCooldownUntil = pygame.time.get_ticks() + 3000
-                bestMove = None
-            elif event.key == pygame.K_RIGHT and not searching:
-                logic.redoMove()
-                botCooldownUntil = pygame.time.get_ticks() + 3000
-                bestMove = None
+            self.bestMove = None
+            return True
+            
+        return False
 
-    if visuals.redraw and not searching:
-        visuals.drawBoard()
-        visuals.drawHighlights()
+    def draw(self):
+        visuals.drawBoard(self.board)
+        visuals.drawHighlights(self.board)
         visuals.drawArrows()
         
-        if logic.gameOverMessage:
-            gamelines = logic.gameOverMessage.split("\n")
+        if self.board.gameOverMessage:
+            gamelines = self.board.gameOverMessage.split("\n")
             renderedLines = []
             totalHeight = 0
             
@@ -105,9 +82,19 @@ while running:
         pygame.display.flip()
         visuals.redraw = False
 
-    if logic.turnColour == botColour and not logic.gameOverMessage:
-        runBotTurn()
+    def run(self):
+        while self.running:
+            inputHandler.handleInputs(self, self.board)
+            if visuals.redraw and not self.searching:
+                self.draw()
+            if self.board.turnColour == botColour and not self.board.gameOverMessage:
+                self.runBotTurn(
+                    self.board)
 
-    visuals.clock.tick(60)    
+            visuals.clock.tick(60)    
+
+if __name__ == "__main__":
+    main = mainLoop()
+    main.run()
 
 pygame.quit()

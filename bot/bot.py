@@ -1,105 +1,82 @@
-from engine import logic
+from bot.modules import material, positions
 
-pieceValues = {
-    "P": 10,
-    "B": 40,
-    "H": 45,
-    "R": 70,
-    "Q": 130,
-    "K": 99999
-}
-
-def materialDif():
-    score = 0
-    for piece, bitboard in logic.piecePositions.items():
-        colour = piece[0]
-        pType = piece[1]
-        quantity = int(bitboard).bit_count()
-        value = quantity * pieceValues[pType]
-        if colour == "w":
-            score += value
-        else:
-            score -= value
-    return score
-
-def getAllPossibleMoves(colour):
+def getAllPossibleMoves(board, colour):
     allMoves = []
-    for piece, bitboard in logic.piecePositions.items():
+    for piece, bitboard in board.piecePositions.items():
         if piece[0] == colour:
-            board = int(bitboard)
-            while board:
-                lsb = board & -board
+            bb = int(bitboard)
+            while bb:
+                lsb = bb & -bb
                 index = lsb.bit_length() - 1
                 row = index // 8
                 column = index % 8
-                pieceMoves = logic.blockCheck(row, column)
+                pieceMoves = board.blockCheck(row, column)
                 for endRow, endColumn in pieceMoves:
                     allMoves.append((row, column, endRow, endColumn))
-                board &= board - 1
+                bb &= bb - 1
     return allMoves
 
-def scoreMove(move):
+def totalScore(board):
+    score = 0
+    score += material.materialDif(board.piecePositions) * 5
+    score += positions.evaluatePositions(board.piecePositions) * 0.8
+
+    return score
+
+def scoreMove(board, move):
     startRow, startCol, endRow, endCol = move
-    targetPiece = logic.getPiece(endRow, endCol)
+    targetPiece = board.getPiece(endRow, endCol)
     score = 0
     if targetPiece != "":
         targetType = targetPiece[1]
-        score += pieceValues[targetType] * 10
-        attacker = logic.getPiece(startRow, startCol)
+        score += material.pieceValues[targetType] * 10
+        attacker = board.getPiece(startRow, startCol)
         if attacker != "":
             atkType = attacker[1]
-            score -= pieceValues[atkType]
+            score -= material.pieceValues[atkType]
     return score
 
-def minimax(depth, maxMaterial, alpha=-999999, beta=999999):
+def minimax(board, depth, maximisingPlayer, alpha=-999999, beta=999999):
     if depth == 0:
-        return materialDif()
+        return totalScore(board)
 
-    bestScore = -999999 if maxMaterial else 999999
-    currentColour = "w" if maxMaterial else "b"
-    
-    moves = sorted(getAllPossibleMoves(currentColour), key=scoreMove, reverse=True)
-    
+    currentColour = "w" if maximisingPlayer else "b"
+    moves = sorted(getAllPossibleMoves(board, currentColour), key=lambda m: scoreMove(board, m), reverse=True)
+    bestScore = -999999 if maximisingPlayer else 999999
+
     for move in moves:
         startRow, startCol, endRow, endCol = move
-        logic.makeMove(startRow, startCol, endRow, endCol, sound=False, simulation=True)
-        
-        score = minimax(depth - 1, not maxMaterial, alpha, beta)
-        
-        logic.previousMove(sound=False, simulation=True)
-        
-        if maxMaterial:
-            bestScore = max(bestScore, score)
+        board.makeMove(startRow, startCol, endRow, endCol, sound=False, simulation=True)
+        score = minimax(board, depth - 1, not maximisingPlayer, alpha, beta)
+        board.previousMove(sound=False, simulation=True)
+        bestScore = max(bestScore, score) if maximisingPlayer else min(bestScore, score) 
+        if maximisingPlayer:
             alpha = max(alpha, score)
         else:
-            bestScore = min(bestScore, score)
             beta = min(beta, score)
-
         if beta <= alpha:
             break
-        
+
     return bestScore
 
-def findBestMove(depth, botColour):
+def findBestMove(board, depth, botColour):
     bestScore = -999999 if botColour == "w" else 999999
     alpha = -999999
     beta = 999999
+    bestMove = None
     
-    moves = sorted(getAllPossibleMoves(botColour), key=scoreMove, reverse=True)
+    moves = sorted(getAllPossibleMoves(board, botColour), key=lambda m: scoreMove(board, m), reverse=True)
 
-    savedRedo = logic.redoHistory.copy()
-    savedMoves = logic.moveHistory.copy()
-    savedPositions = logic.positionHistory.copy()
-    savedGameOver = logic.gameOverMessage
+    savedRedo = board.redoHistory.copy()
+    savedMoves = board.moveHistory.copy()
+    savedPositions = board.positionHistory.copy()
+    savedGameOver = board.gameOverMessage
     
     for move in moves:
         startRow, startCol, endRow, endCol = move
-        logic.makeMove(startRow, startCol, endRow, endCol, sound=False, simulation=True)
-        
-        score = minimax(depth - 1, not (botColour == "w"), alpha, beta)
-        
-        logic.previousMove(sound=False, simulation=True)
-        
+        board.makeMove(startRow, startCol, endRow, endCol, sound=False, simulation=True)
+        score = minimax(board, depth - 1, not (botColour == "w"), alpha, beta)
+        board.previousMove(sound=False, simulation=True)
         if botColour == "w":
             if score >= bestScore:
                 bestScore = score
@@ -114,9 +91,9 @@ def findBestMove(depth, botColour):
         if beta <= alpha:
             break
                 
-    logic.redoHistory = savedRedo
-    logic.moveHistory = savedMoves
-    logic.positionHistory = savedPositions
-    logic.gameOverMessage = savedGameOver
+    board.redoHistory = savedRedo
+    board.moveHistory = savedMoves
+    board.positionHistory = savedPositions
+    board.gameOverMessage = savedGameOver
     
     return bestMove

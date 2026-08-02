@@ -31,13 +31,13 @@ rightClickStart = None
 temporaryLine = None
 strategyCircles = []
 
-def drawBoard():
+def drawBoard(board):
     for column in range(0, 8):
         for row in range(0, 8):
             color = "#ffffff" if ((row + column) % 2 == 0) else "#0088ff"
             pygame.draw.rect(screen, color, (column * positionSize, row * positionSize, positionSize, positionSize))
             
-            piece = logic.getPiece(row, column)
+            piece = board.getPiece(row, column)
             if piece != "":
                 screen.blit(pieces[piece], (column * positionSize, row * positionSize))
 
@@ -89,20 +89,20 @@ def choosePromotion(colour):
         
     return chosenPiece
 
-def drawHighlights():
+def drawHighlights(board):
     if activeSquare:
         r, c = activeSquare
         pygame.draw.rect(screen, (0, 255, 0), (c * positionSize, r * positionSize, positionSize, positionSize), 4)
 
     for moveRow, moveColumn in possibleMoves:
         x, y = moveColumn * positionSize, moveRow * positionSize
-        if logic.getPiece(moveRow, moveColumn) != "":
+        if board.getPiece(moveRow, moveColumn) != "":
             screen.blit(overlays["red"], (x, y))
         else:
             screen.blit(overlays["green"], (x, y))
 
-    if logic.kingCheck(logic.turnColour):
-        king = logic.findKing(logic.turnColour)
+    if board.kingCheck(board.turnColour):
+        king = board.findKing(board.turnColour)
         if king:
             screen.blit(overlays["red"], (king[1] * positionSize, king[0] * positionSize))
 
