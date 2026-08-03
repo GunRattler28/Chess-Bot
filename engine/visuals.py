@@ -70,7 +70,7 @@ def choosePromotion(colour):
                 quit()
             elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
                 mouseX, mouseY = event.pos
-                if menuY <= mouseY <= menuY + positionSize and menuX <= mouseX <= menuX + menuWidth:
+                if menuY < mouseY < menuY + positionSize and menuX < mouseX < menuX + menuWidth:
                     index = int((mouseX - menuX) // positionSize)
                     chosenPiece = colour + piecesToChoose[index]
                     promotionActive = False

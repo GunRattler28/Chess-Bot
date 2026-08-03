@@ -251,8 +251,8 @@ class logic:
 
     def insufficientMat(self):
         if (self.piecePositions["bP"] or self.piecePositions["bR"] or self.piecePositions["bQ"] or self.piecePositions["wP"] or self.piecePositions["wR"] or self.piecePositions["wQ"]): return False
-        totKnights = self.piecePositions["bH"] | self.piecePositions["wH"]
-        totBishops = self.piecePositions["bB"] | self.piecePositions["wB"]
+        totKnights = int(self.piecePositions["bH"]).bit_count() + int(self.piecePositions["wH"]).bit_count()
+        totBishops = int(self.piecePositions["bB"]).bit_count() + int(self.piecePositions["wB"]).bit_count()
         return (totBishops + totKnights) < 2
 
     def moveCastleRook(self, piece, start, end, undo=False):
