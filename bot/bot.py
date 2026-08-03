@@ -18,8 +18,8 @@ def getAllPossibleMoves(board, colour):
 
 def totalScore(board):
     score = 0
-    score += material.materialDif(board.piecePositions) * 5
-    score += positions.evaluatePositions(board.piecePositions) * 0.8
+    score += material.materialDif(board.piecePositions) * 10
+    score += positions.evaluatePositions(board.piecePositions) * 0.5
 
     return score
 
