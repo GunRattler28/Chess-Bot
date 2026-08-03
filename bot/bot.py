@@ -18,8 +18,8 @@ def getAllPossibleMoves(board, colour):
 
 def totalScore(board):
     score = 0
-    score += material.materialDif(board.piecePositions) * 10
-    score += positions.evaluatePositions(board.piecePositions) * 0.5
+    score += material.materialDif(board.piecePositions) * 5
+    score += positions.evaluatePositions(board.piecePositions)
 
     return score
 
@@ -42,6 +42,12 @@ def minimax(board, depth, maximisingPlayer, alpha=-999999, beta=999999):
 
     currentColour = "w" if maximisingPlayer else "b"
     moves = sorted(getAllPossibleMoves(board, currentColour), key=lambda m: scoreMove(board, m), reverse=True)
+
+    if not moves:
+        if board.kingCheck(currentColour):
+            return -999999 if maximisingPlayer else 999999
+        else:
+            return 0
     bestScore = -999999 if maximisingPlayer else 999999
 
     for move in moves:
@@ -67,6 +73,9 @@ def findBestMove(board, depth, botColour):
     
     moves = sorted(getAllPossibleMoves(board, botColour), key=lambda m: scoreMove(board, m), reverse=True)
 
+    if moves:
+        bestMove = moves[0]
+
     savedRedo = board.redoHistory.copy()
     savedMoves = board.moveHistory.copy()
     savedPositions = board.positionHistory.copy()
@@ -78,12 +87,12 @@ def findBestMove(board, depth, botColour):
         score = minimax(board, depth - 1, not (botColour == "w"), alpha, beta)
         board.previousMove(sound=False, simulation=True)
         if botColour == "w":
-            if score >= bestScore:
+            if score > bestScore:
                 bestScore = score
                 bestMove = move
             alpha = max(alpha, score)
         else:
-            if score <= bestScore:
+            if score < bestScore:
                 bestScore = score
                 bestMove = move
             beta = min(beta, score)

@@ -1,5 +1,5 @@
 import pygame
-from engine import visuals, logic
+from engine import visuals, constants
 from bot.modules import material
 from engine.constants import positionSize
 
@@ -9,7 +9,9 @@ def handleInputs(inputs, board):
             inputs.running = False
             
         elif event.type == pygame.MOUSEBUTTONDOWN:
-            if event.button == 1 and not inputs.searching: onClick(event.pos[0], event.pos[1], board) 
+            if event.button == 1 and not inputs.searching: 
+                if board.turnColour != constants.botColour:
+                    onClick(event.pos[0], event.pos[1], board) 
             elif event.button == 3: onRightClick(event.pos[0], event.pos[1])
                 
         elif event.type == pygame.MOUSEMOTION:
@@ -87,7 +89,11 @@ def onRightRelease(x, y):
             else:
                 visuals.strategyCircles.append((endRow, endColumn))
         else:
-            visuals.lines.append(((startRow, startColumn), (endRow, endColumn)))
+            line = ((startRow, startColumn), (endRow, endColumn))
+            if line in visuals.lines:
+                visuals.lines.remove(line)
+            else:
+                visuals.lines.append(line)
 
     visuals.rightClickStart = visuals.temporaryLine = None
     visuals.redraw = True

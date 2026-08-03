@@ -1,7 +1,6 @@
 import pygame
 import pygame.freetype
 import math
-from engine import logic
 from engine.constants import windowSize, positionSize, pieces, overlays
 
 pygame.init()

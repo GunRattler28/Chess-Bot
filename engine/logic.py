@@ -49,6 +49,9 @@ class logic:
         new_state.piecePositions = self.piecePositions.copy()
         new_state.castleRights = self.castleRights.copy()
         new_state.squarePiece = self.squarePiece.copy()
+        new_state.moveHistory = self.moveHistory.copy()
+        new_state.redoHistory = self.redoHistory.copy()
+        new_state.positionHistory = self.positionHistory.copy()
         
         return new_state
 
@@ -250,7 +253,7 @@ class logic:
         if (self.piecePositions["bP"] or self.piecePositions["bR"] or self.piecePositions["bQ"] or self.piecePositions["wP"] or self.piecePositions["wR"] or self.piecePositions["wQ"]): return False
         totKnights = self.piecePositions["bH"] | self.piecePositions["wH"]
         totBishops = self.piecePositions["bB"] | self.piecePositions["wB"]
-        return (totBishops == 0 and totKnights == 0)
+        return (totBishops + totKnights) < 2
 
     def moveCastleRook(self, piece, start, end, undo=False):
         if piece not in ("wK", "bK"): return
