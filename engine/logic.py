@@ -1,4 +1,4 @@
-from engine.constants import knightMoves, kingMoves, rookDirections, bishopDirections, queenDirections, knightAtk, kingAtk, sounds, botColour
+from engine.constants import rookDirections, bishopDirections, queenDirections, knightAtk, kingAtk, sounds, botColour
 
 class logic:
     def __init__(self):
@@ -35,9 +35,6 @@ class logic:
             "bK": True, 
             "bKr": True,
         }
-
-        self.knightAtk = self.createAttackTables(knightMoves)
-        self.kingAtk = self.createAttackTables(kingMoves)
 
     def clone(self):
         new_state = logic()
@@ -83,18 +80,6 @@ class logic:
     def hashBoard(self):
         return hash((tuple(self.piecePositions.values()), self.turnColour, tuple(self.castleRights.values()), self.enPassantTarget))
 
-    def createAttackTables(self, offset):
-        table = [0] * 64
-        for square in range(64):
-            row, column = square // 8, square % 8
-            mask = 0
-            for rowChange, columnChange in offset:
-                newRow, newColumn = row + rowChange, column + columnChange
-                if 0 <= newRow < 8 and 0 <= newColumn < 8:
-                    mask |= 1 << (newRow * 8 + newColumn)
-            table[square] = mask
-        return table
-
     def slidingMoves(self, row, column, movements, friendlyOccupied, occupied, possibleMoves):
         for rowChange, columnChange in movements:
             potRow, potColumn = row + rowChange, column + columnChange
@@ -117,10 +102,10 @@ class logic:
     def isSquareAttacked(self, row, column, atkColour):
         targetIndex = row * 8 + column
         
-        if self.knightAtk[targetIndex] & self.piecePositions[atkColour + "H"]:
+        if knightAtk[targetIndex] & self.piecePositions[atkColour + "H"]:
             return True
             
-        if self.kingAtk[targetIndex] & self.piecePositions[atkColour + "K"]:
+        if kingAtk[targetIndex] & self.piecePositions[atkColour + "K"]:
             return True
         
         pawnMask = 0
@@ -189,9 +174,9 @@ class logic:
         whiteOccupied, blackOccupied, occupied = self.getOccupied()
         friendlyOccupied = whiteOccupied if pieceColour == "w" else blackOccupied
 
-        if pieceType == "H": self.instaMoves(self.knightAtk[row * 8 + column], friendlyOccupied, possibleMoves)
+        if pieceType == "H": self.instaMoves(knightAtk[row * 8 + column], friendlyOccupied, possibleMoves)
         elif pieceType == "K":
-            self.instaMoves(self.kingAtk[row * 8 + column], friendlyOccupied, possibleMoves)
+            self.instaMoves(kingAtk[row * 8 + column], friendlyOccupied, possibleMoves)
             if includeCastling: self.addCastleMoves(pieceColour, possibleMoves)
         elif pieceType == "R": self.slidingMoves(row, column, rookDirections, friendlyOccupied, occupied, possibleMoves)
         elif pieceType == "B": self.slidingMoves(row, column, bishopDirections, friendlyOccupied, occupied, possibleMoves)
@@ -398,6 +383,7 @@ class logic:
             visuals.activeOutline = None
             visuals.moveIndicator.clear()
             visuals.possibleMoves.clear()
+            visuals.lastMove = startColumn, startRow, endColumn, endRow
             visuals.redraw = True
 
     def gameState(self, sound=True):
@@ -462,15 +448,15 @@ class logic:
 
         self.moveCastleRook(p["piece"], p["start"], p["end"], undo=True)
         self.updateSquareTable()
+
         if not simulation:
             visuals.activeSquare = visuals.activeOutline = None
             visuals.possibleMoves.clear()
             visuals.moveIndicator.clear()
             visuals.lines.clear()
             visuals.strategyCircles.clear()
-
-        if not simulation:
             self.gameState(sound)
+            visuals.lastMove = (p["start"][1], p["start"][0], p["end"][1], p["end"][0])
             visuals.redraw = True
 
     def redoMove(self):
@@ -519,6 +505,6 @@ class logic:
         visuals.moveIndicator.clear()
         visuals.lines.clear()
         visuals.strategyCircles.clear()
-        
+        visuals.lastMove = (m["start"][1], m["start"][0], m["end"][1], m["end"][0])
         self.gameState()
         visuals.redraw = True

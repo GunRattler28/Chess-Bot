@@ -29,13 +29,20 @@ lines = []
 rightClickStart = None
 temporaryLine = None
 strategyCircles = []
+lastMove = None
 
 def drawBoard(board):
+    global lastMove
     for column in range(0, 8):
         for row in range(0, 8):
             color = "#ffffff" if ((row + column) % 2 == 0) else "#0088ff"
+            if lastMove:
+                startColumn, startRow, endColumn, endRow = lastMove
+                if column == startColumn and row == startRow:
+                    color = "#97C997"
+                elif column == endColumn and row == endRow:
+                    color = "#8DCE8D"
             pygame.draw.rect(screen, color, (column * positionSize, row * positionSize, positionSize, positionSize))
-            
             piece = board.getPiece(row, column)
             if piece != "":
                 screen.blit(pieces[piece], (column * positionSize, row * positionSize))
