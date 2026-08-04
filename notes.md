@@ -87,4 +87,8 @@ Alpha beta pruning works by storing the best guaranteed outcome for you (alpha) 
 
 ## Aspiration windows
 
-Aspiration windows work on the basis that moves don't usually swing the score by a lot. This means that when going down paths we can immediately remove anything that isn't within a certain amount of our expected score. If we find that the score is actually higher than we expect we search again but without the aspiration window. This helps remove the obviously bad paths
+Aspiration windows work on the basis that moves don't usually swing the score by a lot. This means that when going down paths we can set the lower and upper bounds to previous score ± window size. This helps prune more paths. If we find that the score is actually higher than we expect we search again but without the aspiration window. This helps remove the obviously bad paths.
+
+## Transposition tables
+
+Transposition tables work by using zobrist hashing to see if the move has been analysed before. Due to many moves leading to the same outcome it means that when we find moves we have analysed before we can save computing power and just not analyse them. Zobrist hashes are used for this. 

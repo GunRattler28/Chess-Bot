@@ -73,7 +73,7 @@ class mainLoop:
 
             currentY = (constants.windowSize - totalHeight) / 2
             for surf, rect in renderedLines:
-                rect.centerx = constants.windowSize / 2
+                rect.centrex = constants.windowSize / 2
                 rect.y = currentY
                 visuals.screen.blit(surf, rect)
                 currentY += rect.height + 8

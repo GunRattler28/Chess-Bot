@@ -79,7 +79,7 @@ def onRightClick(x, y):
 
 def onRightDrag(x, y):
     if visuals.rightClickStart:
-        visuals.temporaryLine = visuals.squareCenter(getBoardPos(x, y))
+        visuals.temporaryLine = visuals.squareCentre(getBoardPos(x, y))
     visuals.redraw = True
 
 def onRightRelease(x, y):

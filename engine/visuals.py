@@ -120,11 +120,44 @@ def drawHighlights(board):
             drawR, drawC = getDrawPos(king[0], king[1])
             screen.blit(overlays["red"], (drawC * positionSize, drawR * positionSize))
 
-def squareCenter(square):
+def squareCentre(square):
     row, column = square
     drawRow, drawColumn = getDrawPos(row, column)
     offset = positionSize / 2
     return (drawColumn * positionSize + offset, drawRow * positionSize + offset)
+
+def drawKnightArrow(surface, color, startSquare, endSquare, thickness=25, arrowSize=50):
+    startRow, startCol = startSquare
+    endRow, endCol = endSquare
+    
+    if abs(startRow - endRow) == 2:
+        corner = (endRow, startCol)
+    else:
+        corner = (startRow, endCol)
+        
+    startCentre = squareCentre(startSquare)
+    cornerCentre = squareCentre(corner)
+    endCentre = squareCentre(endSquare)
+    
+    radius = thickness / 2
+    
+    dx = cornerCentre[0] - startCentre[0]
+    dy = cornerCentre[1] - startCentre[1]
+    length = math.hypot(dx, dy)
+    
+    if length > 0:
+        dir_x, dir_y = dx / length, dy / length
+        perp_x, perp_y = -dir_y, dir_x
+        
+        p1 = (startCentre[0] + perp_x * radius, startCentre[1] + perp_y * radius)
+        p2 = (startCentre[0] - perp_x * radius, startCentre[1] - perp_y * radius)
+        p3 = (cornerCentre[0] - perp_x * radius, cornerCentre[1] - perp_y * radius)
+        p4 = (cornerCentre[0] + perp_x * radius, cornerCentre[1] + perp_y * radius)
+        
+        pygame.draw.circle(surface, color, startCentre, radius)
+        pygame.draw.polygon(surface, color, [p1, p2, p3, p4])
+        
+    drawArrow(surface, color, cornerCentre, endCentre, thickness, arrowSize)
 
 def drawArrow(surface, color, start, end, thickness=25, arrowSize=50):
     dx = end[0] - start[0]
@@ -156,12 +189,32 @@ def drawArrows():
         screen.blit(overlays["green"], (drawC * positionSize, drawR * positionSize))
 
     arrowSurf = pygame.Surface((windowSize, windowSize), pygame.SRCALPHA)
-    arrowColor = (0, 255, 0, 150)
+    
+    arrowColor = (0, 255, 0, 255)
+    dragColor = (0, 187, 0, 255)
 
     for startSquare, endSquare in lines:
-        drawArrow(arrowSurf, arrowColor, squareCenter(startSquare), squareCenter(endSquare))
+        dr = abs(startSquare[0] - endSquare[0])
+        dc = abs(startSquare[1] - endSquare[1])
+        
+        if (dr == 2 and dc == 1) or (dr == 1 and dc == 2):
+            drawKnightArrow(arrowSurf, arrowColor, startSquare, endSquare)
+        else:
+            drawArrow(arrowSurf, arrowColor, squareCentre(startSquare), squareCentre(endSquare))
 
     if rightClickStart and temporaryLine:
-        drawArrow(arrowSurf, (0, 187, 0, 150), squareCenter(rightClickStart), temporaryLine)
+        drawCol = int(temporaryLine[0] // positionSize)
+        drawRow = int(temporaryLine[1] // positionSize)
+        endSquare = (7 - drawRow, 7 - drawCol) if botColour == "w" else (drawRow, drawCol)
+            
+        dr = abs(rightClickStart[0] - endSquare[0])
+        dc = abs(rightClickStart[1] - endSquare[1])
+        
+        if (dr == 2 and dc == 1) or (dr == 1 and dc == 2):
+            drawKnightArrow(arrowSurf, dragColor, rightClickStart, endSquare)
+        else:
+            drawArrow(arrowSurf, dragColor, squareCentre(rightClickStart), temporaryLine)
+
+    arrowSurf.fill((255, 255, 255, 150), special_flags=pygame.BLEND_RGBA_MULT)
 
     screen.blit(arrowSurf, (0, 0))
