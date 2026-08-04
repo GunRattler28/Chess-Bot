@@ -1,7 +1,7 @@
 import pygame
 import pygame.freetype
 import math
-from engine.constants import windowSize, positionSize, pieces, overlays
+from engine.constants import windowSize, positionSize, pieces, overlays, botColour
 
 pygame.init()
 pygame.mixer.init()
@@ -31,10 +31,16 @@ temporaryLine = None
 strategyCircles = []
 lastMove = None
 
+def getDrawPos(row, col):
+    if botColour == "w":
+        return 7 - row, 7 - col
+    return row, col
+
 def drawBoard(board):
     global lastMove
     for column in range(0, 8):
         for row in range(0, 8):
+            drawRow, drawCol = getDrawPos(row, column)
             color = "#ffffff" if ((row + column) % 2 == 0) else "#0088ff"
             if lastMove:
                 startColumn, startRow, endColumn, endRow = lastMove
@@ -42,10 +48,10 @@ def drawBoard(board):
                     color = "#97C997"
                 elif column == endColumn and row == endRow:
                     color = "#8DCE8D"
-            pygame.draw.rect(screen, color, (column * positionSize, row * positionSize, positionSize, positionSize))
+            pygame.draw.rect(screen, color, (drawCol * positionSize, drawRow * positionSize, positionSize, positionSize))
             piece = board.getPiece(row, column)
             if piece != "":
-                screen.blit(pieces[piece], (column * positionSize, row * positionSize))
+                screen.blit(pieces[piece], (drawCol * positionSize, drawRow * positionSize))
 
 def blurSurface(surface, scaleFactor=3):
     if scaleFactor <= 1: return surface.copy()
@@ -97,11 +103,13 @@ def choosePromotion(colour):
 
 def drawHighlights(board):
     if activeSquare:
-        r, c = activeSquare
-        pygame.draw.rect(screen, (0, 255, 0), (c * positionSize, r * positionSize, positionSize, positionSize), 4)
+        row, column = activeSquare
+        drawR, drawC = getDrawPos(row, column)
+        pygame.draw.rect(screen, (0, 255, 0), (drawC * positionSize, drawR * positionSize, positionSize, positionSize), 4)
 
     for moveRow, moveColumn in possibleMoves:
-        x, y = moveColumn * positionSize, moveRow * positionSize
+        drawR, drawC = getDrawPos(moveRow, moveColumn)
+        x, y = drawC * positionSize, drawR * positionSize
         if board.getPiece(moveRow, moveColumn) != "":
             screen.blit(overlays["red"], (x, y))
         else:
@@ -110,12 +118,14 @@ def drawHighlights(board):
     if board.kingCheck(board.turnColour):
         king = board.findKing(board.turnColour)
         if king:
-            screen.blit(overlays["red"], (king[1] * positionSize, king[0] * positionSize))
+            drawR, drawC = getDrawPos(king[0], king[1])
+            screen.blit(overlays["red"], (drawC * positionSize, drawR * positionSize))
 
 def squareCenter(square):
     row, column = square
+    drawRow, drawColumn = getDrawPos(row, column)
     offset = positionSize / 2
-    return (column * positionSize + offset, row * positionSize + offset)
+    return (drawColumn * positionSize + offset, drawRow * positionSize + offset)
 
 def drawArrow(surface, color, start, end, thickness=25, arrowSize=50):
     dx = end[0] - start[0]
@@ -143,7 +153,8 @@ def drawArrow(surface, color, start, end, thickness=25, arrowSize=50):
 
 def drawArrows():
     for row, column in strategyCircles:
-        screen.blit(overlays["green"], (column * positionSize, row * positionSize))
+        drawR, drawC = getDrawPos(row, column)
+        screen.blit(overlays["green"], (drawC * positionSize, drawR * positionSize))
 
     arrowSurf = pygame.Surface((windowSize, windowSize), pygame.SRCALPHA)
     arrowColor = (0, 255, 0, 150)

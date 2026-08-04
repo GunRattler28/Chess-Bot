@@ -3,6 +3,12 @@ from engine import visuals, constants
 from bot.modules import material
 from engine.constants import positionSize
 
+def getBoardPos(x, y):
+    row, col = int(y // positionSize), int(x // positionSize)
+    if constants.botColour == "w":
+        return 7 - row, 7 - col
+    return row, col
+
 def handleInputs(inputs, board):
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
@@ -36,7 +42,7 @@ def onClick(x, y, board):
     if visuals.promotionActive: return
     if len(visuals.lines) > 0 or len(visuals.strategyCircles) > 0: clearArrows()
 
-    row, column = int(y // positionSize), int(x // positionSize)
+    row, column = getBoardPos(x, y)
 
     if visuals.activeSquare is None:
         handleSelection(board, row, column)
@@ -69,17 +75,17 @@ def clearArrows():
 
 def onRightClick(x, y):
     if visuals.promotionActive: return
-    visuals.rightClickStart = (int(y // positionSize), int(x // positionSize))
+    visuals.rightClickStart = getBoardPos(x, y)
 
 def onRightDrag(x, y):
     if visuals.rightClickStart:
-        visuals.temporaryLine = visuals.squareCenter((int(y // positionSize), int(x // positionSize)))
+        visuals.temporaryLine = visuals.squareCenter(getBoardPos(x, y))
     visuals.redraw = True
 
 def onRightRelease(x, y):
     if not visuals.rightClickStart: return
 
-    endRow, endColumn = int(y // positionSize), int(x // positionSize)
+    endRow, endColumn = getBoardPos(x, y)
     startRow, startColumn = visuals.rightClickStart
     
     if 0 <= endRow < 8 and 0 <= endColumn < 8:
