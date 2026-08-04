@@ -1,2 +1,2 @@
-bot.modules.__pycache__
-engine.__pycache__
+bot/modules/__pycache__
+engine/__pycache__
