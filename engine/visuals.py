@@ -10,15 +10,14 @@ pygame.font.init()
 redraw = True
 screen = pygame.display.set_mode((windowSize, windowSize))
 pygame.display.set_caption("Gun's Chess Bot")
-
-try:
-    icon = pygame.image.load('images/icon.png')
-    pygame.display.set_icon(icon)
-except:
-    pass
+icon = pygame.image.load('images/icon.png')
+pygame.display.set_icon(icon)
 
 clock = pygame.time.Clock()
-# gameFont = pygame.freetype.SysFont("dynapuffregular", 64, bold=True) 
+try:
+    gameFont = pygame.freetype.SysFont("dynapuffregular", 64, bold=True) 
+except:
+    gameFont = pygame.freetype.SysFont("arial", 64, bold=True)
 
 promotionActive = False
 activeOutline = None

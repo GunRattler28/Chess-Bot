@@ -7,7 +7,7 @@ pygame.mixer.init()
 pygame.display.set_mode((800, 800)) 
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-sys.dont_write_bytecode = True
+sys.dont_write_bytecode = True # stops pycache files from being created when running
 
 import threading
 from engine import visuals, inputHandler, logic, constants
@@ -33,7 +33,7 @@ class mainLoop:
             self.bestMove = calculatedMove
         self.searching = False
 
-    def runBotTurn(self, board):
+    def runBotTurn(self, board): 
         if self.bestMove is None and not self.searching:
             self.searching = True
             self.botCooldownUntil = pygame.time.get_ticks() + 3000 
