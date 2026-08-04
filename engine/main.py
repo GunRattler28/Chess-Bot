@@ -7,7 +7,6 @@ pygame.mixer.init()
 pygame.display.set_mode((800, 800)) 
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-sys.dont_write_bytecode = True # stops pycache files from being created when running
 
 import threading
 from engine import visuals, inputHandler, logic, constants
