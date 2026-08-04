@@ -66,7 +66,7 @@ def minimax(board, depth, maximisingPlayer, alpha=-999999, beta=999999):
     return bestScore
 
 def findBestMove(board, depth, botColour):
-    bestScore = -999999 if botColour == "w" else 999999
+    playerMaximising = (botColour == "w")
     alpha = -999999
     beta = 999999
     bestMove = None
@@ -80,26 +80,72 @@ def findBestMove(board, depth, botColour):
     savedMoves = board.moveHistory.copy()
     savedPositions = board.positionHistory.copy()
     savedGameOver = board.gameOverMessage
+    prevScore = 0
+    window = 25
     
-    for move in moves:
-        startRow, startCol, endRow, endCol = move
-        board.makeMove(startRow, startCol, endRow, endCol, sound=False, simulation=True)
-        score = minimax(board, depth - 1, not (botColour == "w"), alpha, beta)
-        board.previousMove(sound=False, simulation=True)
-        if botColour == "w":
-            if score > bestScore:
-                bestScore = score
-                bestMove = move
-            alpha = max(alpha, score)
+    for currentDepth in range(1, depth + 1):
+        if currentDepth >= 4:
+            alpha = prevScore - window
+            beta = prevScore + window
         else:
-            if score < bestScore:
-                bestScore = score
-                bestMove = move
-            beta = min(beta, score)
+            alpha = -999999
+            beta = 999999
+
+        currentBestScore = -999999 if playerMaximising else 999999
+        currentBestMove = bestMove
+
+        for move in moves:
+            startRow, startCol, endRow, endCol = move
+            board.makeMove(startRow, startCol, endRow, endCol, sound=False, simulation=True)
+            score = minimax(board, currentDepth - 1, not playerMaximising, alpha, beta)
+            board.previousMove(sound=False, simulation=True)
             
-        if beta <= alpha:
-            break
+            if playerMaximising:
+                if score > currentBestScore:
+                    currentBestScore = score
+                    currentBestMove = move
+                alpha = max(alpha, score)
+            else:
+                if score < currentBestScore:
+                    currentBestScore = score
+                    currentBestMove = move
+                beta = min(beta, score)
                 
+            if beta <= alpha:
+                break
+
+        if currentDepth >= 4 and (currentBestScore <= alpha or currentBestScore >= beta):
+            alpha = -999999
+            beta = 999999
+            currentBestScore = -999999 if playerMaximising else 999999
+            
+            for move in moves:
+                startRow, startCol, endRow, endCol = move
+                board.makeMove(startRow, startCol, endRow, endCol, sound=False, simulation=True)
+                score = minimax(board, currentDepth - 1, not playerMaximising, alpha, beta)
+                board.previousMove(sound=False, simulation=True)
+                
+                if playerMaximising:
+                    if score > currentBestScore:
+                        currentBestScore = score
+                        currentBestMove = move
+                    alpha = max(alpha, score)
+                else:
+                    if score < currentBestScore:
+                        currentBestScore = score
+                        currentBestMove = move
+                    beta = min(beta, score)
+                    
+                if beta <= alpha:
+                    break
+
+        prevScore = currentBestScore
+        if currentBestMove:
+            bestMove = currentBestMove
+            if bestMove in moves:
+                moves.remove(bestMove)
+                moves.insert(0, bestMove)
+            
     board.redoHistory = savedRedo
     board.moveHistory = savedMoves
     board.positionHistory = savedPositions
