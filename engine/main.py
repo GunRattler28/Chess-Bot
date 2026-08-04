@@ -27,7 +27,7 @@ class mainLoop:
 
     def searchMove(self, currentMoveCount):
         boardCopy = self.board.clone()
-        calculatedMove = bot.findBestMove(boardCopy, 4, botColour)
+        calculatedMove = bot.findBestMove(boardCopy, 5, botColour)
         if self.searching and self.board.moves == currentMoveCount:
             self.bestMove = calculatedMove
         self.searching = False
