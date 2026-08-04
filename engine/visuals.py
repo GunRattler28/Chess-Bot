@@ -18,7 +18,7 @@ except:
     pass
 
 clock = pygame.time.Clock()
-gameFont = pygame.freetype.SysFont("dynapuffregular", 64, bold=True) 
+# gameFont = pygame.freetype.SysFont("dynapuffregular", 64, bold=True) 
 
 promotionActive = False
 activeOutline = None

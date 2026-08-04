@@ -22,8 +22,7 @@ class mainLoop:
         self.searchThread = None
         self.board = logic.logic()
         self.board.updateSquareTable()
-        startHash = self.board.hashBoard()
-        self.board.positionHistory.append(startHash)
+        self.board.positionHistory.append(self.board.hashBoard())
         self.botCooldownUntil = 0
         self.running = True
 

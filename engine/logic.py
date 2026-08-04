@@ -456,7 +456,11 @@ class logic:
             visuals.lines.clear()
             visuals.strategyCircles.clear()
             self.gameState(sound)
-            visuals.lastMove = (p["start"][1], p["start"][0], p["end"][1], p["end"][0])
+            if len(self.moveHistory) > 0:
+                secondLastMove = self.moveHistory[-1]
+                visuals.lastMove = (secondLastMove["start"][1], secondLastMove["start"][0], secondLastMove["end"][1], secondLastMove["end"][0])
+            else:
+                visuals.lastMove = None
             visuals.redraw = True
 
     def redoMove(self):
