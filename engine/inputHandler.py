@@ -52,7 +52,7 @@ def onClick(x, y, board):
     if (row, column) in visuals.possibleMoves:
         board.makeMove(startRow, startColumn, row, column)
         board.gameState()
-        print(f"Move: {board.moves} Material Difference: {material.materialDif(board.piecePositions)}")
+        print(f"Move: {board.moves} Material Difference: {material.materialDif(board.piecePositions)} Time: NULL")
     else:
         handleSelection(board, row, column)
 

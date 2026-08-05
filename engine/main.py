@@ -45,7 +45,7 @@ class mainLoop:
             if piece != "" and piece[0] == botColour:
                 board.makeMove(startRow, startCol, endRow, endCol)
                 board.gameState()
-                print(f"Move: {board.moves} Material Difference: {material.materialDif(board.piecePositions)}")
+                print(f"Move: {board.moves} Material Difference: {material.materialDif(board.piecePositions)} Time: {(pygame.time.get_ticks() - self.botCooldownUntil + 3000) / 1000} seconds")
             
             self.bestMove = None
             return True

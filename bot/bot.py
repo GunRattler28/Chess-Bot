@@ -90,11 +90,14 @@ def findBestMove(board, depth, botColour):
     
     for currentDepth in range(1, depth + 1):
         if currentDepth >= 4:
-            alpha = prevScore - aspirationWindow
-            beta = prevScore + aspirationWindow
+            initialAlpha = prevScore - aspirationWindow
+            initialBeta = prevScore + aspirationWindow
         else:
-            alpha = -999999
-            beta = 999999
+            initialAlpha = -999999
+            initialBeta = 999999
+
+        alpha = initialAlpha
+        beta = initialBeta
 
         currentBestScore = -999999 if playerMaximising else 999999
         currentBestMove = bestMove

@@ -8,7 +8,7 @@ pygame.mixer.init()
 pygame.font.init()
 
 redraw = True
-screen = pygame.display.set_mode((windowSize, windowSize))
+screen = pygame.display.get_surface()
 pygame.display.set_caption("Gun's Chess Bot")
 icon = pygame.image.load('images/icon.png')
 pygame.display.set_icon(icon)

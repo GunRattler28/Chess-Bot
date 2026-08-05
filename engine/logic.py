@@ -70,8 +70,10 @@ class logic:
     def getOccupied(self):
         whiteOccupied, blackOccupied = 0, 0
         for name, bitboard in self.piecePositions.items():
-            if name[0] == "w": whiteOccupied |= bitboard
-            else: blackOccupied |= bitboard
+            if name[0] == "w": 
+                whiteOccupied |= bitboard
+            else: 
+                blackOccupied |= bitboard
         return (whiteOccupied, blackOccupied, whiteOccupied | blackOccupied)
 
     def hashBoard(self):
@@ -82,9 +84,11 @@ class logic:
             potRow, potColumn = row + rowChange, column + columnChange
             while 0 <= potRow < 8 and 0 <= potColumn < 8:
                 targetBit = 1 << (potRow * 8 + potColumn)
-                if targetBit & friendlyOccupied: break
+                if targetBit & friendlyOccupied: 
+                    break
                 possibleMoves.append((potRow, potColumn))
-                if targetBit & occupied: break
+                if targetBit & occupied: 
+                    break
                 potRow += rowChange
                 potColumn += columnChange
 
@@ -107,16 +111,20 @@ class logic:
         
         pawnMask = 0
         if atkColour == "w":
-            if row < 7 and column > 0: pawnMask |= 1 << ((row + 1) * 8 + (column - 1))
-            if row < 7 and column < 7: pawnMask |= 1 << ((row + 1) * 8 + (column + 1))
+            if row < 7 and column > 0: 
+                pawnMask |= 1 << ((row + 1) * 8 + (column - 1))
+            if row < 7 and column < 7: 
+                pawnMask |= 1 << ((row + 1) * 8 + (column + 1))
         else:
-            if row > 0 and column > 0: pawnMask |= 1 << ((row - 1) * 8 + (column - 1))
-            if row > 0 and column < 7: pawnMask |= 1 << ((row - 1) * 8 + (column + 1))
+            if row > 0 and column > 0: 
+                pawnMask |= 1 << ((row - 1) * 8 + (column - 1))
+            if row > 0 and column < 7: 
+                pawnMask |= 1 << ((row - 1) * 8 + (column + 1))
             
         if pawnMask & self.piecePositions[atkColour + "P"]:
             return True
 
-        whiteOccupied, blackOccupied, occupied = self.getOccupied()
+        occupied = self.getOccupied()[2]
 
         for rowChange, columnChange in rookDirections:
             potRow, potColumn = row + rowChange, column + columnChange
@@ -143,13 +151,15 @@ class logic:
 
     def findKing(self, colour):
         kingBoard = int(self.piecePositions[colour + "K"])
-        if kingBoard == 0: return None
+        if kingBoard == 0: 
+            return None
         index = kingBoard.bit_length() - 1
         return (index // 8, index % 8)
 
     def kingCheck(self, colour):
         king = self.findKing(colour)
-        if king is None: return False
+        if king is None: 
+            return False
         return self.isSquareAttacked(king[0], king[1], "w" if colour == "b" else "b")
 
     def addCastleMoves(self, pieceColour, possibleMoves):
@@ -171,13 +181,17 @@ class logic:
         whiteOccupied, blackOccupied, occupied = self.getOccupied()
         friendlyOccupied = whiteOccupied if pieceColour == "w" else blackOccupied
 
-        if pieceType == "H": self.instaMoves(knightAtk[row * 8 + column], friendlyOccupied, possibleMoves)
+        if pieceType == "H": 
+            self.instaMoves(knightAtk[row * 8 + column], friendlyOccupied, possibleMoves)
         elif pieceType == "K":
             self.instaMoves(kingAtk[row * 8 + column], friendlyOccupied, possibleMoves)
             if includeCastling: self.addCastleMoves(pieceColour, possibleMoves)
-        elif pieceType == "R": self.slidingMoves(row, column, rookDirections, friendlyOccupied, occupied, possibleMoves)
-        elif pieceType == "B": self.slidingMoves(row, column, bishopDirections, friendlyOccupied, occupied, possibleMoves)
-        elif pieceType == "Q": self.slidingMoves(row, column, queenDirections, friendlyOccupied, occupied, possibleMoves)
+        elif pieceType == "R": 
+            self.slidingMoves(row, column, rookDirections, friendlyOccupied, occupied, possibleMoves)
+        elif pieceType == "B": 
+            self.slidingMoves(row, column, bishopDirections, friendlyOccupied, occupied, possibleMoves)
+        elif pieceType == "Q": 
+            self.slidingMoves(row, column, queenDirections, friendlyOccupied, occupied, possibleMoves)
         elif pieceType == "P":
             direction = -1 if pieceColour == "w" else 1
             potRow = row + direction
@@ -220,12 +234,13 @@ class logic:
     def legalMoves(self, colour):
         for piece, bitboard in self.piecePositions.items():
             if piece[0] == colour:
-                b = int(bitboard)
-                while b:
-                    lsb = b & -b
+                board = bitboard
+                while board:
+                    lsb = board & -board
                     index = lsb.bit_length() - 1
-                    if self.blockCheck(index // 8, index % 8): return True
-                    b &= b - 1
+                    if self.blockCheck(index // 8, index % 8): 
+                        return True
+                    board &= board - 1
         return False
 
     def isPromotable(self, piece, row):
@@ -238,12 +253,22 @@ class logic:
         return (totBishops + totKnights) < 2
 
     def moveCastleRook(self, piece, start, end, undo=False):
-        if piece not in ("wK", "bK"): return
+        if piece not in ("wK", "bK"): 
+            return
         row = 7 if piece == "wK" else 0
 
-        if start == (row, 4) and end == (row, 6): rookStart, rookEnd = ((row, 5), (row, 7)) if undo else ((row, 7), (row, 5))
-        elif start == (row, 4) and end == (row, 2): rookStart, rookEnd = ((row, 3), (row, 0)) if undo else ((row, 0), (row, 3))
-        else: return
+        if start == (row, 4) and end == (row, 6): 
+            if undo:
+                rookStart, rookEnd = ((row, 5), (row, 7)) 
+            else:
+                rookStart, rookEnd((row, 7), (row, 5))
+        elif start == (row, 4) and end == (row, 2):  
+            if undo:
+                rookStart, rookEnd = ((row, 3), (row, 0))
+            else:
+                rookStart, rookEnd = ((row, 0), (row, 3))
+        else: 
+            return
 
         self.piecePositions[piece[0] + "R"] &= ~(1 << (rookStart[0] * 8 + rookStart[1]))
         self.piecePositions[piece[0] + "R"] |= 1 << (rookEnd[0] * 8 + rookEnd[1])
@@ -292,51 +317,57 @@ class logic:
         targetPos = 1 << (endRow * 8 + endColumn)
         start, end = (startRow, startColumn), (endRow, endColumn)
 
-        self.moveHistory.append({
-            "piece": movingPiece,
-            "start": start, 
-            "end": end, 
-            "capturedPiece": target,
-            "capturedSquare": None,
-            "enPassantBefore": self.enPassantTarget, 
-            "turnColour": self.turnColour, 
-            "moves": self.moves, 
-            "halfmoveClockBefore": self.halfmoveClock, 
-            "halfmoveClockAfter": None, 
-            "castleRightsBefore": self.castleRights.copy(), 
-            "promotion": None
-        })
+        turnColourBefore = self.turnColour
+        movesBefore = self.moves
+        halfmoveClockBefore = self.halfmoveClock
+        enPassantBefore = self.enPassantTarget
+        castleRights = self.castleRights
+        castleRightsBefore = (castleRights["wKl"], castleRights["wK"], castleRights["wKr"], castleRights["bKl"], castleRights["bK"], castleRights["bKr"])
+        capturedPiece = target
+        capturedSquare = None
+        promotion = None
 
         self.moveCastleRook(movingPiece, start, end)
         
-        if movingPiece == "wK": self.castleRights["wK"] = self.castleRights["wKl"] = self.castleRights["wKr"] = False
-        elif movingPiece == "bK": self.castleRights["bK"] = self.castleRights["bKl"] = self.castleRights["bKr"] = False
+        if movingPiece == "wK": 
+            self.castleRights["wK"] = self.castleRights["wKl"] = self.castleRights["wKr"] = False
+        elif movingPiece == "bK": 
+            self.castleRights["bK"] = self.castleRights["bKl"] = self.castleRights["bKr"] = False
         elif movingPiece == "wR":
-            if start == (7, 0): self.castleRights["wKl"] = False
-            elif start == (7, 7): self.castleRights["wKr"] = False
+            if start == (7, 0): 
+                self.castleRights["wKl"] = False
+            elif start == (7, 7): 
+                self.castleRights["wKr"] = False
         elif movingPiece == "bR":
-            if start == (0, 0): self.castleRights["bKl"] = False
-            elif start == (0, 7): self.castleRights["bKr"] = False
+            if start == (0, 0): 
+                self.castleRights["bKl"] = False
+            elif start == (0, 7): 
+                self.castleRights["bKr"] = False
 
         if target == "wR":
-            if end == (7, 0): self.castleRights["wKl"] = False
-            elif end == (7, 7): self.castleRights["wKr"] = False
+            if end == (7, 0): 
+                self.castleRights["wKl"] = False
+            elif end == (7, 7): 
+                self.castleRights["wKr"] = False
         elif target == "bR":
-            if end == (0, 0): self.castleRights["bKl"] = False
-            elif end == (0, 7): self.castleRights["bKr"] = False
+            if end == (0, 0): 
+                self.castleRights["bKl"] = False
+            elif end == (0, 7): 
+                self.castleRights["bKr"] = False
+
         if not simulation:
             visuals.possibleMoves.clear()
             self.redoHistory.clear()
 
         enPassantCapture = False
+
         if movingPiece[-1] == "P" and target == "" and startColumn != endColumn and self.enPassantTarget == (endRow, endColumn):
             capturedRow = endRow - (-1 if movingPiece[0] == "w" else 1)
             capturedPiece = self.squarePiece[capturedRow * 8 + endColumn]
             if capturedPiece != "":
                 self.piecePositions[capturedPiece] &= ~(1 << (capturedRow * 8 + endColumn))
                 self.setPiece(capturedRow, endColumn, "")
-                self.moveHistory[-1]["capturedPiece"] = capturedPiece
-                self.moveHistory[-1]["capturedSquare"] = (capturedRow, endColumn)
+                capturedSquare = (capturedRow, endColumn)
                 enPassantCapture = True
                 if sound: sounds["capture"].play()
 
@@ -362,16 +393,29 @@ class logic:
             self.piecePositions[movingPiece] &= ~targetPos
             self.piecePositions[promotedPiece] |= targetPos
             self.setPiece(endRow, endColumn, promotedPiece)
-            self.moveHistory[-1]["promotion"] = promotedPiece
-        
-        self.moveHistory[-1]["castleRightsAfter"] = self.castleRights.copy()
+            promotion = promotedPiece
+
         self.enPassantTarget = ((startRow + endRow) // 2, startColumn) if movingPiece[-1] == "P" and abs(endRow - startRow) == 2 else None
-        self.moveHistory[-1]["enPassantAfter"] = self.enPassantTarget
         self.turnColour = "b" if self.turnColour == "w" else "w"    
-        
         self.moves += 1
         self.halfmoveClock = 0 if movingPiece[-1] == "P" or target != "" or enPassantCapture else self.halfmoveClock + 1
-        self.moveHistory[-1]["halfmoveClockAfter"] = self.halfmoveClock
+        castleRightsAfter = (castleRights["wKl"], castleRights["wK"], castleRights["wKr"], castleRights["bKl"], castleRights["bK"], castleRights["bKr"])
+        self.moveHistory.append((
+            movingPiece, 
+            start, 
+            end, 
+            capturedPiece, 
+            capturedSquare,
+            enPassantBefore, 
+            turnColourBefore, 
+            movesBefore, 
+            halfmoveClockBefore,
+            castleRightsBefore, 
+            promotion,
+            castleRightsAfter, 
+            self.enPassantTarget, 
+            self.halfmoveClock
+        ))
 
         if not simulation:
             self.positionHistory.append(self.hashBoard())
@@ -395,55 +439,66 @@ class logic:
             if inCheck:
                 winner = "Black" if self.turnColour == "w" else "White"
                 self.gameOverMessage = f"Checkmate!\n{winner}  wins!"
-                if sound: sounds["checkmate"].play()
+                if sound: 
+                    sounds["checkmate"].play()
             else:
                 self.gameOverMessage = "Stalemate!\nNobody  wins!"
-                if sound: sounds["checkmate"].play()
-        elif inCheck and sound: sounds["check"].play()
+                if sound: 
+                    sounds["checkmate"].play()
+        elif inCheck and sound: 
+            sounds["check"].play()
         elif self.halfmoveClock >= 100:
             self.gameOverMessage = "50-move rule\nDraw!"
-            if sound: sounds["checkmate"].play()
+            if sound: 
+                sounds["checkmate"].play()
         elif self.insufficientMat():
             self.gameOverMessage = "Insufficient  Material! \n Nobody  wins"
-            if sound: sounds["checkmate"].play()
-        else: self.gameOverMessage = None
+            if sound: 
+                sounds["checkmate"].play()
+        else: 
+            self.gameOverMessage = None
 
     def previousMove(self, sound=True, simulation=False):
         from engine import visuals
-        if not self.moveHistory: return
+        if not self.moveHistory: 
+            return
 
-        p = self.moveHistory.pop()
-        if not simulation: self.redoHistory.append(p)
-        if self.positionHistory: self.positionHistory.pop()
+        move = self.moveHistory.pop()
+        if not simulation: 
+            self.redoHistory.append(move)
+        if self.positionHistory: 
+            self.positionHistory.pop()
 
-        self.turnColour, self.moves, self.halfmoveClock = p["turnColour"], p["moves"], p.get("halfmoveClockBefore", 0)
-        self.castleRights.clear()
-        self.castleRights.update(p["castleRightsBefore"])
-        self.enPassantTarget = p.get("enPassantBefore", None)
+        piece, start, end, capturedPiece, capturedSquare, enPassantBefore, turnColour, moves, halfmoveClockBefore, castleRightsBefore, promotion, castleRightsAfter, enPassantAfter, halfmoveClockAfter = move
 
-        startPos, endPos = 1 << (p["start"][0] * 8 + p["start"][1]), 1 << (p["end"][0] * 8 + p["end"][1])
-        self.setPiece(p["end"][0], p["end"][1], "")
-        self.setPiece(p["start"][0], p["start"][1], p["piece"])
+        self.turnColour = turnColour
+        self.moves = moves
+        self.halfmoveClock = halfmoveClockBefore
+        
+        castleRights = self.castleRights
+        castleRights["wKl"], castleRights["wK"], castleRights["wKr"], castleRights["bKl"], castleRights["bK"], castleRights["bKr"] = castleRightsBefore
+        self.enPassantTarget = enPassantBefore
 
-        if p["promotion"] is not None:
-            self.piecePositions[p["promotion"]] &= ~endPos
-            self.piecePositions[p["piece"]] |= startPos
+        startPos = 1 << (start[0] * 8 + start[1])
+        endPos = 1 << (end[0] * 8 + end[1])
+
+        if promotion is not None:
+            self.piecePositions[promotion] &= ~endPos
+            self.piecePositions[piece] |= startPos
         else:
-            self.piecePositions[p["piece"]] &= ~endPos
-            self.piecePositions[p["piece"]] |= startPos
+            self.piecePositions[piece] &= ~endPos
+            self.piecePositions[piece] |= startPos
             
-        if p["capturedPiece"] != "":
-            if p.get("capturedSquare"):
-                self.piecePositions[p["capturedPiece"]] |= 1 << (p["capturedSquare"][0] * 8 + p["capturedSquare"][1])
-                self.setPiece(p["capturedSquare"][0], p["capturedSquare"][1], p["capturedPiece"])
+        if capturedPiece != "":
+            if capturedSquare:
+                self.piecePositions[capturedPiece] |= 1 << (capturedSquare[0] * 8 + capturedSquare[1])
             else:
-                self.piecePositions[p["capturedPiece"]] |= endPos
-                self.setPiece(p["end"][0], p["end"][1], p["capturedPiece"])
+                self.piecePositions[capturedPiece] |= endPos
             if sound: sounds["capture"].play()
         else:
             if sound: sounds["move"].play()
 
-        self.moveCastleRook(p["piece"], p["start"], p["end"], undo=True)
+        self.moveCastleRook(piece, start, end, undo=True)
         self.updateSquareTable()
 
         if not simulation:
@@ -453,9 +508,10 @@ class logic:
             visuals.lines.clear()
             visuals.strategyCircles.clear()
             self.gameState(sound)
+            
             if len(self.moveHistory) > 0:
                 secondLastMove = self.moveHistory[-1]
-                visuals.lastMove = (secondLastMove["start"][1], secondLastMove["start"][0], secondLastMove["end"][1], secondLastMove["end"][0])
+                visuals.lastMove = (secondLastMove[1][1], secondLastMove[1][0], secondLastMove[2][1], secondLastMove[2][0])
             else:
                 visuals.lastMove = None
             visuals.redraw = True
@@ -464,40 +520,40 @@ class logic:
         from engine import visuals
         if not self.redoHistory: return
 
-        m = self.redoHistory.pop()
-        self.turnColour = "b" if m["turnColour"] == "w" else "w"
-        self.moves = m["moves"] + 1
-        self.halfmoveClock = m.get("halfmoveClockAfter", 0)
-        self.castleRights.clear()
-        self.castleRights.update(m["castleRightsAfter"])
-        self.enPassantTarget = m.get("enPassantAfter", None)
+        move = self.redoHistory.pop()
+        
+        piece, start, end, capturedPiece, capturedSquare, enPassantBefore, turnColour, moves, halfmoveClockBefore, castleRightsBefore, promotion, castleRightsAfter, enPassantAfter, halfmoveClockAfter = move
 
-        startPos, endPos = 1 << (m["start"][0] * 8 + m["start"][1]), 1 << (m["end"][0] * 8 + m["end"][1])
+        self.turnColour = "b" if turnColour == "w" else "w"
+        self.moves = moves + 1
+        self.halfmoveClock = halfmoveClockAfter
+        
+        castleRights = self.castleRights
+        castleRights["wKl"], castleRights["wK"], castleRights["wKr"], castleRights["bKl"], castleRights["bK"], castleRights["bKr"] = castleRightsAfter
+        self.enPassantTarget = enPassantAfter
 
-        if m["capturedPiece"] != "":
-            if m.get("capturedSquare"):
-                self.piecePositions[m["capturedPiece"]] &= ~(1 << (m["capturedSquare"][0] * 8 + m["capturedSquare"][1]))
-                self.setPiece(m["capturedSquare"][0], m["capturedSquare"][1], "")
+        startPos = 1 << (start[0] * 8 + start[1])
+        endPos = 1 << (end[0] * 8 + end[1])
+
+        if capturedPiece != "":
+            if capturedSquare:
+                self.piecePositions[capturedPiece] &= ~(1 << (capturedSquare[0] * 8 + capturedSquare[1]))
             else:
-                self.piecePositions[m["capturedPiece"]] &= ~endPos
-                self.setPiece(m["end"][0], m["end"][1], "")
+                self.piecePositions[capturedPiece] &= ~endPos
             sounds["capture"].play()
-        else: sounds["move"].play()
+        else: 
+            sounds["move"].play()
 
-        self.moveCastleRook(m["piece"], m["start"], m["end"])
+        self.moveCastleRook(piece, start, end)
 
-        if m["promotion"] is not None:
-            self.piecePositions[m["piece"]] &= ~startPos
-            self.piecePositions[m["promotion"]] |= endPos
-            self.setPiece(m["start"][0], m["start"][1], "")
-            self.setPiece(m["end"][0], m["end"][1], m["promotion"])
+        if promotion is not None:
+            self.piecePositions[piece] &= ~startPos
+            self.piecePositions[promotion] |= endPos
         else:    
-            self.piecePositions[m["piece"]] &= ~startPos
-            self.piecePositions[m["piece"]] |= endPos
-            self.setPiece(m["start"][0], m["start"][1], "")
-            self.setPiece(m["end"][0], m["end"][1], m["piece"])
+            self.piecePositions[piece] &= ~startPos
+            self.piecePositions[piece] |= endPos
 
-        self.moveHistory.append(m)
+        self.moveHistory.append(move)
         self.updateSquareTable()
         self.positionHistory.append(self.hashBoard())
 
@@ -506,6 +562,7 @@ class logic:
         visuals.moveIndicator.clear()
         visuals.lines.clear()
         visuals.strategyCircles.clear()
-        visuals.lastMove = (m["start"][1], m["start"][0], m["end"][1], m["end"][0])
+        visuals.lastMove = (start[1], start[0], end[1], end[0])
+        
         self.gameState()
         visuals.redraw = True

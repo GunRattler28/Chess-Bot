@@ -98,9 +98,7 @@ def evaluatePositions(board):
             lsb = bb & -bb
             index = lsb.bit_length() - 1
             if colour == "w":
-                row = index // 8
-                col = index % 8
-                index = (7 - row) * 8 + col
+                index = index ^ 56
             else:
                 index = index
             value = 0

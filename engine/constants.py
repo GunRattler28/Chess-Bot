@@ -2,7 +2,7 @@ import pygame
 import random
 
 windowSize = 800
-positionSize = windowSize / 8
+positionSize = windowSize // 8
 randomColour = random.randint(0, 1)
 botColour = "b" if randomColour else "w"
 
