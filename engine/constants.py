@@ -3,7 +3,6 @@ import random
 
 windowSize = 800
 positionSize = windowSize / 8
-# botColour = "b"
 randomColour = random.randint(0, 1)
 botColour = "b" if randomColour else "w"
 

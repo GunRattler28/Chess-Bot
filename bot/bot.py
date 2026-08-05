@@ -23,7 +23,9 @@ def totalScore(board):
 
     return score
 
-def scoreMove(board, move):
+def scoreMove(board, move, previousBestMove=None):
+    if move == previousBestMove:
+        return 999999
     startRow, startCol, endRow, endCol = move
     targetPiece = board.getPiece(endRow, endCol)
     score = 0
@@ -71,7 +73,7 @@ def findBestMove(board, depth, botColour):
     beta = 999999
     bestMove = None
     
-    moves = sorted(getAllPossibleMoves(board, botColour), key=lambda m: scoreMove(board, m), reverse=True)
+    moves = sorted(getAllPossibleMoves(board, botColour), key=lambda m: scoreMove(board, m, bestMove), reverse=True)
 
     if moves:
         bestMove = moves[0]
