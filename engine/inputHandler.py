@@ -15,16 +15,21 @@ def handleInputs(inputs, board):
             inputs.running = False
             
         elif event.type == pygame.MOUSEBUTTONDOWN:
-            if event.button == 1 and not inputs.searching: 
-                if board.turnColour != constants.botColour:
-                    onClick(event.pos[0], event.pos[1], board) 
-            elif event.button == 3: onRightClick(event.pos[0], event.pos[1])
+            if event.button == 1: 
+                if not inputs.searching: 
+                    onClick(event.pos[0], event.pos[1], board)
+                else:
+                    clearArrows()
+            elif event.button == 3: 
+                onRightClick(event.pos[0], event.pos[1])
                 
         elif event.type == pygame.MOUSEMOTION:
-            if visuals.rightClickStart: onRightDrag(event.pos[0], event.pos[1])
+            if visuals.rightClickStart: 
+                onRightDrag(event.pos[0], event.pos[1])
                 
         elif event.type == pygame.MOUSEBUTTONUP:
-            if event.button == 3: onRightRelease(event.pos[0], event.pos[1])
+            if event.button == 3: 
+                onRightRelease(event.pos[0], event.pos[1])
                 
         elif event.type == pygame.KEYDOWN:
             if event.key == pygame.K_LEFT:
@@ -39,8 +44,10 @@ def handleInputs(inputs, board):
                 inputs.searching = False
 
 def onClick(x, y, board):
-    if visuals.promotionActive: return
-    if len(visuals.lines) > 0 or len(visuals.strategyCircles) > 0: clearArrows()
+    if visuals.promotionActive: 
+        return
+    if len(visuals.lines) > 0 or len(visuals.strategyCircles) > 0: 
+        clearArrows()
 
     row, column = getBoardPos(x, y)
 
@@ -74,7 +81,8 @@ def clearArrows():
     visuals.redraw = True
 
 def onRightClick(x, y):
-    if visuals.promotionActive: return
+    if visuals.promotionActive: 
+        return
     visuals.rightClickStart = getBoardPos(x, y)
 
 def onRightDrag(x, y):

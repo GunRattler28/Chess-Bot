@@ -63,20 +63,20 @@ class mainLoop:
             totalHeight = 0
             
             for line in gamelines:
-                surf, rect = visuals.gameFont.render(line, fgcolor=(255, 0, 0), style=pygame.freetype.STYLE_STRONG)
-                renderedLines.append((surf, rect))
-                totalHeight += rect.height + 8
+                surface, rectangle = visuals.gameFont.render(line, fgcolor=(255, 0, 0), style=pygame.freetype.STYLE_STRONG)
+                renderedLines.append((surface, rectangle))
+                totalHeight += rectangle.height + 8
 
             bgSurface = pygame.Surface((constants.windowSize, constants.windowSize), pygame.SRCALPHA)
             bgSurface.fill((0, 0, 0, 150))
             visuals.screen.blit(bgSurface, (0, 0))
 
             currentY = (constants.windowSize - totalHeight) / 2
-            for surf, rect in renderedLines:
-                rect.centerx = constants.windowSize / 2
-                rect.y = currentY
-                visuals.screen.blit(surf, rect)
-                currentY += rect.height + 8
+            for surface, rectangle in renderedLines:
+                rectangle.centerx = constants.windowSize / 2
+                rectangle.y = currentY
+                visuals.screen.blit(surface, rectangle)
+                currentY += rectangle.height + 8
 
         pygame.display.flip()
         visuals.redraw = False
@@ -84,11 +84,10 @@ class mainLoop:
     def run(self):
         while self.running:
             inputHandler.handleInputs(self, self.board)
-            if visuals.redraw and not self.searching:
+            if visuals.redraw:
                 self.draw()
             if self.board.turnColour == botColour and not self.board.gameOverMessage:
-                self.runBotTurn(
-                    self.board)
+                self.runBotTurn(self.board)
 
             visuals.clock.tick(60)    
 

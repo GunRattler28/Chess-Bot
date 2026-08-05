@@ -103,12 +103,12 @@ def choosePromotion(colour):
 def drawHighlights(board):
     if activeSquare:
         row, column = activeSquare
-        drawR, drawC = getDrawPos(row, column)
-        pygame.draw.rect(screen, (0, 255, 0), (drawC * positionSize, drawR * positionSize, positionSize, positionSize), 4)
+        drawRow, drawColumn = getDrawPos(row, column)
+        pygame.draw.rect(screen, (0, 255, 0), (drawColumn * positionSize, drawRow * positionSize, positionSize, positionSize), 4)
 
     for moveRow, moveColumn in possibleMoves:
-        drawR, drawC = getDrawPos(moveRow, moveColumn)
-        x, y = drawC * positionSize, drawR * positionSize
+        drawRow, drawColumn = getDrawPos(moveRow, moveColumn)
+        x, y = drawColumn * positionSize, drawRow * positionSize
         if board.squarePiece[moveRow * 8 + moveColumn] != "":
             screen.blit(overlays["red"], (x, y))
         else:
@@ -117,8 +117,8 @@ def drawHighlights(board):
     if board.kingCheck(board.turnColour):
         king = board.findKing(board.turnColour)
         if king:
-            drawR, drawC = getDrawPos(king[0], king[1])
-            screen.blit(overlays["red"], (drawC * positionSize, drawR * positionSize))
+            drawRow, drawColumn = getDrawPos(king[0], king[1])
+            screen.blit(overlays["red"], (drawColumn * positionSize, drawRow * positionSize))
 
 def squareCentre(square):
     row, column = square
@@ -185,8 +185,8 @@ def drawArrow(surface, color, start, end, thickness=25, arrowSize=50):
 
 def drawArrows():
     for row, column in strategyCircles:
-        drawR, drawC = getDrawPos(row, column)
-        screen.blit(overlays["green"], (drawC * positionSize, drawR * positionSize))
+        drawRow, drawColumn = getDrawPos(row, column)
+        screen.blit(overlays["green"], (drawColumn * positionSize, drawRow * positionSize))
 
     arrowSurf = pygame.Surface((windowSize, windowSize), pygame.SRCALPHA)
     

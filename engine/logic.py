@@ -261,7 +261,7 @@ class logic:
             if undo:
                 rookStart, rookEnd = ((row, 5), (row, 7)) 
             else:
-                rookStart, rookEnd((row, 7), (row, 5))
+                rookStart, rookEnd = ((row, 7), (row, 5))
         elif start == (row, 4) and end == (row, 2):  
             if undo:
                 rookStart, rookEnd = ((row, 3), (row, 0))
