@@ -1,4 +1,4 @@
-from engine.constants import rookDirections, bishopDirections, queenDirections, knightAtk, kingAtk, sounds, botColour
+from engine.constants import rookDirections, bishopDirections, queenDirections, knightAtk, kingAtk, sounds, botColour, zobristPieces, zobristBlackTurn
 
 class logic:
     def __init__(self):
@@ -35,6 +35,9 @@ class logic:
             "bK": True, 
             "bKr": True,
         }
+
+        self.updateSquareTable()
+        self.currentHash = self.generateHash()
 
     def clone(self):
         new_state = logic()
@@ -76,9 +79,6 @@ class logic:
             if name[0] == "w": whiteOccupied |= bitboard
             else: blackOccupied |= bitboard
         return (whiteOccupied, blackOccupied, whiteOccupied | blackOccupied)
-
-    def hashBoard(self):
-        return hash((tuple(self.piecePositions.values()), self.turnColour, tuple(self.castleRights.values()), self.enPassantTarget))
 
     def slidingMoves(self, row, column, movements, friendlyOccupied, occupied, possibleMoves):
         for rowChange, columnChange in movements:
@@ -295,6 +295,15 @@ class logic:
         targetPos = 1 << (endRow * 8 + endColumn)
         start, end = (startRow, startColumn), (endRow, endColumn)
 
+        startIndex = startColumn + startRow * 8
+        endIndex = endColumn + endRow * 8
+
+        self.currentHash = self.currentHash ^ zobristPieces[movingPiece][startIndex]
+        self.currentHash = self.currentHash ^ zobristPieces[movingPiece][endIndex]
+        if target != "":
+            self.currentHash = self.currentHash ^ zobristPieces[target][endIndex]
+        self.currentHash = self.currentHash ^ zobristBlackTurn
+
         self.moveHistory.append({
             "piece": movingPiece,
             "start": start, 
@@ -342,6 +351,7 @@ class logic:
                 self.moveHistory[-1]["capturedSquare"] = (capturedRow, endColumn)
                 enPassantCapture = True
                 if sound: sounds["capture"].play()
+                self.currentHash = self.currentHash ^ zobristPieces[capturedPiece][endColumn + capturedRow * 8]
 
         if not enPassantCapture:
             if target != "":
@@ -366,6 +376,8 @@ class logic:
             self.piecePositions[promotedPiece] |= targetPos
             self.setPiece(endRow, endColumn, promotedPiece)
             self.moveHistory[-1]["promotion"] = promotedPiece
+            self.currentHash = self.currentHash ^ [movingPiece][endIndex]
+            self.currentHash = self.currentHash ^ zobristPieces[promotedPiece][endIndex]
         
         self.moveHistory[-1]["castleRightsAfter"] = self.castleRights.copy()
         self.enPassantTarget = ((startRow + endRow) // 2, startColumn) if movingPiece[-1] == "P" and abs(endRow - startRow) == 2 else None
@@ -376,7 +388,7 @@ class logic:
         self.moves += 1
         self.halfmoveClock = 0 if movingPiece[-1] == "P" or target != "" or enPassantCapture else self.halfmoveClock + 1
         self.moveHistory[-1]["halfmoveClockAfter"] = self.halfmoveClock
-        self.positionHistory.append(self.hashBoard())
+        self.positionHistory.append(self.currentHash)
 
         if not simulation:
             visuals.activeSquare = None
@@ -388,7 +400,7 @@ class logic:
 
     def gameState(self, sound=True):
         
-        if self.positionHistory.count(self.hashBoard()) >= 3:
+        if self.positionHistory.count(self.currentHash) >= 3:
             self.gameOverMessage = "Three-fold \nRepetition!\nNobody  wins!"
             if sound: sounds["checkmate"].play()
             return
@@ -411,42 +423,76 @@ class logic:
             if sound: sounds["checkmate"].play()
         else: self.gameOverMessage = None
 
+    def generateHash(self):
+        hash = 0
+        for square in range(0, 64):
+            piece = self.squarePiece[square]
+            if piece != "":
+                hash = hash ^ zobristPieces[piece][square]
+        if self.turnColour == "b":
+            hash = hash ^ zobristBlackTurn
+
+        return hash
+
     def previousMove(self, sound=True, simulation=False):
         from engine import visuals
-        if not self.moveHistory: return
+        if not self.moveHistory: 
+            return
 
-        p = self.moveHistory.pop()
-        if not simulation: self.redoHistory.append(p)
-        if self.positionHistory: self.positionHistory.pop()
+        move = self.moveHistory.pop()
+        if not simulation: 
+            self.redoHistory.append(move)
+        if self.positionHistory: 
+            self.positionHistory.pop()
 
-        self.turnColour, self.moves, self.halfmoveClock = p["turnColour"], p["moves"], p.get("halfmoveClockBefore", 0)
-        self.castleRights.clear()
-        self.castleRights.update(p["castleRightsBefore"])
-        self.enPassantTarget = p.get("enPassantBefore", None)
-
-        startPos, endPos = 1 << (p["start"][0] * 8 + p["start"][1]), 1 << (p["end"][0] * 8 + p["end"][1])
-        self.setPiece(p["end"][0], p["end"][1], "")
-        self.setPiece(p["start"][0], p["start"][1], p["piece"])
-
-        if p["promotion"] is not None:
-            self.piecePositions[p["promotion"]] &= ~endPos
-            self.piecePositions[p["piece"]] |= startPos
+        movingPiece = move["piece"]
+        startIndex = move["start"][1] + move["start"][0] * 8
+        endIndex = move["end"][1] + move["end"][0] * 8
+        target = move["capturedPiece"]
+        if move["promotion"] is not None:
+            actualEndPiece = move["promotion"] 
         else:
-            self.piecePositions[p["piece"]] &= ~endPos
-            self.piecePositions[p["piece"]] |= startPos
-            
-        if p["capturedPiece"] != "":
-            if p.get("capturedSquare"):
-                self.piecePositions[p["capturedPiece"]] |= 1 << (p["capturedSquare"][0] * 8 + p["capturedSquare"][1])
-                self.setPiece(p["capturedSquare"][0], p["capturedSquare"][1], p["capturedPiece"])
+            actualEndPiece = movingPiece
+        self.currentHash = self.currentHash ^ zobristPieces[actualEndPiece][endIndex]
+        self.currentHash = self.currentHash ^ zobristPieces[movingPiece][startIndex]
+
+        if target != "":
+            if move["capturedSquare"]:
+                capturedIdx = move["capturedSquare"][1] + move["capturedSquare"][0] * 8
+                self.currentHash = self.currentHash ^ zobristPieces[target][capturedIdx]
             else:
-                self.piecePositions[p["capturedPiece"]] |= endPos
-                self.setPiece(p["end"][0], p["end"][1], p["capturedPiece"])
+                self.currentHash = self.currentHash ^ zobristPieces[target][endIndex]
+
+        self.currentHash = self.currentHash ^ zobristBlackTurn
+
+        self.turnColour, self.moves, self.halfmoveClock = move["turnColour"], move["moves"], move.get("halfmoveClockBefore", 0)
+        self.castleRights.clear()
+        self.castleRights.update(move["castleRightsBefore"])
+        self.enPassantTarget = move.get("enPassantBefore", None)
+
+        startPos, endPos = 1 << (move["start"][0] * 8 + move["start"][1]), 1 << (move["end"][0] * 8 + move["end"][1])
+        self.setPiece(move["end"][0], move["end"][1], "")
+        self.setPiece(move["start"][0], move["start"][1], move["piece"])
+
+        if move["promotion"] is not None:
+            self.piecePositions[move["promotion"]] &= ~endPos
+            self.piecePositions[move["piece"]] |= startPos
+        else:
+            self.piecePositions[move["piece"]] &= ~endPos
+            self.piecePositions[move["piece"]] |= startPos
+            
+        if move["capturedPiece"] != "":
+            if move.get("capturedSquare"):
+                self.piecePositions[move["capturedPiece"]] |= 1 << (move["capturedSquare"][0] * 8 + move["capturedSquare"][1])
+                self.setPiece(move["capturedSquare"][0], move["capturedSquare"][1], move["capturedPiece"])
+            else:
+                self.piecePositions[move["capturedPiece"]] |= endPos
+                self.setPiece(move["end"][0], move["end"][1], move["capturedPiece"])
             if sound: sounds["capture"].play()
         else:
             if sound: sounds["move"].play()
 
-        self.moveCastleRook(p["piece"], p["start"], p["end"], undo=True)
+        self.moveCastleRook(move["piece"], move["start"], move["end"], undo=True)
         self.updateSquareTable()
 
         if not simulation:
@@ -465,50 +511,72 @@ class logic:
 
     def redoMove(self):
         from engine import visuals
-        if not self.redoHistory: return
+        if not self.redoHistory: 
+            return
 
-        m = self.redoHistory.pop()
-        self.turnColour = "b" if m["turnColour"] == "w" else "w"
-        self.moves = m["moves"] + 1
-        self.halfmoveClock = m.get("halfmoveClockAfter", 0)
-        self.castleRights.clear()
-        self.castleRights.update(m["castleRightsAfter"])
-        self.enPassantTarget = m.get("enPassantAfter", None)
+        move = self.redoHistory.pop()
 
-        startPos, endPos = 1 << (m["start"][0] * 8 + m["start"][1]), 1 << (m["end"][0] * 8 + m["end"][1])
+        movingPiece = move["piece"]
+        startIndex = move["start"][1] + move["start"][0] * 8
+        endIndex = move["end"][1] + move["end"][0] * 8
+        target = move["capturedPiece"]
+        if move["promotion"] is not None:
+            actualEndPiece = move["promotion"] 
+        else:
+            actualEndPiece = movingPiece
+        self.currentHash = self.currentHash ^ zobristPieces[actualEndPiece][endIndex]
+        self.currentHash = self.currentHash ^ zobristPieces[movingPiece][startIndex]
 
-        if m["capturedPiece"] != "":
-            if m.get("capturedSquare"):
-                self.piecePositions[m["capturedPiece"]] &= ~(1 << (m["capturedSquare"][0] * 8 + m["capturedSquare"][1]))
-                self.setPiece(m["capturedSquare"][0], m["capturedSquare"][1], "")
+        if target != "":
+            if move["capturedSquare"]:
+                capturedIdx = move["capturedSquare"][1] + move["capturedSquare"][0] * 8
+                self.currentHash = self.currentHash ^ zobristPieces[target][capturedIdx]
             else:
-                self.piecePositions[m["capturedPiece"]] &= ~endPos
-                self.setPiece(m["end"][0], m["end"][1], "")
+                self.currentHash = self.currentHash ^ zobristPieces[target][endIndex]
+
+        self.currentHash = self.currentHash ^ zobristBlackTurn
+        
+        self.turnColour = "b" if move["turnColour"] == "w" else "w"
+        self.moves = move["moves"] + 1
+        self.halfmoveClock = move.get("halfmoveClockAfter", 0)
+        self.castleRights.clear()
+        self.castleRights.update(move["castleRightsAfter"])
+        self.enPassantTarget = move.get("enPassantAfter", None)
+
+        startPos, endPos = 1 << (move["start"][0] * 8 + move["start"][1]), 1 << (move["end"][0] * 8 + move["end"][1])
+
+        if move["capturedPiece"] != "":
+            if move.get("capturedSquare"):
+                self.piecePositions[move["capturedPiece"]] &= ~(1 << (move["capturedSquare"][0] * 8 + move["capturedSquare"][1]))
+                self.setPiece(move["capturedSquare"][0], move["capturedSquare"][1], "")
+            else:
+                self.piecePositions[move["capturedPiece"]] &= ~endPos
+                self.setPiece(move["end"][0], move["end"][1], "")
             sounds["capture"].play()
         else: sounds["move"].play()
 
-        self.moveCastleRook(m["piece"], m["start"], m["end"])
+        self.moveCastleRook(move["piece"], move["start"], move["end"])
 
-        if m["promotion"] is not None:
-            self.piecePositions[m["piece"]] &= ~startPos
-            self.piecePositions[m["promotion"]] |= endPos
-            self.setPiece(m["start"][0], m["start"][1], "")
-            self.setPiece(m["end"][0], m["end"][1], m["promotion"])
+        if move["promotion"] is not None:
+            self.piecePositions[move["piece"]] &= ~startPos
+            self.piecePositions[move["promotion"]] |= endPos
+            self.setPiece(move["start"][0], move["start"][1], "")
+            self.setPiece(move["end"][0], move["end"][1], move["promotion"])
         else:    
-            self.piecePositions[m["piece"]] &= ~startPos
-            self.piecePositions[m["piece"]] |= endPos
-            self.setPiece(m["start"][0], m["start"][1], "")
-            self.setPiece(m["end"][0], m["end"][1], m["piece"])
+            self.piecePositions[move["piece"]] &= ~startPos
+            self.piecePositions[move["piece"]] |= endPos
+            self.setPiece(move["start"][0], move["start"][1], "")
+            self.setPiece(move["end"][0], move["end"][1], move["piece"])
 
-        self.moveHistory.append(m)
+        self.moveHistory.append(move)
         self.updateSquareTable()
-        self.positionHistory.append(self.hashBoard())
+        self.positionHistory.append(self.currentHash)
 
         visuals.activeSquare = visuals.activeOutline = None
         visuals.possibleMoves.clear()
         visuals.moveIndicator.clear()
         visuals.lines.clear()
         visuals.strategyCircles.clear()
-        visuals.lastMove = (m["start"][1], m["start"][0], m["end"][1], m["end"][0])
+        visuals.lastMove = (move["start"][1], move["start"][0], move["end"][1], move["end"][0])
         self.gameState()
         visuals.redraw = True

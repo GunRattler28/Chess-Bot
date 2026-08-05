@@ -1,5 +1,11 @@
 from bot.modules import material, positions
 
+exact = 0
+lower = 1
+upper = 2
+
+evaluatedPositions = {}
+
 def getAllPossibleMoves(board, colour):
     allMoves = []
     for piece, bitboard in board.piecePositions.items():
@@ -37,40 +43,87 @@ def scoreMove(board, move):
     return score
 
 def minimax(board, depth, maximisingPlayer, alpha=-999999, beta=999999):
+    if board.positionHistory.count(board.currentHash) >= 3 or board.halfmoveClock >= 100:
+        return 0
+    alphaOriginal = alpha
+    betaOriginal = beta
+    hashKey = board.currentHash
+
+    if hashKey in evaluatedPositions:
+        evaluatedPosition = evaluatedPositions[hashKey]
+        if evaluatedPosition['depth'] >= depth:
+            if evaluatedPosition['flag'] == exact:
+                return evaluatedPosition['score']
+            elif evaluatedPosition['flag'] == lower:
+                alpha = max(alpha, evaluatedPosition['score'])
+            elif evaluatedPosition['flag'] == upper:
+                beta = min(beta, evaluatedPosition['score'])
+            
+            if alpha >= beta:
+                return evaluatedPosition['score']
+
     if depth == 0:
         return totalScore(board)
 
     currentColour = "w" if maximisingPlayer else "b"
     moves = sorted(getAllPossibleMoves(board, currentColour), key=lambda m: scoreMove(board, m), reverse=True)
 
+    if hashKey in evaluatedPositions:
+        hashMove = evaluatedPositions[hashKey].get('bestMove')
+        if hashMove in moves:
+            moves.remove(hashMove)
+            moves.insert(0, hashMove)
+
     if not moves:
         if board.kingCheck(currentColour):
             return -999999 if maximisingPlayer else 999999
         else:
             return 0
+            
     bestScore = -999999 if maximisingPlayer else 999999
+    bestMoveThisNode = None
 
     for move in moves:
         startRow, startCol, endRow, endCol = move
         board.makeMove(startRow, startCol, endRow, endCol, sound=False, simulation=True)
         score = minimax(board, depth - 1, not maximisingPlayer, alpha, beta)
         board.previousMove(sound=False, simulation=True)
-        bestScore = max(bestScore, score) if maximisingPlayer else min(bestScore, score) 
+        
         if maximisingPlayer:
-            alpha = max(alpha, score)
+            if score > bestScore:
+                bestScore = score
+                bestMoveThisNode = move
+            alpha = max(alpha, bestScore)
         else:
-            beta = min(beta, score)
+            if score < bestScore:
+                bestScore = score
+                bestMoveThisNode = move
+            beta = min(beta, bestScore)
+            
         if beta <= alpha:
             break
+
+    evaluatedFlag = exact
+    if bestScore <= alphaOriginal:
+        evaluatedFlag = upper
+    elif bestScore >= betaOriginal:
+        evaluatedFlag = lower
+        
+    evaluatedPositions[hashKey] = {
+        'score': bestScore,
+        'depth': depth,
+        'flag': evaluatedFlag,
+        'bestMove': bestMoveThisNode
+    }
 
     return bestScore
 
 def findBestMove(board, depth, botColour):
+    if len(evaluatedPositions) > 500000:
+        evaluatedPositions.clear()
+
     playerMaximising = (botColour == "w")
-    alpha = -999999
-    beta = 999999
     bestMove = None
-    
     moves = sorted(getAllPossibleMoves(board, botColour), key=lambda m: scoreMove(board, m), reverse=True)
 
     if moves:
@@ -82,7 +135,7 @@ def findBestMove(board, depth, botColour):
     savedGameOver = board.gameOverMessage
     prevScore = 0
     window = 25
-    
+
     for currentDepth in range(1, depth + 1):
         if currentDepth >= 4:
             alpha = prevScore - window
@@ -93,6 +146,8 @@ def findBestMove(board, depth, botColour):
 
         currentBestScore = -999999 if playerMaximising else 999999
         currentBestMove = bestMove
+        currentAlpha = alpha
+        currentBeta = beta
 
         for move in moves:
             startRow, startCol, endRow, endCol = move
@@ -114,7 +169,7 @@ def findBestMove(board, depth, botColour):
             if beta <= alpha:
                 break
 
-        if currentDepth >= 4 and (currentBestScore <= alpha or currentBestScore >= beta):
+        if currentDepth >= 4 and (currentBestScore <= currentAlpha or currentBestScore >= currentBeta):
             alpha = -999999
             beta = 999999
             currentBestScore = -999999 if playerMaximising else 999999

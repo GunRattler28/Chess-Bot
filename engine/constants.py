@@ -3,7 +3,6 @@ import random
 
 windowSize = 800
 positionSize = windowSize / 8
-# botColour = "b"
 randomColour = random.randint(0, 1)
 botColour = "b" if randomColour else "w"
 
@@ -33,6 +32,14 @@ sounds = {
     "check": pygame.mixer.Sound("sounds/Check.mp3"),
     "checkmate": pygame.mixer.Sound("sounds/Checkmate.mp3"),
 }
+
+zobristPieces = {}
+for piece in pieces.keys():
+    pieceHashlist = []
+    for square in range (0, 64):
+        pieceHashlist.append(random.getrandbits(64))
+    zobristPieces[piece] = pieceHashlist
+zobristBlackTurn = random.getrandbits(64)
 
 knightMoves = [(2, 1), (2, -1), (-2, 1), (-2, -1), (1, 2), (1, -2), (-1, 2), (-1, -2)]
 kingMoves = [(1,0), (-1,0), (0,1), (0,-1), (1,1), (1,-1), (-1,1), (-1,-1)]

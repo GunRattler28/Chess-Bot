@@ -21,22 +21,24 @@ class mainLoop:
         self.searchThread = None
         self.board = logic.logic()
         self.board.updateSquareTable()
-        self.board.positionHistory.append(self.board.hashBoard())
+        self.board.positionHistory.append(self.board.currentHash)
         self.botCooldownUntil = 0
         self.running = True
+        self.searchId = 0
 
-    def searchMove(self, currentMoveCount):
+    def searchMove(self, currentSearchId):
         boardCopy = self.board.clone()
         calculatedMove = bot.findBestMove(boardCopy, 5, botColour)
-        if self.searching and self.board.moves == currentMoveCount:
+        if self.searching and self.searchId == currentSearchId:
             self.bestMove = calculatedMove
-        self.searching = False
+            self.searching = False
 
     def runBotTurn(self, board): 
         if self.bestMove is None and not self.searching:
             self.searching = True
-            self.botCooldownUntil = pygame.time.get_ticks() + 3000 
-            self.searchThread = threading.Thread(target=self.searchMove, args=(board.moves,), daemon=True)
+            self.botCooldownUntil = pygame.time.get_ticks() + 3000 # Change to 0 and test times on different search depths. Try to find a formula like searchTime = 2^(depth*2.5)
+            self.searchId += 1
+            self.searchThread = threading.Thread(target=self.searchMove, args=(self.searchId,), daemon=True)
             self.searchThread.start()
 
         if self.bestMove is not None and pygame.time.get_ticks() > self.botCooldownUntil:
