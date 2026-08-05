@@ -77,11 +77,11 @@ kingEndgamePositionScores = [
 
 def isEndgame(board):
     totalPieces = 0
-    for piece, bitboard in board.items():
-        totalPieces += int(bitboard).bit_count()
+    for bitboard in board.values():
+        totalPieces += bitboard.bit_count()
         
-    wQ = int(board["wQ"])
-    bQ = int(board["bQ"])
+    wQ = board["wQ"]
+    bQ = board["bQ"]
 
     if (wQ == 0 and bQ == 0) or totalPieces < 10:
         return True

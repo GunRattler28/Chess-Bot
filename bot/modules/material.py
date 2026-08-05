@@ -11,9 +11,9 @@ def materialDif(board):
     score = 0
     for piece, bitboard in board.items():
         colour = piece[0]
-        pType = piece[1]
-        quantity = int(bitboard).bit_count()
-        value = quantity * pieceValues[pType]
+        pieceType = piece[1]
+        quantity = bitboard.bit_count()
+        value = quantity * pieceValues[pieceType]
         if colour == "w":
             score += value
         else:

@@ -369,13 +369,13 @@ class logic:
         self.moveHistory[-1]["enPassantAfter"] = self.enPassantTarget
         self.turnColour = "b" if self.turnColour == "w" else "w"    
         
-        self.updateSquareTable()
         self.moves += 1
         self.halfmoveClock = 0 if movingPiece[-1] == "P" or target != "" or enPassantCapture else self.halfmoveClock + 1
         self.moveHistory[-1]["halfmoveClockAfter"] = self.halfmoveClock
-        self.positionHistory.append(self.hashBoard())
 
         if not simulation:
+            self.positionHistory.append(self.hashBoard())
+            self.updateSquareTable()
             visuals.activeSquare = None
             visuals.activeOutline = None
             visuals.moveIndicator.clear()
