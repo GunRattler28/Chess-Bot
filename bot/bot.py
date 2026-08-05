@@ -27,12 +27,12 @@ def scoreMove(board, move, previousBestMove=None):
     if move == previousBestMove:
         return 999999
     startRow, startCol, endRow, endCol = move
-    targetPiece = board.getPiece(endRow, endCol)
+    targetPiece = board.squarePiece[endRow * 8 + endCol]
     score = 0
     if targetPiece != "":
         targetType = targetPiece[1]
         score += material.pieceValues[targetType] * 10
-        attacker = board.getPiece(startRow, startCol)
+        attacker = board.squarePiece[startRow * 8 + startCol]
         if attacker != "":
             atkType = attacker[1]
             score -= material.pieceValues[atkType]
@@ -43,7 +43,7 @@ def minimax(board, depth, maximisingPlayer, alpha=-999999, beta=999999):
         return totalScore(board)
 
     currentColour = "w" if maximisingPlayer else "b"
-    moves = sorted(getAllPossibleMoves(board, currentColour), key=lambda m: scoreMove(board, m), reverse=True)
+    moves = getAllPossibleMoves(board, currentColour)
 
     if not moves:
         if board.kingCheck(currentColour):
@@ -51,6 +51,9 @@ def minimax(board, depth, maximisingPlayer, alpha=-999999, beta=999999):
         else:
             return 0
     bestScore = -999999 if maximisingPlayer else 999999
+
+    if depth >= 3:
+        moves.sort(key=lambda move: scoreMove(board, move), reverse=True)
 
     for move in moves:
         startRow, startCol, endRow, endCol = move
@@ -73,7 +76,7 @@ def findBestMove(board, depth, botColour):
     beta = 999999
     bestMove = None
     
-    moves = sorted(getAllPossibleMoves(board, botColour), key=lambda m: scoreMove(board, m, bestMove), reverse=True)
+    moves = sorted(getAllPossibleMoves(board, botColour), key=lambda move: scoreMove(board, move, bestMove), reverse=True)
 
     if moves:
         bestMove = moves[0]
@@ -83,12 +86,12 @@ def findBestMove(board, depth, botColour):
     savedPositions = board.positionHistory.copy()
     savedGameOver = board.gameOverMessage
     prevScore = 0
-    window = 25
+    aspirationWindow = 50
     
     for currentDepth in range(1, depth + 1):
         if currentDepth >= 4:
-            alpha = prevScore - window
-            beta = prevScore + window
+            alpha = prevScore - aspirationWindow
+            beta = prevScore + aspirationWindow
         else:
             alpha = -999999
             beta = 999999

@@ -35,13 +35,13 @@ class mainLoop:
     def runBotTurn(self, board): 
         if self.bestMove is None and not self.searching:
             self.searching = True
-            self.botCooldownUntil = pygame.time.get_ticks() + 3000 
+            self.botCooldownUntil = pygame.time.get_ticks() + 3000
             self.searchThread = threading.Thread(target=self.searchMove, args=(board.moves,), daemon=True)
             self.searchThread.start()
 
         if self.bestMove is not None and pygame.time.get_ticks() > self.botCooldownUntil:
             startRow, startCol, endRow, endCol = self.bestMove
-            piece = board.getPiece(startRow, startCol)
+            piece = board.squarePiece[startRow * 8 + startCol]
             if piece != "" and piece[0] == botColour:
                 board.makeMove(startRow, startCol, endRow, endCol)
                 board.gameState()

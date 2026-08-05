@@ -52,12 +52,9 @@ class logic:
         
         return new_state
 
-    def getPiece(self, row, column):
-        if not (0 <= row < 8 and 0 <= column < 8): return ""
-        return self.squarePiece[row * 8 + column]
-
     def setPiece(self, row, column, piece):
-        if not (0 <= row < 8 and 0 <= column < 8): return
+        if not (0 <= row < 8 and 0 <= column < 8): 
+            return
         self.squarePiece[row * 8 + column] = piece
 
     def updateSquareTable(self):
@@ -159,15 +156,15 @@ class logic:
         row = 7 if pieceColour == "w" else 0
         enemy = "b" if pieceColour == "w" else "w"
 
-        if (self.castleRights[pieceColour + "Kr"] and self.getPiece(row, 5) == "" and self.getPiece(row, 6) == "" and not self.kingCheck(pieceColour) and not self.isSquareAttacked(row, 5, enemy) and not self.isSquareAttacked(row, 6, enemy) and self.getPiece(row, 7) == pieceColour + "R"):
+        if (self.castleRights[pieceColour + "Kr"] and self.squarePiece[row * 8 + 5] == "" and self.squarePiece[row * 8 + 6] == "" and not self.kingCheck(pieceColour) and not self.isSquareAttacked(row, 5, enemy) and not self.isSquareAttacked(row, 6, enemy) and self.squarePiece[row * 8 + 7] == pieceColour + "R"):
             possibleMoves.append((row, 6))
 
-        if (self.castleRights[pieceColour + "Kl"] and self.getPiece(row, 1) == "" and self.getPiece(row, 2) == "" and self.getPiece(row, 3) == "" and not self.kingCheck(pieceColour) and not self.isSquareAttacked(row, 3, enemy) and not self.isSquareAttacked(row, 2, enemy) and self.getPiece(row, 0) == pieceColour + "R"):
+        if (self.castleRights[pieceColour + "Kl"] and self.squarePiece[row * 8 + 1] == "" and self.squarePiece[row * 8 + 2] == "" and self.squarePiece[row * 8 + 3] == "" and not self.kingCheck(pieceColour) and not self.isSquareAttacked(row, 3, enemy) and not self.isSquareAttacked(row, 2, enemy) and self.squarePiece[row * 8 + 0] == pieceColour + "R"):
             possibleMoves.append((row, 2))
 
     def calculateLegalMoves(self, row, column, includeCastling):
         possibleMoves = []
-        piece = self.getPiece(row, column)
+        piece = self.squarePiece[row * 8 + column]
         if piece == "": return []
 
         pieceType, pieceColour = piece[-1], piece[0]
@@ -185,34 +182,34 @@ class logic:
             direction = -1 if pieceColour == "w" else 1
             potRow = row + direction
             if 0 <= potRow < 8:
-                if self.getPiece(potRow, column) == "":
+                if self.squarePiece[potRow * 8 + column] == "":
                     possibleMoves.append((potRow, column))
-                    if pieceColour == "w" and row == 6 and self.getPiece(potRow - 1, column) == "": possibleMoves.append((potRow - 1, column))
-                    elif pieceColour == "b" and row == 1 and self.getPiece(potRow + 1, column) == "": possibleMoves.append((potRow + 1, column))
+                    if pieceColour == "w" and row == 6 and self.squarePiece[(potRow - 1) * 8 + column] == "": possibleMoves.append((potRow - 1, column))
+                    elif pieceColour == "b" and row == 1 and self.squarePiece[(potRow + 1) * 8 + column] == "": possibleMoves.append((potRow + 1, column))
 
             for columnChange in [-1, 1]:
                 potRow, potColumn = row + direction, column + columnChange
                 if 0 <= potRow < 8 and 0 <= potColumn < 8:
-                    target = self.getPiece(potRow, potColumn)
+                    target = self.squarePiece[potRow * 8 + potColumn]
                     if target != "" and target[0] != pieceColour: possibleMoves.append((potRow, potColumn))
                     elif self.enPassantTarget == (potRow, potColumn): possibleMoves.append((potRow, potColumn))
 
         return possibleMoves
 
     def blockCheck(self, row, column):
-        piece = self.getPiece(row, column)
+        piece = self.squarePiece[row * 8 + column]
         if piece == "": return []
         validMoves = []
         
         for endRow, endColumn in self.calculateLegalMoves(row, column, True):
-            targetPiece = self.getPiece(endRow, endColumn)
+            targetPiece = self.squarePiece[endRow * 8 + endColumn]
             capturedSquare = None
             capturedPiece = targetPiece
 
             if piece[-1] == "P" and targetPiece == "" and column != endColumn:
                 if self.enPassantTarget == (endRow, endColumn):
                     capturedSquare = (endRow - (-1 if piece[0] == "w" else 1), endColumn)
-                    capturedPiece = self.getPiece(capturedSquare[0], capturedSquare[1])
+                    capturedPiece = self.squarePiece[capturedSquare[0] * 8 + capturedSquare[1]]
 
             self.simulateMove(piece, (row, column), (endRow, endColumn), capturedPiece, capturedSquare)
             if not self.kingCheck(piece[0]): validMoves.append((endRow, endColumn))
@@ -290,8 +287,8 @@ class logic:
     def makeMove(self, startRow, startColumn, endRow, endColumn, sound=True, simulation=False):
         from engine import visuals
         
-        movingPiece = self.getPiece(startRow, startColumn)
-        target = self.getPiece(endRow, endColumn)
+        movingPiece = self.squarePiece[startRow * 8 + startColumn]
+        target = self.squarePiece[endRow * 8 + endColumn]
         targetPos = 1 << (endRow * 8 + endColumn)
         start, end = (startRow, startColumn), (endRow, endColumn)
 
@@ -299,8 +296,8 @@ class logic:
             "piece": movingPiece,
             "start": start, 
             "end": end, 
-            "capturedPiece": target, 
-            "capturedSquare": None, 
+            "capturedPiece": target,
+            "capturedSquare": None,
             "enPassantBefore": self.enPassantTarget, 
             "turnColour": self.turnColour, 
             "moves": self.moves, 
@@ -334,7 +331,7 @@ class logic:
         enPassantCapture = False
         if movingPiece[-1] == "P" and target == "" and startColumn != endColumn and self.enPassantTarget == (endRow, endColumn):
             capturedRow = endRow - (-1 if movingPiece[0] == "w" else 1)
-            capturedPiece = self.getPiece(capturedRow, endColumn)
+            capturedPiece = self.squarePiece[capturedRow * 8 + endColumn]
             if capturedPiece != "":
                 self.piecePositions[capturedPiece] &= ~(1 << (capturedRow * 8 + endColumn))
                 self.setPiece(capturedRow, endColumn, "")

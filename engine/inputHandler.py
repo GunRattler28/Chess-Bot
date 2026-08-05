@@ -57,7 +57,7 @@ def onClick(x, y, board):
         handleSelection(board, row, column)
 
 def handleSelection(board, row, column):
-    piece = board.getPiece(row, column)
+    piece = board.squarePiece[row * 8 + column]
     if piece == "" or piece[0] != board.turnColour:
         visuals.activeSquare = visuals.activeOutline = None
         visuals.possibleMoves.clear()

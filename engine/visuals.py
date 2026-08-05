@@ -48,7 +48,7 @@ def drawBoard(board):
                 elif column == endColumn and row == endRow:
                     color = "#8DCE8D"
             pygame.draw.rect(screen, color, (drawCol * positionSize, drawRow * positionSize, positionSize, positionSize))
-            piece = board.getPiece(row, column)
+            piece = board.squarePiece[row * 8 + column]
             if piece != "":
                 screen.blit(pieces[piece], (drawCol * positionSize, drawRow * positionSize))
 
@@ -109,7 +109,7 @@ def drawHighlights(board):
     for moveRow, moveColumn in possibleMoves:
         drawR, drawC = getDrawPos(moveRow, moveColumn)
         x, y = drawC * positionSize, drawR * positionSize
-        if board.getPiece(moveRow, moveColumn) != "":
+        if board.squarePiece[moveRow * 8 + moveColumn] != "":
             screen.blit(overlays["red"], (x, y))
         else:
             screen.blit(overlays["green"], (x, y))
