@@ -4,10 +4,11 @@ from bot.modules import material
 from engine.constants import positionSize
 
 def getBoardPos(x, y):
-    row, col = int(y // positionSize), int(x // positionSize)
+    column = x // positionSize
+    row = y // positionSize
     if constants.botColour == "w":
-        return 7 - row, 7 - col
-    return row, col
+        return ((7 - row), (7 - column))
+    return row, column
 
 def handleInputs(inputs, board):
     for event in pygame.event.get():

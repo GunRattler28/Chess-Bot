@@ -42,7 +42,7 @@ def drawBoard(board):
             drawRow, drawCol = getDrawPos(row, column)
             color = "#ffffff" if ((row + column) % 2 == 0) else "#0088ff"
             if lastMove:
-                startColumn, startRow, endColumn, endRow = lastMove
+                startRow, startColumn, endRow, endColumn = lastMove
                 if column == startColumn and row == startRow:
                     color = "#97C997"
                 elif column == endColumn and row == endRow:

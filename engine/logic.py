@@ -424,7 +424,7 @@ class logic:
             visuals.activeOutline = None
             visuals.moveIndicator.clear()
             visuals.possibleMoves.clear()
-            visuals.lastMove = startColumn, startRow, endColumn, endRow
+            visuals.lastMove = (startRow, startColumn, endRow, endColumn)
             visuals.redraw = True
 
     def gameState(self, sound=True):
@@ -511,7 +511,7 @@ class logic:
             
             if len(self.moveHistory) > 0:
                 secondLastMove = self.moveHistory[-1]
-                visuals.lastMove = (secondLastMove[1][1], secondLastMove[1][0], secondLastMove[2][1], secondLastMove[2][0])
+                visuals.lastMove = (secondLastMove[1][0], secondLastMove[1][1], secondLastMove[2][0], secondLastMove[2][1])
             else:
                 visuals.lastMove = None
             visuals.redraw = True
@@ -562,7 +562,7 @@ class logic:
         visuals.moveIndicator.clear()
         visuals.lines.clear()
         visuals.strategyCircles.clear()
-        visuals.lastMove = (start[1], start[0], end[1], end[0])
+        visuals.lastMove = (start[0], start[1], end[0], end[1])
         
         self.gameState()
         visuals.redraw = True
