@@ -1,3 +1,5 @@
+from engine.constants import white, black, pawn, knight, bishop, rook, queen, king, empty
+
 knightPositionScores = [
     -50, -40, -30, -30, -30, -30, -40, -50,
     -40, -20, 0, 0, 0, 0, -20, -40,
@@ -80,8 +82,8 @@ def isEndgame(board):
     for bitboard in board.values():
         totalPieces += bitboard.bit_count()
         
-    wQ = board["wQ"]
-    bQ = board["bQ"]
+    wQ = board[white | queen]
+    bQ = board[black | queen]
 
     if (wQ == 0 and bQ == 0) or totalPieces < 10:
         return True
@@ -91,35 +93,37 @@ def isEndgame(board):
 def evaluatePositions(board):
     score = 0
     for piece, bitboard in board.items():
-        bb = int(bitboard)
-        colour = piece[0]
-        pType = piece[1]
-        while bb:
-            lsb = bb & -bb
+        if piece == empty:
+            continue
+        isWhite = piece & white
+        pType = piece & 7
+        endgame = isEndgame(board)
+        while bitboard:
+            lsb = bitboard & -bitboard
             index = lsb.bit_length() - 1
-            if colour == "w":
+            if isWhite:
                 index = index ^ 56
             else:
                 index = index
             value = 0
-            if pType == "H":
+            if pType == knight:
                 value = knightPositionScores[index]
-            elif pType == "P":
+            elif pType == pawn:
                 value = pawnPositionScores[index]
-            elif pType == "B":
+            elif pType == bishop:
                 value = bishopPositionScores[index]
-            elif pType == "R":
+            elif pType == rook:
                 value = rookPositionScores[index]
-            elif pType == "Q":
+            elif pType == queen:
                 value = queenPositionScores[index]
-            elif pType == "K":
-                if isEndgame(board):
+            elif pType == king:
+                if endgame:
                     value = kingEndgamePositionScores[index]
                 else:
                     value = kingPositionScores[index]
-            if colour == "w":
+            if isWhite:
                 score += value
             else:
                 score -= value
-            bb &= bb - 1
+            bitboard &= bitboard - 1
     return score

@@ -1,12 +1,12 @@
 import pygame
 from engine import visuals, constants
 from bot.modules import material
-from engine.constants import positionSize
+from engine.constants import positionSize, white, empty
 
 def getBoardPos(x, y):
     column = x // positionSize
     row = y // positionSize
-    if constants.botColour == "w":
+    if constants.botColour == white:
         return ((7 - row), (7 - column))
     return row, column
 
@@ -66,14 +66,14 @@ def onClick(x, y, board):
 
 def handleSelection(board, row, column):
     piece = board.squarePiece[row * 8 + column]
-    if piece == "" or piece[0] != board.turnColour:
+    if piece == empty or (piece & 24) != board.turnColour:
         visuals.activeSquare = visuals.activeOutline = None
         visuals.possibleMoves.clear()
         visuals.redraw = True
         return
 
     visuals.activeSquare = [row, column]
-    visuals.possibleMoves = board.blockCheck(row, column)
+    visuals.possibleMoves = board.fullyLegalMove(row, column)
     visuals.redraw = True
 
 def clearArrows():

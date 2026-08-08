@@ -10,7 +10,7 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 import threading
 from engine import visuals, inputHandler, logic, constants
-from engine.constants import botColour
+from engine.constants import botColour, empty
 from bot import bot
 from bot.modules import material
 
@@ -42,7 +42,7 @@ class mainLoop:
         if self.bestMove is not None and pygame.time.get_ticks() > self.botCooldownUntil:
             startRow, startCol, endRow, endCol = self.bestMove
             piece = board.squarePiece[startRow * 8 + startCol]
-            if piece != "" and piece[0] == botColour:
+            if piece != empty and (piece & 24) == botColour:
                 board.makeMove(startRow, startCol, endRow, endCol)
                 board.gameState()
                 print(f"Move: {board.moves} Material Difference: {material.materialDif(board.piecePositions)} Time: {(pygame.time.get_ticks() - self.botCooldownUntil + 3000) / 1000} seconds")

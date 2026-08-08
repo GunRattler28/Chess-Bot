@@ -1,19 +1,19 @@
 from bot.modules import material, positions
+from engine.constants import white, black, empty
 
 def getAllPossibleMoves(board, colour):
     allMoves = []
     for piece, bitboard in board.piecePositions.items():
-        if piece[0] == colour:
-            bb = int(bitboard)
-            while bb:
-                lsb = bb & -bb
+        if piece & colour:
+            while bitboard:
+                lsb = bitboard & -bitboard
                 index = lsb.bit_length() - 1
                 row = index // 8
                 column = index % 8
                 pieceMoves = board.calculateLegalMoves(row, column, True)
                 for endRow, endColumn in pieceMoves:
                     allMoves.append((row, column, endRow, endColumn))
-                bb &= bb - 1
+                bitboard &= bitboard - 1
     return allMoves
 
 def totalScore(board):
@@ -29,12 +29,12 @@ def scoreMove(board, move, previousBestMove=None):
     startRow, startCol, endRow, endCol = move
     targetPiece = board.squarePiece[endRow * 8 + endCol]
     score = 0
-    if targetPiece != "":
-        targetType = targetPiece[1]
+    if targetPiece != empty:
+        targetType = targetPiece & 7
         score += material.pieceValues[targetType] * 10
         attacker = board.squarePiece[startRow * 8 + startCol]
-        if attacker != "":
-            atkType = attacker[1]
+        if attacker != empty:
+            atkType = attacker & 7
             score -= material.pieceValues[atkType]
     return score
 
@@ -42,7 +42,7 @@ def minimax(board, depth, maximisingPlayer, alpha=-999999, beta=999999):
     if depth == 0:
         return totalScore(board)
 
-    currentColour = "w" if maximisingPlayer else "b"
+    currentColour = white if maximisingPlayer else black
     moves = getAllPossibleMoves(board, currentColour)
 
     if not moves:
@@ -73,7 +73,7 @@ def minimax(board, depth, maximisingPlayer, alpha=-999999, beta=999999):
     return bestScore
 
 def findBestMove(board, depth, botColour):
-    playerMaximising = (botColour == "w")
+    playerMaximising = (botColour == white)
     alpha = -999999
     beta = 999999
     bestMove = None

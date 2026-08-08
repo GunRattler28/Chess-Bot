@@ -1,20 +1,24 @@
+from engine.constants import pawn, bishop, knight, rook, queen, king, white, empty
+
 pieceValues = {
-    "P": 10,
-    "B": 40,
-    "H": 45,
-    "R": 70,
-    "Q": 130,
-    "K": 99999
+    pawn: 10,
+    bishop: 40,
+    knight: 45,
+    rook: 70,
+    queen: 130,
+    king: 99999
 }
 
 def materialDif(board):
     score = 0
     for piece, bitboard in board.items():
-        colour = piece[0]
-        pieceType = piece[1]
+        if piece == empty:
+            continue
+        isWhite = piece & white
+        pieceType = piece & 7
         quantity = bitboard.bit_count()
         value = quantity * pieceValues[pieceType]
-        if colour == "w":
+        if isWhite:
             score += value
         else:
             score -= value

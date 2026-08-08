@@ -1,30 +1,30 @@
-from engine.constants import rookDirections, bishopDirections, queenDirections, knightAtk, kingAtk, sounds, botColour
+from engine.constants import rookDirections, bishopDirections, queenDirections, knightAtk, kingAtk, sounds, botColour, empty, queen, king, knight, rook, bishop, pawn, black, white
 
 class logic:
     def __init__(self):
         self.gameOverMessage = None
         self.moves = 0
         self.halfmoveClock = 0
-        self.turnColour = "w"
+        self.turnColour = white
         self.moveHistory = []
         self.redoHistory = []
         self.positionHistory = []
-        self.squarePiece = [""] * 64
+        self.squarePiece = [empty] * 64
         self.enPassantTarget = None
 
         self.piecePositions = {
-            "bQ": 0x0000000000000008, 
-            "bK": 0x0000000000000010, 
-            "bB": 0x0000000000000024,
-            "bH": 0x0000000000000042, 
-            "bR": 0x0000000000000081, 
-            "bP": 0x000000000000FF00,
-            "wQ": 0x0800000000000000, 
-            "wK": 0x1000000000000000, 
-            "wB": 0x2400000000000000,
-            "wH": 0x4200000000000000, 
-            "wR": 0x8100000000000000, 
-            "wP": 0x00FF000000000000
+            (black | queen): 0x0000000000000008, 
+            (black | king): 0x0000000000000010, 
+            (black | bishop): 0x0000000000000024,
+            (black | knight): 0x0000000000000042, 
+            (black | rook): 0x0000000000000081, 
+            (black | pawn): 0x000000000000FF00,
+            (white | queen): 0x0800000000000000, 
+            (white | king): 0x1000000000000000, 
+            (white | bishop): 0x2400000000000000,
+            (white | knight): 0x4200000000000000, 
+            (white | rook): 0x8100000000000000, 
+            (white | pawn): 0x00FF000000000000
         }
 
         self.castleRights = {
@@ -58,9 +58,9 @@ class logic:
         self.squarePiece[row * 8 + column] = piece
 
     def updateSquareTable(self):
-        self.squarePiece = [""] * 64
+        self.squarePiece = [empty] * 64
         for piece, bitboard in self.piecePositions.items():
-            board = int(bitboard)
+            board = bitboard
             while board:
                 lsb = board & -board
                 index = lsb.bit_length() - 1
@@ -68,12 +68,8 @@ class logic:
                 board &= board - 1
 
     def getOccupied(self):
-        whiteOccupied, blackOccupied = 0, 0
-        for name, bitboard in self.piecePositions.items():
-            if name[0] == "w": 
-                whiteOccupied |= bitboard
-            else: 
-                blackOccupied |= bitboard
+        whiteOccupied = (self.piecePositions[9] | self.piecePositions[10] | self.piecePositions[11] | self.piecePositions[12] | self.piecePositions[13] | self.piecePositions[14])
+        blackOccupied = (self.piecePositions[17] | self.piecePositions[18] | self.piecePositions[19] | self.piecePositions[20] | self.piecePositions[21] | self.piecePositions[22])
         return (whiteOccupied, blackOccupied, whiteOccupied | blackOccupied)
 
     def hashBoard(self):
@@ -103,14 +99,14 @@ class logic:
     def isSquareAttacked(self, row, column, atkColour):
         targetIndex = row * 8 + column
         
-        if knightAtk[targetIndex] & self.piecePositions[atkColour + "H"]:
+        if knightAtk[targetIndex] & self.piecePositions[atkColour | knight]:
             return True
             
-        if kingAtk[targetIndex] & self.piecePositions[atkColour + "K"]:
+        if kingAtk[targetIndex] & self.piecePositions[atkColour | king]:
             return True
         
         pawnMask = 0
-        if atkColour == "w":
+        if atkColour == white:
             if row < 7 and column > 0: 
                 pawnMask |= 1 << ((row + 1) * 8 + (column - 1))
             if row < 7 and column < 7: 
@@ -121,7 +117,7 @@ class logic:
             if row > 0 and column < 7: 
                 pawnMask |= 1 << ((row - 1) * 8 + (column + 1))
             
-        if pawnMask & self.piecePositions[atkColour + "P"]:
+        if pawnMask & self.piecePositions[atkColour | pawn]:
             return True
 
         occupied = self.getOccupied()[2]
@@ -131,7 +127,7 @@ class logic:
             while 0 <= potRow < 8 and 0 <= potColumn < 8:
                 testMask = 1 << (potRow * 8 + potColumn)
                 if testMask & occupied:
-                    if testMask & (self.piecePositions[atkColour + "R"] | self.piecePositions[atkColour + "Q"]):
+                    if testMask & (self.piecePositions[atkColour | rook] | self.piecePositions[atkColour | queen]):
                         return True
                     break
                 potRow += rowChange
@@ -142,7 +138,7 @@ class logic:
             while 0 <= potRow < 8 and 0 <= potColumn < 8:
                 testMask = 1 << (potRow * 8 + potColumn)
                 if testMask & occupied:
-                    if testMask & (self.piecePositions[atkColour + "B"] | self.piecePositions[atkColour + "Q"]):
+                    if testMask & (self.piecePositions[atkColour | bishop] | self.piecePositions[atkColour | queen]):
                         return True
                     break
                 potRow += rowChange
@@ -150,8 +146,8 @@ class logic:
         return False
 
     def findKing(self, colour):
-        kingBoard = int(self.piecePositions[colour + "K"])
-        if kingBoard == 0: 
+        kingBoard = self.piecePositions[colour | king]
+        if kingBoard == empty: 
             return None
         index = kingBoard.bit_length() - 1
         return (index // 8, index % 8)
@@ -160,59 +156,61 @@ class logic:
         king = self.findKing(colour)
         if king is None: 
             return False
-        return self.isSquareAttacked(king[0], king[1], "w" if colour == "b" else "b")
+        return self.isSquareAttacked(king[0], king[1], white if colour == black else black)
 
     def addCastleMoves(self, pieceColour, possibleMoves):
-        row = 7 if pieceColour == "w" else 0
-        enemy = "b" if pieceColour == "w" else "w"
-
-        if (self.castleRights[pieceColour + "Kr"] and self.squarePiece[row * 8 + 5] == "" and self.squarePiece[row * 8 + 6] == "" and not self.kingCheck(pieceColour) and not self.isSquareAttacked(row, 5, enemy) and not self.isSquareAttacked(row, 6, enemy) and self.squarePiece[row * 8 + 7] == pieceColour + "R"):
+        row = 7 if pieceColour == white else 0
+        enemy = black if pieceColour == white else black
+        cStr = "w" if pieceColour == white else "b"
+        if (self.castleRights[cStr + "Kr"] and self.squarePiece[row * 8 + 5] == empty and self.squarePiece[row * 8 + 6] == empty and not self.kingCheck(pieceColour) and not self.isSquareAttacked(row, 5, enemy) and not self.isSquareAttacked(row, 6, enemy) and self.squarePiece[row * 8 + 7] == (pieceColour | rook)):
             possibleMoves.append((row, 6))
 
-        if (self.castleRights[pieceColour + "Kl"] and self.squarePiece[row * 8 + 1] == "" and self.squarePiece[row * 8 + 2] == "" and self.squarePiece[row * 8 + 3] == "" and not self.kingCheck(pieceColour) and not self.isSquareAttacked(row, 3, enemy) and not self.isSquareAttacked(row, 2, enemy) and self.squarePiece[row * 8 + 0] == pieceColour + "R"):
+        if (self.castleRights[cStr + "Kl"] and self.squarePiece[row * 8 + 1] == empty and self.squarePiece[row * 8 + 2] == empty and self.squarePiece[row * 8 + 3] == empty and not self.kingCheck(pieceColour) and not self.isSquareAttacked(row, 3, enemy) and not self.isSquareAttacked(row, 2, enemy) and self.squarePiece[row * 8 + 0] == (pieceColour | rook)):
             possibleMoves.append((row, 2))
 
     def calculateLegalMoves(self, row, column, includeCastling):
         possibleMoves = []
         piece = self.squarePiece[row * 8 + column]
-        if piece == "": return []
+        if piece == empty: 
+            return []
 
-        pieceType, pieceColour = piece[-1], piece[0]
+        pieceType = piece & 7
+        pieceColour = white if (piece & white) else black
         whiteOccupied, blackOccupied, occupied = self.getOccupied()
-        friendlyOccupied = whiteOccupied if pieceColour == "w" else blackOccupied
+        friendlyOccupied = whiteOccupied if pieceColour == white else blackOccupied
 
-        if pieceType == "H": 
+        if pieceType == knight: 
             self.instaMoves(knightAtk[row * 8 + column], friendlyOccupied, possibleMoves)
-        elif pieceType == "K":
+        elif pieceType == king:
             self.instaMoves(kingAtk[row * 8 + column], friendlyOccupied, possibleMoves)
             if includeCastling: self.addCastleMoves(pieceColour, possibleMoves)
-        elif pieceType == "R": 
+        elif pieceType == rook: 
             self.slidingMoves(row, column, rookDirections, friendlyOccupied, occupied, possibleMoves)
-        elif pieceType == "B": 
+        elif pieceType == bishop: 
             self.slidingMoves(row, column, bishopDirections, friendlyOccupied, occupied, possibleMoves)
-        elif pieceType == "Q": 
+        elif pieceType == queen: 
             self.slidingMoves(row, column, queenDirections, friendlyOccupied, occupied, possibleMoves)
-        elif pieceType == "P":
-            direction = -1 if pieceColour == "w" else 1
+        elif pieceType == pawn:
+            direction = -1 if pieceColour == white else 1
             potRow = row + direction
             if 0 <= potRow < 8:
-                if self.squarePiece[potRow * 8 + column] == "":
+                if self.squarePiece[potRow * 8 + column] == empty:
                     possibleMoves.append((potRow, column))
-                    if pieceColour == "w" and row == 6 and self.squarePiece[(potRow - 1) * 8 + column] == "": possibleMoves.append((potRow - 1, column))
-                    elif pieceColour == "b" and row == 1 and self.squarePiece[(potRow + 1) * 8 + column] == "": possibleMoves.append((potRow + 1, column))
+                    if pieceColour == white and row == 6 and self.squarePiece[(potRow - 1) * 8 + column] == empty: possibleMoves.append((potRow - 1, column))
+                    elif pieceColour == black and row == 1 and self.squarePiece[(potRow + 1) * 8 + column] == empty: possibleMoves.append((potRow + 1, column))
 
             for columnChange in [-1, 1]:
                 potRow, potColumn = row + direction, column + columnChange
                 if 0 <= potRow < 8 and 0 <= potColumn < 8:
                     target = self.squarePiece[potRow * 8 + potColumn]
-                    if target != "" and target[0] != pieceColour: possibleMoves.append((potRow, potColumn))
+                    if target != empty and (target & 24) != pieceColour: possibleMoves.append((potRow, potColumn))
                     elif self.enPassantTarget == (potRow, potColumn): possibleMoves.append((potRow, potColumn))
 
         return possibleMoves
 
-    def blockCheck(self, row, column):
+    def fullyLegalMove(self, row, column):
         piece = self.squarePiece[row * 8 + column]
-        if piece == "": return []
+        if piece == empty: return []
         validMoves = []
         
         for endRow, endColumn in self.calculateLegalMoves(row, column, True):
@@ -220,42 +218,43 @@ class logic:
             capturedSquare = None
             capturedPiece = targetPiece
 
-            if piece[-1] == "P" and targetPiece == "" and column != endColumn:
+            if (piece & 7) == pawn and targetPiece == empty and column != endColumn:
                 if self.enPassantTarget == (endRow, endColumn):
-                    capturedSquare = (endRow - (-1 if piece[0] == "w" else 1), endColumn)
+                    capturedSquare = (endRow - (-1 if (piece & 24) == white else 1), endColumn)
                     capturedPiece = self.squarePiece[capturedSquare[0] * 8 + capturedSquare[1]]
 
             self.simulateMove(piece, (row, column), (endRow, endColumn), capturedPiece, capturedSquare)
-            if not self.kingCheck(piece[0]): validMoves.append((endRow, endColumn))
+            if not self.kingCheck(piece & 24): validMoves.append((endRow, endColumn))
             self.undoMove(piece, (row, column), (endRow, endColumn), capturedPiece, capturedSquare)
 
         return validMoves
 
     def legalMoves(self, colour):
         for piece, bitboard in self.piecePositions.items():
-            if piece[0] == colour:
+            if (piece & 24) == colour:
                 board = bitboard
                 while board:
                     lsb = board & -board
                     index = lsb.bit_length() - 1
-                    if self.blockCheck(index // 8, index % 8): 
+                    if self.fullyLegalMove(index // 8, index % 8): 
                         return True
                     board &= board - 1
         return False
 
     def isPromotable(self, piece, row):
-        return (piece == "wP" and row == 0) or (piece == "bP" and row == 7)
+        return (piece == (white | pawn) and row == 0) or (piece == (black | pawn) and row == 7)
 
     def insufficientMat(self):
-        if (self.piecePositions["bP"] or self.piecePositions["bR"] or self.piecePositions["bQ"] or self.piecePositions["wP"] or self.piecePositions["wR"] or self.piecePositions["wQ"]): return False
-        totKnights = int(self.piecePositions["bH"]).bit_count() + int(self.piecePositions["wH"]).bit_count()
-        totBishops = int(self.piecePositions["bB"]).bit_count() + int(self.piecePositions["wB"]).bit_count()
+        if (self.piecePositions[black | pawn] or self.piecePositions[black | rook] or self.piecePositions[black | queen] or self.piecePositions[white | pawn] or self.piecePositions[white | rook] or self.piecePositions[white | queen]): 
+            return False
+        totKnights = self.piecePositions[black | knight].bit_count() + self.piecePositions[white | knight].bit_count()
+        totBishops = self.piecePositions[black | bishop].bit_count() + self.piecePositions[white | bishop].bit_count()
         return (totBishops + totKnights) < 2
 
     def moveCastleRook(self, piece, start, end, undo=False):
-        if piece not in ("wK", "bK"): 
+        if piece not in (white | king, black | king): 
             return
-        row = 7 if piece == "wK" else 0
+        row = 7 if piece == (white | king) else 0
 
         if start == (row, 4) and end == (row, 6): 
             if undo:
@@ -270,26 +269,27 @@ class logic:
         else: 
             return
 
-        self.piecePositions[piece[0] + "R"] &= ~(1 << (rookStart[0] * 8 + rookStart[1]))
-        self.piecePositions[piece[0] + "R"] |= 1 << (rookEnd[0] * 8 + rookEnd[1])
-        self.setPiece(rookStart[0], rookStart[1], "")
-        self.setPiece(rookEnd[0], rookEnd[1], piece[0] + "R")
+        self.piecePositions[(piece & 24) | rook] &= ~(1 << (rookStart[0] * 8 + rookStart[1]))
+        self.piecePositions[(piece & 24) | rook] |= 1 << (rookEnd[0] * 8 + rookEnd[1])
+        self.setPiece(rookStart[0], rookStart[1], empty)
+        self.setPiece(rookEnd[0], rookEnd[1], (piece & 24) | rook)
 
     def simulateMove(self, piece, start, end, captured, capturedSquare=None):
         if captured:
             if capturedSquare:
                 self.piecePositions[captured] &= ~(1 << (capturedSquare[0] * 8 + capturedSquare[1]))
-                self.setPiece(capturedSquare[0], capturedSquare[1], "")
+                self.setPiece(capturedSquare[0], capturedSquare[1], empty)
             else:
                 self.piecePositions[captured] &= ~(1 << (end[0] * 8 + end[1]))
-                self.setPiece(end[0], end[1], "")
+                self.setPiece(end[0], end[1], empty)
 
         self.piecePositions[piece] &= ~(1 << (start[0] * 8 + start[1]))
         self.piecePositions[piece] |= 1 << (end[0] * 8 + end[1])
-        self.setPiece(start[0], start[1], "")
+        self.setPiece(start[0], start[1], empty)
         self.setPiece(end[0], end[1], piece)
 
-        if piece in ("wK", "bK"): self.moveCastleRook(piece, start, end)
+        if piece in (white | king, black | king): 
+            self.moveCastleRook(piece, start, end)
 
     def undoMove(self, piece, start, end, captured, capturedSquare=None):
         self.piecePositions[piece] &= ~(1 << (end[0] * 8 + end[1]))
@@ -305,9 +305,10 @@ class logic:
 
         self.setPiece(start[0], start[1], piece)
         if not captured or (captured and capturedSquare):
-            self.setPiece(end[0], end[1], "" if captured and capturedSquare else (captured or ""))
+            self.setPiece(end[0], end[1], empty if captured and capturedSquare else (captured or empty))
 
-        if piece in ("wK", "bK"): self.moveCastleRook(piece, start, end, undo=True)
+        if piece in (white | king, black | king): 
+            self.moveCastleRook(piece, start, end, undo=True)
 
     def makeMove(self, startRow, startColumn, endRow, endColumn, sound=True, simulation=False):
         from engine import visuals
@@ -329,27 +330,27 @@ class logic:
 
         self.moveCastleRook(movingPiece, start, end)
         
-        if movingPiece == "wK": 
+        if movingPiece == (white | king): 
             self.castleRights["wK"] = self.castleRights["wKl"] = self.castleRights["wKr"] = False
         elif movingPiece == "bK": 
             self.castleRights["bK"] = self.castleRights["bKl"] = self.castleRights["bKr"] = False
-        elif movingPiece == "wR":
+        elif movingPiece == (white | rook):
             if start == (7, 0): 
                 self.castleRights["wKl"] = False
             elif start == (7, 7): 
                 self.castleRights["wKr"] = False
-        elif movingPiece == "bR":
+        elif movingPiece == (black | king):
             if start == (0, 0): 
                 self.castleRights["bKl"] = False
             elif start == (0, 7): 
                 self.castleRights["bKr"] = False
 
-        if target == "wR":
+        if movingPiece == (white | rook):
             if end == (7, 0): 
                 self.castleRights["wKl"] = False
             elif end == (7, 7): 
                 self.castleRights["wKr"] = False
-        elif target == "bR":
+        elif movingPiece == (black | rook):
             if end == (0, 0): 
                 self.castleRights["bKl"] = False
             elif end == (0, 7): 
@@ -361,32 +362,32 @@ class logic:
 
         enPassantCapture = False
 
-        if movingPiece[-1] == "P" and target == "" and startColumn != endColumn and self.enPassantTarget == (endRow, endColumn):
-            capturedRow = endRow - (-1 if movingPiece[0] == "w" else 1)
+        if (movingPiece & 7) == pawn and target == empty and startColumn != endColumn and self.enPassantTarget == (endRow, endColumn):
+            capturedRow = endRow - (-1 if (movingPiece & 24) == white else 1)
             capturedPiece = self.squarePiece[capturedRow * 8 + endColumn]
-            if capturedPiece != "":
+            if capturedPiece != empty:
                 self.piecePositions[capturedPiece] &= ~(1 << (capturedRow * 8 + endColumn))
-                self.setPiece(capturedRow, endColumn, "")
+                self.setPiece(capturedRow, endColumn, empty)
                 capturedSquare = (capturedRow, endColumn)
                 enPassantCapture = True
                 if sound: sounds["capture"].play()
 
         if not enPassantCapture:
-            if target != "":
+            if target != empty:
                 self.piecePositions[target] &= ~targetPos
-                self.setPiece(endRow, endColumn, "")
+                self.setPiece(endRow, endColumn, empty)
                 if sound: sounds["capture"].play()
             else:
                 if sound: sounds["move"].play()
 
         self.piecePositions[movingPiece] &= ~(1 << (startRow * 8 + startColumn))
         self.piecePositions[movingPiece] |= targetPos
-        self.setPiece(startRow, startColumn, "")
+        self.setPiece(startRow, startColumn, empty)
         self.setPiece(endRow, endColumn, movingPiece)
 
         if self.isPromotable(movingPiece, endRow):
             if simulation or self.turnColour == botColour:
-                promotedPiece = self.turnColour + "Q"
+                promotedPiece = self.turnColour | queen
             else:
                 promotedPiece = visuals.choosePromotion(self.turnColour)
             
@@ -395,10 +396,10 @@ class logic:
             self.setPiece(endRow, endColumn, promotedPiece)
             promotion = promotedPiece
 
-        self.enPassantTarget = ((startRow + endRow) // 2, startColumn) if movingPiece[-1] == "P" and abs(endRow - startRow) == 2 else None
-        self.turnColour = "b" if self.turnColour == "w" else "w"    
+        self.enPassantTarget = ((startRow + endRow) // 2, startColumn) if (movingPiece & 7) == pawn and abs(endRow - startRow) == 2 else None
+        self.turnColour = black if self.turnColour == white else white    
         self.moves += 1
-        self.halfmoveClock = 0 if movingPiece[-1] == "P" or target != "" or enPassantCapture else self.halfmoveClock + 1
+        self.halfmoveClock = 0 if (movingPiece & 7) == pawn or target != empty or enPassantCapture else self.halfmoveClock + 1
         castleRightsAfter = (castleRights["wKl"], castleRights["wK"], castleRights["wKr"], castleRights["bKl"], castleRights["bK"], castleRights["bKr"])
         self.moveHistory.append((
             movingPiece, 
@@ -437,7 +438,7 @@ class logic:
         inCheck = self.kingCheck(self.turnColour)
         if not self.legalMoves(self.turnColour):
             if inCheck:
-                winner = "Black" if self.turnColour == "w" else "White"
+                winner = "Black" if self.turnColour == white else "White"
                 self.gameOverMessage = f"Checkmate!\n{winner}  wins!"
                 if sound: 
                     sounds["checkmate"].play()
@@ -489,7 +490,7 @@ class logic:
             self.piecePositions[piece] &= ~endPos
             self.piecePositions[piece] |= startPos
             
-        if capturedPiece != "":
+        if capturedPiece != empty:
             if capturedSquare:
                 self.piecePositions[capturedPiece] |= 1 << (capturedSquare[0] * 8 + capturedSquare[1])
             else:
@@ -524,7 +525,7 @@ class logic:
         
         piece, start, end, capturedPiece, capturedSquare, enPassantBefore, turnColour, moves, halfmoveClockBefore, castleRightsBefore, promotion, castleRightsAfter, enPassantAfter, halfmoveClockAfter = move
 
-        self.turnColour = "b" if turnColour == "w" else "w"
+        self.turnColour = black if turnColour == white else white
         self.moves = moves + 1
         self.halfmoveClock = halfmoveClockAfter
         
@@ -535,7 +536,7 @@ class logic:
         startPos = 1 << (start[0] * 8 + start[1])
         endPos = 1 << (end[0] * 8 + end[1])
 
-        if capturedPiece != "":
+        if capturedPiece != empty:
             if capturedSquare:
                 self.piecePositions[capturedPiece] &= ~(1 << (capturedSquare[0] * 8 + capturedSquare[1]))
             else:

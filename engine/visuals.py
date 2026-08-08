@@ -1,7 +1,7 @@
 import pygame
 import pygame.freetype
 import math
-from engine.constants import windowSize, positionSize, pieces, overlays, botColour
+from engine.constants import windowSize, positionSize, piecesTextures, overlays, botColour, empty, white, knight, bishop, rook, queen
 
 pygame.init()
 pygame.mixer.init()
@@ -31,7 +31,7 @@ strategyCircles = []
 lastMove = None
 
 def getDrawPos(row, col):
-    if botColour == "w":
+    if botColour == white:
         return 7 - row, 7 - col
     return row, col
 
@@ -49,20 +49,20 @@ def drawBoard(board):
                     color = "#8DCE8D"
             pygame.draw.rect(screen, color, (drawCol * positionSize, drawRow * positionSize, positionSize, positionSize))
             piece = board.squarePiece[row * 8 + column]
-            if piece != "":
-                screen.blit(pieces[piece], (drawCol * positionSize, drawRow * positionSize))
+            if piece != empty:
+                screen.blit(piecesTextures[piece], (drawCol * positionSize, drawRow * positionSize))
 
 def blurSurface(surface, scaleFactor=3):
     if scaleFactor <= 1: return surface.copy()
-    width = max(1, int(surface.get_width() / scaleFactor))
-    height = max(1, int(surface.get_height() / scaleFactor))
+    width = max(1, surface.get_width() // scaleFactor)
+    height = max(1, surface.get_height() // scaleFactor)
     scaled = pygame.transform.smoothscale(surface, (width, height))
     return pygame.transform.smoothscale(scaled, surface.get_size())
 
 def choosePromotion(colour):
     global promotionActive
     promotionActive = True
-    piecesToChoose = ["Q", "H", "R", "B"]
+    piecesToChoose = [queen, knight, rook, bishop]
     
     menuWidth = positionSize * 4
     menuX = (windowSize - menuWidth) // 2
@@ -83,8 +83,8 @@ def choosePromotion(colour):
             elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
                 mouseX, mouseY = event.pos
                 if menuY < mouseY < menuY + positionSize and menuX < mouseX < menuX + menuWidth:
-                    index = int((mouseX - menuX) // positionSize)
-                    chosenPiece = colour + piecesToChoose[index]
+                    index = (mouseX - menuX) // positionSize
+                    chosenPiece = colour | piecesToChoose[index]
                     promotionActive = False
 
         screen.blit(blurredBackground, (0, 0))
@@ -93,7 +93,7 @@ def choosePromotion(colour):
         pygame.draw.rect(screen, (0, 0, 0), (menuX, menuY, menuWidth, positionSize), 4)
         
         for i, piece in enumerate(piecesToChoose):
-            screen.blit(pieces[colour + piece], (menuX + (i * positionSize), menuY))
+            screen.blit(piecesTextures[colour | piece], (menuX + (i * positionSize), menuY))
             
         pygame.display.flip()
         clock.tick(60)
@@ -109,7 +109,7 @@ def drawHighlights(board):
     for moveRow, moveColumn in possibleMoves:
         drawRow, drawColumn = getDrawPos(moveRow, moveColumn)
         x, y = drawColumn * positionSize, drawRow * positionSize
-        if board.squarePiece[moveRow * 8 + moveColumn] != "":
+        if board.squarePiece[moveRow * 8 + moveColumn] != empty:
             screen.blit(overlays["red"], (x, y))
         else:
             screen.blit(overlays["green"], (x, y))
@@ -203,9 +203,9 @@ def drawArrows():
             drawArrow(arrowSurf, arrowColor, squareCentre(startSquare), squareCentre(endSquare))
 
     if rightClickStart and temporaryLine:
-        drawCol = int(temporaryLine[0] // positionSize)
-        drawRow = int(temporaryLine[1] // positionSize)
-        endSquare = (7 - drawRow, 7 - drawCol) if botColour == "w" else (drawRow, drawCol)
+        drawCol = temporaryLine[0] // positionSize
+        drawRow = temporaryLine[1] // positionSize
+        endSquare = (7 - drawRow, 7 - drawCol) if botColour == white else (drawRow, drawCol)
             
         dr = abs(rightClickStart[0] - endSquare[0])
         dc = abs(rightClickStart[1] - endSquare[1])
