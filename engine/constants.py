@@ -4,7 +4,7 @@ import random
 windowSize = 800
 positionSize = windowSize // 8
 randomColour = random.randint(0, 1)
-botColour = "b" if randomColour else "w"
+botColour = "w" if randomColour else "w"
 
 pieces = {
     "bQ": pygame.transform.scale(pygame.image.load("images/pieces/bqueen.png").convert_alpha(), (positionSize, positionSize)),

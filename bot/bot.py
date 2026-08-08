@@ -10,7 +10,7 @@ def getAllPossibleMoves(board, colour):
                 index = lsb.bit_length() - 1
                 row = index // 8
                 column = index % 8
-                pieceMoves = board.blockCheck(row, column)
+                pieceMoves = board.calculateLegalMoves(row, column, True)
                 for endRow, endColumn in pieceMoves:
                     allMoves.append((row, column, endRow, endColumn))
                 bb &= bb - 1
@@ -52,12 +52,14 @@ def minimax(board, depth, maximisingPlayer, alpha=-999999, beta=999999):
             return 0
     bestScore = -999999 if maximisingPlayer else 999999
 
-    if depth >= 3:
-        moves.sort(key=lambda move: scoreMove(board, move), reverse=True)
+    moves.sort(key=lambda move: scoreMove(board, move), reverse=True)
 
     for move in moves:
         startRow, startCol, endRow, endCol = move
         board.makeMove(startRow, startCol, endRow, endCol, sound=False, simulation=True)
+        if board.kingCheck(currentColour):
+            board.previousMove(False, True)
+            continue
         score = minimax(board, depth - 1, not maximisingPlayer, alpha, beta)
         board.previousMove(sound=False, simulation=True)
         bestScore = max(bestScore, score) if maximisingPlayer else min(bestScore, score) 

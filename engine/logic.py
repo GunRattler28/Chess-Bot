@@ -37,20 +37,20 @@ class logic:
         }
 
     def clone(self):
-        new_state = logic()
-        new_state.moves = self.moves
-        new_state.halfmoveClock = self.halfmoveClock
-        new_state.turnColour = self.turnColour
-        new_state.enPassantTarget = self.enPassantTarget
-        new_state.gameOverMessage = self.gameOverMessage
-        new_state.piecePositions = self.piecePositions.copy()
-        new_state.castleRights = self.castleRights.copy()
-        new_state.squarePiece = self.squarePiece.copy()
-        new_state.moveHistory = self.moveHistory.copy()
-        new_state.redoHistory = self.redoHistory.copy()
-        new_state.positionHistory = self.positionHistory.copy()
+        newState = logic()
+        newState.moves = self.moves
+        newState.halfmoveClock = self.halfmoveClock
+        newState.turnColour = self.turnColour
+        newState.enPassantTarget = self.enPassantTarget
+        newState.gameOverMessage = self.gameOverMessage
+        newState.piecePositions = self.piecePositions.copy()
+        newState.castleRights = self.castleRights.copy()
+        newState.squarePiece = self.squarePiece.copy()
+        newState.moveHistory = self.moveHistory.copy()
+        newState.redoHistory = self.redoHistory.copy()
+        newState.positionHistory = self.positionHistory.copy()
         
-        return new_state
+        return newState
 
     def setPiece(self, row, column, piece):
         if not (0 <= row < 8 and 0 <= column < 8): 
