@@ -49,7 +49,7 @@ def minimax(board, depth, maximisingPlayer, alpha=-999999, beta=999999):
     bestScore = -999999 if maximisingPlayer else 999999
     moves.sort(key=lambda move: scoreMove(board, move), reverse=True)
 
-    legalMovesFound = True
+    legalMovesFound = False
 
     for move in moves:
         startRow, startCol, endRow, endCol = move
@@ -57,6 +57,7 @@ def minimax(board, depth, maximisingPlayer, alpha=-999999, beta=999999):
         if board.kingCheck(currentColour):
             board.previousMove(False, True)
             continue
+        legalMovesFound = True
         score = minimax(board, depth - 1, not maximisingPlayer, alpha, beta)
         board.previousMove(sound=False, simulation=True)
         bestScore = max(bestScore, score) if maximisingPlayer else min(bestScore, score) 
@@ -82,9 +83,6 @@ def findBestMove(board, depth, botColour):
     bestMove = None
     
     moves = sorted(getAllPossibleMoves(board, botColour), key=lambda move: scoreMove(board, move, bestMove), reverse=True)
-
-    if moves:
-        bestMove = moves[0]
 
     savedRedo = board.redoHistory.copy()
     savedMoves = board.moveHistory.copy()
@@ -130,7 +128,7 @@ def findBestMove(board, depth, botColour):
             if beta <= alpha:
                 break
 
-        if currentDepth >= 4 and (currentBestScore <= alpha or currentBestScore >= beta):
+        if currentDepth >= 4 and (currentBestScore <= initialAlpha or currentBestScore >= initialBeta):
             alpha = -999999
             beta = 999999
             currentBestScore = -999999 if playerMaximising else 999999
