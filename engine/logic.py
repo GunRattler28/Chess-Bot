@@ -160,7 +160,7 @@ class logic:
 
     def addCastleMoves(self, pieceColour, possibleMoves):
         row = 7 if pieceColour == white else 0
-        enemy = black if pieceColour == white else black
+        enemy = black if pieceColour == white else white
         cStr = "w" if pieceColour == white else "b"
         if (self.castleRights[cStr + "Kr"] and self.squarePiece[row * 8 + 5] == empty and self.squarePiece[row * 8 + 6] == empty and not self.kingCheck(pieceColour) and not self.isSquareAttacked(row, 5, enemy) and not self.isSquareAttacked(row, 6, enemy) and self.squarePiece[row * 8 + 7] == (pieceColour | rook)):
             possibleMoves.append((row, 6))
@@ -329,32 +329,29 @@ class logic:
         promotion = None
 
         self.moveCastleRook(movingPiece, start, end)
-        
+
         if movingPiece == (white | king): 
             self.castleRights["wK"] = self.castleRights["wKl"] = self.castleRights["wKr"] = False
-        elif movingPiece == "bK": 
+        elif movingPiece == (black | king): 
             self.castleRights["bK"] = self.castleRights["bKl"] = self.castleRights["bKr"] = False
-        elif movingPiece == (white | rook):
-            if start == (7, 0): 
-                self.castleRights["wKl"] = False
-            elif start == (7, 7): 
-                self.castleRights["wKr"] = False
-        elif movingPiece == (black | king):
-            if start == (0, 0): 
-                self.castleRights["bKl"] = False
-            elif start == (0, 7): 
-                self.castleRights["bKr"] = False
 
-        if movingPiece == (white | rook):
-            if end == (7, 0): 
-                self.castleRights["wKl"] = False
-            elif end == (7, 7): 
-                self.castleRights["wKr"] = False
-        elif movingPiece == (black | rook):
-            if end == (0, 0): 
-                self.castleRights["bKl"] = False
-            elif end == (0, 7): 
-                self.castleRights["bKr"] = False
+        if start == (7, 0): 
+            self.castleRights["wKl"] = False
+        elif start == (7, 7): 
+            self.castleRights["wKr"] = False
+        elif start == (0, 0): 
+            self.castleRights["bKl"] = False
+        elif start == (0, 7): 
+            self.castleRights["bKr"] = False
+
+        if end == (7, 0): 
+            self.castleRights["wKl"] = False
+        elif end == (7, 7): 
+            self.castleRights["wKr"] = False
+        elif end == (0, 0): 
+            self.castleRights["bKl"] = False
+        elif end == (0, 7): 
+            self.castleRights["bKr"] = False
 
         if not simulation:
             visuals.possibleMoves.clear()

@@ -26,9 +26,11 @@ def totalScore(board):
 def scoreMove(board, move, previousBestMove=None):
     if move == previousBestMove:
         return 999999
+    
     startRow, startCol, endRow, endCol = move
     targetPiece = board.squarePiece[endRow * 8 + endCol]
     score = 0
+    
     if targetPiece != empty:
         targetType = targetPiece & 7
         score += material.pieceValues[targetType] * 10
@@ -44,15 +46,10 @@ def minimax(board, depth, maximisingPlayer, alpha=-999999, beta=999999):
 
     currentColour = white if maximisingPlayer else black
     moves = getAllPossibleMoves(board, currentColour)
-
-    if not moves:
-        if board.kingCheck(currentColour):
-            return -999999 if maximisingPlayer else 999999
-        else:
-            return 0
     bestScore = -999999 if maximisingPlayer else 999999
-
     moves.sort(key=lambda move: scoreMove(board, move), reverse=True)
+
+    legalMovesFound = True
 
     for move in moves:
         startRow, startCol, endRow, endCol = move
@@ -69,6 +66,12 @@ def minimax(board, depth, maximisingPlayer, alpha=-999999, beta=999999):
             beta = min(beta, score)
         if beta <= alpha:
             break
+
+    if not legalMovesFound:
+        if board.kingCheck(currentColour):
+            return (-999999 + depth) if maximisingPlayer else (999999 - depth)
+        else:
+            return 0
 
     return bestScore
 
@@ -107,6 +110,9 @@ def findBestMove(board, depth, botColour):
         for move in moves:
             startRow, startCol, endRow, endCol = move
             board.makeMove(startRow, startCol, endRow, endCol, sound=False, simulation=True)
+            if board.kingCheck(botColour):
+                board.previousMove(False, True)
+                continue
             score = minimax(board, currentDepth - 1, not playerMaximising, alpha, beta)
             board.previousMove(sound=False, simulation=True)
             
@@ -132,6 +138,9 @@ def findBestMove(board, depth, botColour):
             for move in moves:
                 startRow, startCol, endRow, endCol = move
                 board.makeMove(startRow, startCol, endRow, endCol, sound=False, simulation=True)
+                if board.kingCheck(botColour):
+                    board.previousMove(False, True)
+                    continue
                 score = minimax(board, currentDepth - 1, not playerMaximising, alpha, beta)
                 board.previousMove(sound=False, simulation=True)
                 

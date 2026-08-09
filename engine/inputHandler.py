@@ -66,7 +66,7 @@ def onClick(x, y, board):
 
 def handleSelection(board, row, column):
     piece = board.squarePiece[row * 8 + column]
-    if piece == empty or (piece & 24) != board.turnColour:
+    if piece == empty or (piece & 24) != board.turnColour or board.turnColour == constants.botColour:
         visuals.activeSquare = visuals.activeOutline = None
         visuals.possibleMoves.clear()
         visuals.redraw = True

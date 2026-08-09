@@ -74,6 +74,7 @@ class mainLoop:
             currentY = (constants.windowSize - totalHeight) / 2
             for surface, rectangle in renderedLines:
                 rectangle.centerx = constants.windowSize / 2
+
                 rectangle.y = currentY
                 visuals.screen.blit(surface, rectangle)
                 currentY += rectangle.height + 8
