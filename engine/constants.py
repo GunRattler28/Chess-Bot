@@ -2,13 +2,22 @@ import pygame
 import random
 
 empty = 0
-pawn, knight, bishop, rook, queen, king = 1, 2, 3, 4, 5, 6
-white, black = 8, 16
+pawn = 1
+knight = 2
+bishop = 3
+rook = 4
+queen = 5
+king = 6
+white = 8
+black = 16
 
 windowSize = 800
 positionSize = windowSize // 8
 randomColour = random.randint(0, 1)
 botColour = black if randomColour else white
+playerTimeStart = 0
+playerTotalTime = 0
+botTotalTime = 0
 
 piecesTextures = {
     (black | queen): pygame.transform.scale(pygame.image.load("images/pieces/bqueen.png").convert_alpha(), (positionSize, positionSize)),
@@ -57,3 +66,29 @@ def createAttackTable(offsets):
 
 knightAtk = createAttackTable(knightMoves)
 kingAtk = createAttackTable(kingMoves)
+
+random.seed(1149)
+
+zobristKeys = {}
+
+for colour in [white, black]:
+    for pieceType in [pawn, knight, bishop, rook, queen, king]:
+        fullPiece = colour | pieceType
+        zobristKeys[fullPiece] = []
+
+        for index in range(64):
+            zobristKeys[fullPiece].append(random.getrandbits(64))
+
+zobristTurn = random.getrandbits(64)
+
+zobristCastling = {
+    "wKl": random.getrandbits(64),
+    "wKr": random.getrandbits(64),
+    "bKl": random.getrandbits(64),
+    "bKr": random.getrandbits(64)
+}
+
+zobristEnPassant = []
+
+for column in range(8):
+    zobristEnPassant.append(random.getrandbits(64))

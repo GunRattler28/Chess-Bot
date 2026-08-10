@@ -1,4 +1,4 @@
-from engine.constants import rookDirections, bishopDirections, queenDirections, knightAtk, kingAtk, sounds, botColour, empty, queen, king, knight, rook, bishop, pawn, black, white
+from engine.constants import rookDirections, bishopDirections, queenDirections, knightAtk, kingAtk, sounds, botColour, empty, queen, king, knight, rook, bishop, pawn, black, white, zobristKeys, zobristTurn, zobristCastling, zobristEnPassant
 
 class logic:
     def __init__(self):
@@ -72,8 +72,25 @@ class logic:
         blackOccupied = (self.piecePositions[17] | self.piecePositions[18] | self.piecePositions[19] | self.piecePositions[20] | self.piecePositions[21] | self.piecePositions[22])
         return (whiteOccupied, blackOccupied, whiteOccupied | blackOccupied)
 
-    def hashBoard(self):
-        return hash((tuple(self.piecePositions.values()), self.turnColour, tuple(self.castleRights.values()), self.enPassantTarget))
+    def zobristHash(self):
+        hash = 0
+        for index in range(64):
+            piece = self.squarePiece[index]
+            if piece != empty:
+                hash = hash ^ zobristKeys[piece][index]
+
+        if self.turnColour == black:
+            hash = hash ^ zobristTurn
+
+        for castlingRight in ["wKl", "wKr", "bKl", "bKr"]:
+            if self.castleRights[castlingRight] == True:
+                hash = hash ^ zobristCastling[castlingRight]
+
+        if self.enPassantTarget != None:
+            columnIndex = self.enPassantTarget[1]
+            hash = hash ^ zobristEnPassant[columnIndex]
+
+        return hash
 
     def slidingMoves(self, row, column, movements, friendlyOccupied, occupied, possibleMoves):
         for rowChange, columnChange in movements:
@@ -416,7 +433,7 @@ class logic:
         ))
 
         if not simulation:
-            self.positionHistory.append(self.hashBoard())
+            self.positionHistory.append(self.zobristHash())
             self.updateSquareTable()
             visuals.activeSquare = None
             visuals.activeOutline = None
@@ -427,7 +444,7 @@ class logic:
 
     def gameState(self, sound=True):
         
-        if self.positionHistory.count(self.hashBoard()) >= 3:
+        if self.positionHistory.count(self.zobristHash()) >= 3:
             self.gameOverMessage = "Three-fold \nRepetition!\nNobody  wins!"
             if sound: sounds["checkmate"].play()
             return
@@ -455,6 +472,11 @@ class logic:
                 sounds["checkmate"].play()
         else: 
             self.gameOverMessage = None
+
+        if self.gameOverMessage:
+            from engine.constants import playerTotalTime, botTotalTime
+            print(f"Average player time: {(playerTotalTime / self.moves) / 1000 : .2f} seconds")
+            print(f"Average bot time: {(botTotalTime / self.moves) / 1000 : .2f} seconds")
 
     def previousMove(self, sound=True, simulation=False):
         from engine import visuals
@@ -553,7 +575,7 @@ class logic:
 
         self.moveHistory.append(move)
         self.updateSquareTable()
-        self.positionHistory.append(self.hashBoard())
+        self.positionHistory.append(self.zobristHash())
 
         visuals.activeSquare = visuals.activeOutline = None
         visuals.possibleMoves.clear()

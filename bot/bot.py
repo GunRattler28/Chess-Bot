@@ -1,6 +1,34 @@
 from bot.modules import material, positions
 from engine.constants import white, black, empty
 
+aspirationWindow = 50
+exact = 0
+upper = 1
+lower = 2
+transpositionTable = {}
+
+def storeEvaluation(hash, depth, score, flag, bestMove):
+    transpositionTable[hash] = {
+        "depth": depth,
+        "score": score,
+        "flag": flag,
+        "bestMove": bestMove
+    }
+
+def getEvaluation(hash, depth, alpha, beta):
+    if hash in transpositionTable:
+        position = transpositionTable[hash]
+        if position["depth"] >= depth:
+            score = position["score"]
+            flag = position["flag"]
+            if flag == exact:
+                return score
+            elif flag == upper and score <= alpha:
+                return score
+            elif flag == lower and score >= beta:
+                return score
+    return None
+
 def getAllPossibleMoves(board, colour):
     allMoves = []
     for piece, bitboard in board.piecePositions.items():
@@ -43,7 +71,14 @@ def scoreMove(board, move, previousBestMove=None):
 def minimax(board, depth, maximisingPlayer, alpha=-999999, beta=999999):
     if depth == 0:
         return totalScore(board)
+    hash = board.zobristHash()
+    score = getEvaluation(hash, depth, alpha, beta)
+    if score != None:
+        return score
 
+    initialAlpha = alpha
+    initialBeta = beta
+    bestMove = None
     currentColour = white if maximisingPlayer else black
     moves = getAllPossibleMoves(board, currentColour)
     bestScore = -999999 if maximisingPlayer else 999999
@@ -63,8 +98,10 @@ def minimax(board, depth, maximisingPlayer, alpha=-999999, beta=999999):
         bestScore = max(bestScore, score) if maximisingPlayer else min(bestScore, score) 
         if maximisingPlayer:
             alpha = max(alpha, score)
+            bestMove = move
         else:
             beta = min(beta, score)
+            bestMove = move
         if beta <= alpha:
             break
 
@@ -73,6 +110,15 @@ def minimax(board, depth, maximisingPlayer, alpha=-999999, beta=999999):
             return (-999999 + depth) if maximisingPlayer else (999999 - depth)
         else:
             return 0
+
+    if bestScore <= initialAlpha:
+        flag = upper
+    elif bestScore >= initialBeta:
+        flag = lower
+    else:
+        flag = exact
+
+    storeEvaluation(hash, depth, bestScore, flag, bestMove)
 
     return bestScore
 
@@ -89,7 +135,6 @@ def findBestMove(board, depth, botColour):
     savedPositions = board.positionHistory.copy()
     savedGameOver = board.gameOverMessage
     prevScore = 0
-    aspirationWindow = 50
     
     for currentDepth in range(1, depth + 1):
         if currentDepth >= 4:

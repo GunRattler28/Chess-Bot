@@ -10,7 +10,6 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 import threading
 from engine import visuals, inputHandler, logic, constants
-from engine.constants import botColour, empty
 from bot import bot
 from bot.modules import material
 
@@ -21,13 +20,13 @@ class mainLoop:
         self.searchThread = None
         self.board = logic.logic()
         self.board.updateSquareTable()
-        self.board.positionHistory.append(self.board.hashBoard())
+        self.board.positionHistory.append(self.board.zobristHash())
         self.botCooldownUntil = 0
         self.running = True
 
     def searchMove(self, currentMoveCount):
         boardCopy = self.board.clone()
-        calculatedMove = bot.findBestMove(boardCopy, 5, botColour)
+        calculatedMove = bot.findBestMove(boardCopy, 5, constants.botColour)
         if self.searching and self.board.moves == currentMoveCount:
             self.bestMove = calculatedMove
         self.searching = False
@@ -42,11 +41,14 @@ class mainLoop:
         if self.bestMove is not None and pygame.time.get_ticks() > self.botCooldownUntil:
             startRow, startCol, endRow, endCol = self.bestMove
             piece = board.squarePiece[startRow * 8 + startCol]
-            if piece != empty and (piece & 24) == botColour:
+            if piece != constants.empty and (piece & 24) == constants.botColour:
                 board.makeMove(startRow, startCol, endRow, endCol)
                 board.gameState()
-                print(f"Move: {board.moves} Material Difference: {material.materialDif(board.piecePositions)} Time: {(pygame.time.get_ticks() - self.botCooldownUntil + 3000) / 1000} seconds")
-            
+                time = pygame.time.get_ticks() - self.botCooldownUntil + 3000
+                constants.playerTimeStart = pygame.time.get_ticks()
+                print(f"Move: {board.moves} Material Difference: {material.materialDif(board.piecePositions)} Time: {time / 1000 : .2f} seconds")
+                constants.botTotalTime += time
+
             self.bestMove = None
             return True
             
@@ -87,7 +89,7 @@ class mainLoop:
             inputHandler.handleInputs(self, self.board)
             if visuals.redraw:
                 self.draw()
-            if self.board.turnColour == botColour and not self.board.gameOverMessage:
+            if self.board.turnColour == constants.botColour and not self.board.gameOverMessage:
                 self.runBotTurn(self.board)
 
             visuals.clock.tick(60)    

@@ -60,7 +60,9 @@ def onClick(x, y, board):
     if (row, column) in visuals.possibleMoves:
         board.makeMove(startRow, startColumn, row, column)
         board.gameState()
-        print(f"Move: {board.moves} Material Difference: {material.materialDif(board.piecePositions)} Time: NULL")
+        time = pygame.time.get_ticks() - constants.playerTimeStart
+        print(f"Move: {board.moves} Material Difference: {material.materialDif(board.piecePositions)} Time: {time / 1000 : .2f} seconds")
+        constants.playerTotalTime += time
     else:
         handleSelection(board, row, column)
 
