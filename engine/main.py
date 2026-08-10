@@ -24,10 +24,10 @@ class mainLoop:
         self.botCooldownUntil = 0
         self.running = True
 
-    def searchMove(self, currentMoveCount):
+    def searchMove(self, hash):
         boardCopy = self.board.clone()
         calculatedMove = bot.findBestMove(boardCopy, 5, constants.botColour)
-        if self.searching and self.board.moves == currentMoveCount:
+        if self.searching and self.board.zobristHash() == hash:
             self.bestMove = calculatedMove
         self.searching = False
 
@@ -35,7 +35,8 @@ class mainLoop:
         if self.bestMove is None and not self.searching:
             self.searching = True
             self.botCooldownUntil = pygame.time.get_ticks() + 3000
-            self.searchThread = threading.Thread(target=self.searchMove, args=(board.moves,), daemon=True)
+            constants.abortSearch = False
+            self.searchThread = threading.Thread(target=self.searchMove, args=(board.zobristHash(),), daemon=True)
             self.searchThread.start()
 
         if self.bestMove is not None and pygame.time.get_ticks() > self.botCooldownUntil:

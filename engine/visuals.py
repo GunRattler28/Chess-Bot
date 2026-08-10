@@ -6,6 +6,7 @@ from engine.constants import windowSize, positionSize, piecesTextures, overlays,
 pygame.init()
 pygame.mixer.init()
 pygame.font.init()
+pygame.freetype.init()
 
 redraw = True
 screen = pygame.display.get_surface()
@@ -17,7 +18,7 @@ clock = pygame.time.Clock()
 try:
     gameFont = pygame.freetype.SysFont("dynapuffregular", 64, bold=True) 
 except:
-    gameFont = pygame.freetype.SysFont("arial", 64, bold=True)
+    gameFont = pygame.freetype.SysFont(None, 64, bold=True)
 
 promotionActive = False
 activeOutline = None

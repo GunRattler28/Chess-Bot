@@ -432,8 +432,9 @@ class logic:
             self.halfmoveClock
         ))
 
+        self.positionHistory.append(self.zobristHash())
+
         if not simulation:
-            self.positionHistory.append(self.zobristHash())
             self.updateSquareTable()
             visuals.activeSquare = None
             visuals.activeOutline = None
@@ -475,8 +476,8 @@ class logic:
 
         if self.gameOverMessage:
             from engine.constants import playerTotalTime, botTotalTime
-            print(f"Average player time: {(playerTotalTime / self.moves) / 1000 : .2f} seconds")
-            print(f"Average bot time: {(botTotalTime / self.moves) / 1000 : .2f} seconds")
+            print(f"Average player time: {(playerTotalTime / max(1, self.moves)) / 1000 : .2f} seconds")
+            print(f"Average bot time: {(botTotalTime / max(1, self.moves)) / 1000 : .2f} seconds")
 
     def previousMove(self, sound=True, simulation=False):
         from engine import visuals
@@ -484,10 +485,11 @@ class logic:
             return
 
         move = self.moveHistory.pop()
-        if not simulation: 
-            self.redoHistory.append(move)
         if self.positionHistory: 
             self.positionHistory.pop()
+
+        if not simulation: 
+            self.redoHistory.append(move)
 
         piece, start, end, capturedPiece, capturedSquare, enPassantBefore, turnColour, moves, halfmoveClockBefore, castleRightsBefore, promotion, castleRightsAfter, enPassantAfter, halfmoveClockAfter = move
 

@@ -38,11 +38,13 @@ def handleInputs(inputs, board):
                 inputs.botCooldownUntil = pygame.time.get_ticks() + 3000
                 inputs.bestMove = None
                 inputs.searching = False
+                constants.abortSearch = True
             elif event.key == pygame.K_RIGHT:
                 board.redoMove()
                 inputs.botCooldownUntil = pygame.time.get_ticks() + 3000
                 inputs.bestMove = None
                 inputs.searching = False
+                constants.abortSearch = True
 
 def onClick(x, y, board):
     if visuals.promotionActive: 

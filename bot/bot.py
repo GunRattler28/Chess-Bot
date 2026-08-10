@@ -1,4 +1,5 @@
 from bot.modules import material, positions
+import engine.constants as constants
 from engine.constants import white, black, empty
 
 aspirationWindow = 50
@@ -22,12 +23,13 @@ def getEvaluation(hash, depth, alpha, beta):
             score = position["score"]
             flag = position["flag"]
             if flag == exact:
-                return score
+                return score, position["bestMove"]
             elif flag == upper and score <= alpha:
-                return score
+                return score, position["bestMove"]
             elif flag == lower and score >= beta:
-                return score
-    return None
+                return score, position["bestMove"]
+        return None, position["bestMove"]
+    return None, None
 
 def getAllPossibleMoves(board, colour):
     allMoves = []
@@ -69,20 +71,22 @@ def scoreMove(board, move, previousBestMove=None):
     return score
 
 def minimax(board, depth, maximisingPlayer, alpha=-999999, beta=999999):
+    if constants.abortSearch:
+        return 0
     if depth == 0:
         return totalScore(board)
+    if board.halfmoveClock >= 100 or board.positionHistory.count(board.zobristHash()) >= 3:
+        return 0
     hash = board.zobristHash()
-    score = getEvaluation(hash, depth, alpha, beta)
+    score, bestMove = getEvaluation(hash, depth, alpha, beta)
     if score != None:
         return score
-
     initialAlpha = alpha
     initialBeta = beta
-    bestMove = None
     currentColour = white if maximisingPlayer else black
     moves = getAllPossibleMoves(board, currentColour)
     bestScore = -999999 if maximisingPlayer else 999999
-    moves.sort(key=lambda move: scoreMove(board, move), reverse=True)
+    moves.sort(key=lambda move: scoreMove(board, move, bestMove), reverse=True)
 
     legalMovesFound = False
 
@@ -97,11 +101,15 @@ def minimax(board, depth, maximisingPlayer, alpha=-999999, beta=999999):
         board.previousMove(sound=False, simulation=True)
         bestScore = max(bestScore, score) if maximisingPlayer else min(bestScore, score) 
         if maximisingPlayer:
+            if score > bestScore:
+                bestMove = move
+            bestScore = max(bestScore, score)
             alpha = max(alpha, score)
-            bestMove = move
         else:
+            if score < bestScore:
+                bestMove = move
+            bestScore = min(bestScore, score)
             beta = min(beta, score)
-            bestMove = move
         if beta <= alpha:
             break
 
@@ -123,6 +131,8 @@ def minimax(board, depth, maximisingPlayer, alpha=-999999, beta=999999):
     return bestScore
 
 def findBestMove(board, depth, botColour):
+    if constants.abortSearch:
+        return None
     playerMaximising = (botColour == white)
     alpha = -999999
     beta = 999999
