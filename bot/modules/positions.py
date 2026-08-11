@@ -92,12 +92,12 @@ def isEndgame(board):
 
 def evaluatePositions(board):
     score = 0
+    endgame = isEndgame(board)
     for piece, bitboard in board.items():
         if piece == empty:
             continue
         isWhite = piece & white
         pType = piece & 7
-        endgame = isEndgame(board)
         while bitboard:
             lsb = bitboard & -bitboard
             index = lsb.bit_length() - 1

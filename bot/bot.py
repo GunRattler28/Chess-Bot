@@ -1,6 +1,7 @@
-from bot.modules import material, positions
+import pygame
 import engine.constants as constants
 from engine.constants import white, black, empty
+from bot.modules import material, positions
 
 aspirationWindow = 50
 exact = 0
@@ -53,7 +54,6 @@ def totalScore(board):
     score = 0
     score += material.materialDif(board.piecePositions) * 5
     score += positions.evaluatePositions(board.piecePositions)
-
     return score
 
 def scoreMove(board, move, previousBestMove=None):
@@ -73,8 +73,11 @@ def scoreMove(board, move, previousBestMove=None):
             score -= material.pieceValues[atkType]
     return score
 
-def minimax(board, depth, maximisingPlayer, alpha=-999999, beta=999999):
+def minimax(board, depth, maximisingPlayer, startTime, timeLimit, alpha=-999999, beta=999999):
     if constants.abortSearch:
+        return 0
+    if (pygame.time.get_ticks() - startTime) > timeLimit:
+        constants.abortSearch = True
         return 0
     if depth == 0:
         return totalScore(board)
@@ -82,7 +85,7 @@ def minimax(board, depth, maximisingPlayer, alpha=-999999, beta=999999):
         return 0
     hash = board.zobristHash()
     score, bestMove = getEvaluation(hash, depth, alpha, beta)
-    if score != None:
+    if score is not None:
         return score
     initialAlpha = alpha
     initialBeta = beta
@@ -90,7 +93,6 @@ def minimax(board, depth, maximisingPlayer, alpha=-999999, beta=999999):
     moves = getAllPossibleMoves(board, currentColour)
     bestScore = -999999 if maximisingPlayer else 999999
     moves.sort(key=lambda move: scoreMove(board, move, bestMove), reverse=True)
-
     legalMovesFound = False
 
     for move in moves:
@@ -100,7 +102,7 @@ def minimax(board, depth, maximisingPlayer, alpha=-999999, beta=999999):
             board.previousMove(False, True)
             continue
         legalMovesFound = True
-        score = minimax(board, depth - 1, not maximisingPlayer, alpha, beta)
+        score = minimax(board, depth - 1, not maximisingPlayer, startTime, timeLimit, alpha, beta, )
         board.previousMove(sound=False, simulation=True)
         if maximisingPlayer:
             if score > bestScore:
@@ -128,101 +130,90 @@ def minimax(board, depth, maximisingPlayer, alpha=-999999, beta=999999):
     else:
         flag = exact
 
-    storeEvaluation(hash, depth, bestScore, flag, bestMove)
-
+    if not constants.abortSearch:
+        storeEvaluation(hash, depth, bestScore, flag, bestMove)
     return bestScore
 
-def findBestMove(board, depth, botColour):
+def searchMovesAtDepth(board, moves, depth, alpha, beta, playerMaximising, botColour, startTime, timeLimit):
+    if (pygame.time.get_ticks() - startTime) > timeLimit:
+        return 0, None
+    
+    currentBestScore = -999999 if playerMaximising else 999999
+    currentBestMove = None
+    
+    for move in moves:
+        if constants.abortSearch:
+            break
+        startRow, startCol, endRow, endCol = move
+        board.makeMove(startRow, startCol, endRow, endCol, sound=False, simulation=True)
+        
+        if board.kingCheck(botColour):
+            board.previousMove(False, True)
+            continue
+            
+        score = minimax(board, depth - 1, not playerMaximising, startTime, timeLimit, alpha, beta)
+        board.previousMove(sound=False, simulation=True)
+        
+        if playerMaximising:
+            if score > currentBestScore:
+                currentBestScore = score
+                currentBestMove = move
+            alpha = max(alpha, score)
+        else:
+            if score < currentBestScore:
+                currentBestScore = score
+                currentBestMove = move
+            beta = min(beta, score)
+            
+        if beta <= alpha:
+            break
+            
+    return currentBestScore, currentBestMove
+
+def findBestMove(board, depth, botColour, startTime, timeLimit):
     if constants.abortSearch:
         return None
-    playerMaximising = (botColour == white)
-    alpha = -999999
-    beta = 999999
-    bestMove = None
     
+    playerMaximising = (botColour == white)
+    bestMove = None
     moves = sorted(getAllPossibleMoves(board, botColour), key=lambda move: scoreMove(board, move, bestMove), reverse=True)
-
     savedRedo = board.redoHistory.copy()
     savedMoves = board.moveHistory.copy()
     savedPositions = board.positionHistory.copy()
     savedGameOver = board.gameOverMessage
-    prevScore = 0
+    completedBestMove = None
+    previousScore = 0
     
     for currentDepth in range(1, depth + 1):
+        if constants.abortSearch:
+            break
+        if (pygame.time.get_ticks() - startTime) > timeLimit:
+            break
         if currentDepth >= 4:
-            initialAlpha = prevScore - aspirationWindow
-            initialBeta = prevScore + aspirationWindow
+            initialAlpha = previousScore - aspirationWindow
+            initialBeta = previousScore + aspirationWindow
         else:
             initialAlpha = -999999
             initialBeta = 999999
 
-        alpha = initialAlpha
-        beta = initialBeta
-
-        currentBestScore = -999999 if playerMaximising else 999999
-        currentBestMove = bestMove
-
-        for move in moves:
-            startRow, startCol, endRow, endCol = move
-            board.makeMove(startRow, startCol, endRow, endCol, sound=False, simulation=True)
-            if board.kingCheck(botColour):
-                board.previousMove(False, True)
-                continue
-            score = minimax(board, currentDepth - 1, not playerMaximising, alpha, beta)
-            board.previousMove(sound=False, simulation=True)
-            
-            if playerMaximising:
-                if score > currentBestScore:
-                    currentBestScore = score
-                    currentBestMove = move
-                alpha = max(alpha, score)
-            else:
-                if score < currentBestScore:
-                    currentBestScore = score
-                    currentBestMove = move
-                beta = min(beta, score)
-                
-            if beta <= alpha:
-                break
-
+        currentBestScore, currentBestMove = searchMovesAtDepth(board, moves, currentDepth, initialAlpha, initialBeta, playerMaximising, botColour, startTime, timeLimit)
         if currentDepth >= 4 and (currentBestScore <= initialAlpha or currentBestScore >= initialBeta):
-            alpha = -999999
-            beta = 999999
-            currentBestScore = -999999 if playerMaximising else 999999
-            
-            for move in moves:
-                startRow, startCol, endRow, endCol = move
-                board.makeMove(startRow, startCol, endRow, endCol, sound=False, simulation=True)
-                if board.kingCheck(botColour):
-                    board.previousMove(False, True)
-                    continue
-                score = minimax(board, currentDepth - 1, not playerMaximising, alpha, beta)
-                board.previousMove(sound=False, simulation=True)
-                
-                if playerMaximising:
-                    if score > currentBestScore:
-                        currentBestScore = score
-                        currentBestMove = move
-                    alpha = max(alpha, score)
-                else:
-                    if score < currentBestScore:
-                        currentBestScore = score
-                        currentBestMove = move
-                    beta = min(beta, score)
-                    
-                if beta <= alpha:
-                    break
+            currentBestScore, currentBestMove = searchMovesAtDepth(board, moves, currentDepth, -999999, 999999, playerMaximising, botColour, startTime, timeLimit)
 
-        prevScore = currentBestScore
+        previousScore = currentBestScore
         if currentBestMove:
             bestMove = currentBestMove
+            completedBestMove = currentBestMove
             if bestMove in moves:
                 moves.remove(bestMove)
                 moves.insert(0, bestMove)
-            
+
     board.redoHistory = savedRedo
     board.moveHistory = savedMoves
     board.positionHistory = savedPositions
     board.gameOverMessage = savedGameOver
-    
-    return bestMove
+
+    if completedBestMove:
+        return completedBestMove, currentDepth
+    else:
+        return bestMove, depth

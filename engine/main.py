@@ -23,12 +23,14 @@ class mainLoop:
         self.board.positionHistory.append(self.board.zobristHash())
         self.botCooldownUntil = 0
         self.running = True
+        self.searchedDepth = None
 
     def searchMove(self, hash):
         boardCopy = self.board.clone()
-        calculatedMove = bot.findBestMove(boardCopy, 5, constants.botColour)
+        calculatedMove, searchedDepth = bot.findBestMove(boardCopy, 7, constants.botColour, pygame.time.get_ticks(), constants.timeLimit * 1000)
         if self.searching and self.board.zobristHash() == hash:
             self.bestMove = calculatedMove
+            self.searchedDepth = searchedDepth
         self.searching = False
 
     def runBotTurn(self, board): 
@@ -47,7 +49,7 @@ class mainLoop:
                 board.gameState()
                 time = pygame.time.get_ticks() - self.botCooldownUntil + 3000
                 constants.playerTimeStart = pygame.time.get_ticks()
-                print(f"Move: {board.moves} Material Difference: {material.materialDif(board.piecePositions)} Time: {time / 1000 : .2f} seconds")
+                print(f"Move: {board.moves}  Material Difference: {material.materialDif(board.piecePositions)}  Time: {time / 1000 : .2f} seconds  Searched to depth: {self.searchedDepth}")
                 constants.botTotalTime += time
 
             self.bestMove = None
