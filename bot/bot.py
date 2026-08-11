@@ -102,17 +102,16 @@ def minimax(board, depth, maximisingPlayer, alpha=-999999, beta=999999):
         legalMovesFound = True
         score = minimax(board, depth - 1, not maximisingPlayer, alpha, beta)
         board.previousMove(sound=False, simulation=True)
-        bestScore = max(bestScore, score) if maximisingPlayer else min(bestScore, score) 
         if maximisingPlayer:
             if score > bestScore:
+                bestScore = score
                 bestMove = move
-            bestScore = max(bestScore, score)
-            alpha = max(alpha, score)
+            alpha = max(alpha, bestScore)
         else:
             if score < bestScore:
+                bestScore = score
                 bestMove = move
-            bestScore = min(bestScore, score)
-            beta = min(beta, score)
+            beta = min(beta, bestScore)
         if beta <= alpha:
             break
 

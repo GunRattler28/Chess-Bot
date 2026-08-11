@@ -19,7 +19,7 @@ class mainLoop:
         self.searching = False
         self.searchThread = None
         self.board = logic.logic()
-        self.board.updateSquareTable()
+        self.board.createSquareTable()
         self.board.positionHistory.append(self.board.zobristHash())
         self.botCooldownUntil = 0
         self.running = True
