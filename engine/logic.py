@@ -11,6 +11,7 @@ class logic:
         self.positionHistory = []
         self.squarePiece = [empty] * 64
         self.enPassantTarget = None
+        self.hash = 0
 
         self.piecePositions = {
             (black | queen): 0x0000000000000008, 
@@ -49,22 +50,32 @@ class logic:
         newState.moveHistory = self.moveHistory.copy()
         newState.redoHistory = self.redoHistory.copy()
         newState.positionHistory = self.positionHistory.copy()
+        newState.hash = self.hash
         
         return newState
 
     def setPiece(self, row, column, piece):
         if not (0 <= row < 8 and 0 <= column < 8): 
             return
-        self.squarePiece[row * 8 + column] = piece
+        index = row * 8 + column
+        oldPiece = self.squarePiece[index]
+        if oldPiece != empty:
+            self.hash = self.hash ^ zobristKeys[oldPiece][index]
+        if piece != empty:
+            self.hash = self.hash ^ zobristKeys[piece][index]
+        self.squarePiece[index] = piece
+
 
     def updateSquareTable(self):
         self.squarePiece = [empty] * 64
+        self.hash = 0
         for piece, bitboard in self.piecePositions.items():
             board = bitboard
             while board:
                 lsb = board & -board
                 index = lsb.bit_length() - 1
                 self.squarePiece[index] = piece
+                self.hash = self.hash ^ zobristKeys[piece][index]
                 board &= board - 1
 
     def getOccupied(self):
@@ -73,24 +84,19 @@ class logic:
         return (whiteOccupied, blackOccupied, whiteOccupied | blackOccupied)
 
     def zobristHash(self):
-        hash = 0
-        for index in range(64):
-            piece = self.squarePiece[index]
-            if piece != empty:
-                hash = hash ^ zobristKeys[piece][index]
-
+        lhash = self.hash
         if self.turnColour == black:
-            hash = hash ^ zobristTurn
+            lhash = lhash ^ zobristTurn
 
         for castlingRight in ["wKl", "wKr", "bKl", "bKr"]:
             if self.castleRights[castlingRight] == True:
-                hash = hash ^ zobristCastling[castlingRight]
+                lhash = lhash ^ zobristCastling[castlingRight]
 
         if self.enPassantTarget != None:
             columnIndex = self.enPassantTarget[1]
-            hash = hash ^ zobristEnPassant[columnIndex]
+            lhash = lhash ^ zobristEnPassant[columnIndex]
 
-        return hash
+        return lhash
 
     def slidingMoves(self, row, column, movements, friendlyOccupied, occupied, possibleMoves):
         for rowChange, columnChange in movements:
