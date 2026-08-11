@@ -540,6 +540,9 @@ class logic:
         self.moveCastleRook(piece, start, end)
         self.updateSquare(start[0], start[1], empty)
 
+        if capturedPiece != empty and capturedSquare:
+            self.updateSquare(capturedSquare[0], capturedSquare[1], empty)
+
         if promotion is not None:
             self.updateSquare(end[0], end[1], promotion)
         else:

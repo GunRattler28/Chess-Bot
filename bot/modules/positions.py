@@ -102,9 +102,9 @@ def evaluatePositions(board):
             lsb = bitboard & -bitboard
             index = lsb.bit_length() - 1
             if isWhite:
-                index = index ^ 56
-            else:
                 index = index
+            else:
+                index = index ^ 56
             value = 0
             if pType == knight:
                 value = knightPositionScores[index]

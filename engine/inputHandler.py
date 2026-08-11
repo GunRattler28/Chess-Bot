@@ -54,6 +54,9 @@ def onClick(x, y, board):
 
     row, column = getBoardPos(x, y)
 
+    if not (0 <= row < 8 and 0 <= column < 8):
+        return
+
     if visuals.activeSquare is None:
         handleSelection(board, row, column)
         return

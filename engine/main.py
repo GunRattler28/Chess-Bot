@@ -27,7 +27,7 @@ class mainLoop:
 
     def searchMove(self, hash):
         boardCopy = self.board.clone()
-        calculatedMove, searchedDepth = bot.findBestMove(boardCopy, 7, constants.botColour, pygame.time.get_ticks(), constants.timeLimit * 1000)
+        calculatedMove, searchedDepth = bot.findBestMove(boardCopy, 10, constants.botColour, pygame.time.get_ticks(), constants.timeLimit * 1000)
         if self.searching and self.board.zobristHash() == hash:
             self.bestMove = calculatedMove
             self.searchedDepth = searchedDepth
