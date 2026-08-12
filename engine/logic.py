@@ -1,4 +1,5 @@
 from engine.constants import rookDirections, bishopDirections, queenDirections, knightAtk, kingAtk, sounds, botColour, empty, queen, king, knight, rook, bishop, pawn, black, white, zobristKeys, zobristTurn, zobristCastling, zobristEnPassant
+from engine import visuals
 
 class logic:
     def __init__(self):
@@ -323,7 +324,6 @@ class logic:
             self.moveCastleRook(piece, start, end, undo=True)
 
     def makeMove(self, startRow, startColumn, endRow, endColumn, sound=True, simulation=False):
-        from engine import visuals
         
         movingPiece = self.squarePiece[startRow * 8 + startColumn]
         target = self.squarePiece[endRow * 8 + endColumn]

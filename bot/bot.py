@@ -119,7 +119,7 @@ def minimax(board, depth, maximisingPlayer, startTime, timeLimit, alpha=-999999,
 
     if not legalMovesFound:
         if board.kingCheck(currentColour):
-            return (-999999 + depth) if maximisingPlayer else (999999 - depth)
+            return (-999999 - depth) if maximisingPlayer else (999999 + depth)
         else:
             return 0
 
@@ -197,9 +197,12 @@ def findBestMove(board, depth, botColour, startTime, timeLimit):
             initialBeta = 999999
 
         currentBestScore, currentBestMove = searchMovesAtDepth(board, moves, currentDepth, initialAlpha, initialBeta, playerMaximising, botColour, startTime, timeLimit)
+        if constants.abortSearch:
+            break
         if currentDepth >= 4 and (currentBestScore <= initialAlpha or currentBestScore >= initialBeta):
             currentBestScore, currentBestMove = searchMovesAtDepth(board, moves, currentDepth, -999999, 999999, playerMaximising, botColour, startTime, timeLimit)
-
+            if constants.abortSearch:
+                        break
         previousScore = currentBestScore
         if currentBestMove:
             bestMove = currentBestMove
