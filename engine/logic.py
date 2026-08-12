@@ -13,6 +13,9 @@ class logic:
         self.squarePiece = [empty] * 64
         self.enPassantTarget = None
         self.hash = 0
+        self.whiteOccupied = 0
+        self.blackOccupied=  0
+        self.occupied = 0
 
         self.piecePositions = {
             (black | queen): 0x0000000000000008, 
@@ -30,13 +33,13 @@ class logic:
         }
 
         self.castleRights = {
-            "wKl": True, 
-            "wK": True,
+            "wKl": True,
             "wKr": True,
-            "bKl": True, 
-            "bK": True, 
+            "bKl": True,
             "bKr": True,
         }
+
+        self.updateOccupied()
 
     def clone(self):
         newState = logic()
@@ -52,7 +55,9 @@ class logic:
         newState.redoHistory = self.redoHistory.copy()
         newState.positionHistory = self.positionHistory.copy()
         newState.hash = self.hash
-        
+        newState.whiteOccupied = self.whiteOccupied
+        newState.blackOccupied = self.blackOccupied
+        newState.occupied = self.occupied
         return newState
 
     def createSquareTable(self):
@@ -73,17 +78,31 @@ class logic:
         if oldPiece != empty:
             self.piecePositions[oldPiece] = self.piecePositions[oldPiece] & ~(1 << index)
             self.hash = self.hash ^ zobristKeys[oldPiece][index]
+            if oldPiece & white:
+                self.whiteOccupied &= ~(1 << index)
+            else:
+                self.blackOccupied &= ~(1 << index)
 
         if newPiece != empty:
             self.piecePositions[newPiece] = self.piecePositions[newPiece] | (1 << index)
             self.hash = self.hash ^ zobristKeys[newPiece][index]
+            if newPiece & white:
+                self.whiteOccupied |= (1 << index)
+            else:
+                self.blackOccupied |= (1 << index)
 
+        self.occupied = (self.whiteOccupied | self.blackOccupied)
         self.squarePiece[index] = newPiece
 
-    def getOccupied(self):
-        whiteOccupied = (self.piecePositions[9] | self.piecePositions[10] | self.piecePositions[11] | self.piecePositions[12] | self.piecePositions[13] | self.piecePositions[14])
-        blackOccupied = (self.piecePositions[17] | self.piecePositions[18] | self.piecePositions[19] | self.piecePositions[20] | self.piecePositions[21] | self.piecePositions[22])
-        return (whiteOccupied, blackOccupied, whiteOccupied | blackOccupied)
+    def updateOccupied(self):
+        self.whiteOccupied = 0
+        self.blackOccupied = 0
+        for piece, bitboard in self.piecePositions.items():
+            if piece & white:
+                self.whiteOccupied |= bitboard
+            else:
+                self.blackOccupied |= bitboard
+        self.occupied = (self.whiteOccupied | self.blackOccupied)
 
     def zobristHash(self):
         lhash = self.hash
@@ -145,13 +164,11 @@ class logic:
         if pawnMask & self.piecePositions[atkColour | pawn]:
             return True
 
-        occupied = self.getOccupied()[2]
-
         for rowChange, columnChange in rookDirections:
             potRow, potColumn = row + rowChange, column + columnChange
             while 0 <= potRow < 8 and 0 <= potColumn < 8:
                 testMask = 1 << (potRow * 8 + potColumn)
-                if testMask & occupied:
+                if testMask & self.occupied:
                     if testMask & (self.piecePositions[atkColour | rook] | self.piecePositions[atkColour | queen]):
                         return True
                     break
@@ -162,7 +179,7 @@ class logic:
             potRow, potColumn = row + rowChange, column + columnChange
             while 0 <= potRow < 8 and 0 <= potColumn < 8:
                 testMask = 1 << (potRow * 8 + potColumn)
-                if testMask & occupied:
+                if testMask & self.occupied:
                     if testMask & (self.piecePositions[atkColour | bishop] | self.piecePositions[atkColour | queen]):
                         return True
                     break
@@ -201,8 +218,7 @@ class logic:
 
         pieceType = piece & 7
         pieceColour = white if (piece & white) else black
-        whiteOccupied, blackOccupied, occupied = self.getOccupied()
-        friendlyOccupied = whiteOccupied if pieceColour == white else blackOccupied
+        friendlyOccupied = self.whiteOccupied if pieceColour == white else self.blackOccupied
 
         if pieceType == knight: 
             self.instaMoves(knightAtk[row * 8 + column], friendlyOccupied, possibleMoves)
@@ -210,11 +226,11 @@ class logic:
             self.instaMoves(kingAtk[row * 8 + column], friendlyOccupied, possibleMoves)
             if includeCastling: self.addCastleMoves(pieceColour, possibleMoves)
         elif pieceType == rook: 
-            self.slidingMoves(row, column, rookDirections, friendlyOccupied, occupied, possibleMoves)
+            self.slidingMoves(row, column, rookDirections, friendlyOccupied, self.occupied, possibleMoves)
         elif pieceType == bishop: 
-            self.slidingMoves(row, column, bishopDirections, friendlyOccupied, occupied, possibleMoves)
+            self.slidingMoves(row, column, bishopDirections, friendlyOccupied, self.occupied, possibleMoves)
         elif pieceType == queen: 
-            self.slidingMoves(row, column, queenDirections, friendlyOccupied, occupied, possibleMoves)
+            self.slidingMoves(row, column, queenDirections, friendlyOccupied, self.occupied, possibleMoves)
         elif pieceType == pawn:
             direction = -1 if pieceColour == white else 1
             potRow = row + direction
@@ -334,7 +350,7 @@ class logic:
         halfmoveClockBefore = self.halfmoveClock
         enPassantBefore = self.enPassantTarget
         castleRights = self.castleRights
-        castleRightsBefore = (castleRights["wKl"], castleRights["wK"], castleRights["wKr"], castleRights["bKl"], castleRights["bK"], castleRights["bKr"])
+        castleRightsBefore = (castleRights["wKl"], castleRights["wKr"], castleRights["bKl"], castleRights["bKr"])
         capturedPiece = target
         capturedSquare = None
         promotion = None
@@ -342,9 +358,11 @@ class logic:
         self.moveCastleRook(movingPiece, start, end)
 
         if movingPiece == (white | king): 
-            self.castleRights["wK"] = self.castleRights["wKl"] = self.castleRights["wKr"] = False
+            self.castleRights["wKl"] = False
+            self.castleRights["wKr"] = False
         elif movingPiece == (black | king): 
-            self.castleRights["bK"] = self.castleRights["bKl"] = self.castleRights["bKr"] = False
+            self.castleRights["bKl"] = False
+            self.castleRights["bKr"] = False
 
         if start == (7, 0): 
             self.castleRights["wKl"] = False
@@ -401,7 +419,7 @@ class logic:
         self.turnColour = black if self.turnColour == white else white    
         self.moves += 1
         self.halfmoveClock = 0 if (movingPiece & 7) == pawn or target != empty or enPassantCapture else self.halfmoveClock + 1
-        castleRightsAfter = (castleRights["wKl"], castleRights["wK"], castleRights["wKr"], castleRights["bKl"], castleRights["bK"], castleRights["bKr"])
+        castleRightsAfter = (castleRights["wKl"], castleRights["wKr"], castleRights["bKl"], castleRights["bKr"])
         self.moveHistory.append((
             movingPiece, 
             start, 
@@ -484,7 +502,7 @@ class logic:
         self.halfmoveClock = halfmoveClockBefore
         
         castleRights = self.castleRights
-        castleRights["wKl"], castleRights["wK"], castleRights["wKr"], castleRights["bKl"], castleRights["bK"], castleRights["bKr"] = castleRightsBefore
+        castleRights["wKl"], castleRights["wKr"], castleRights["bKl"], castleRights["bKr"] = castleRightsBefore
         self.enPassantTarget = enPassantBefore
 
         self.updateSquare(end[0], end[1], empty)
@@ -529,7 +547,7 @@ class logic:
         self.halfmoveClock = halfmoveClockAfter
         
         castleRights = self.castleRights
-        castleRights["wKl"], castleRights["wK"], castleRights["wKr"], castleRights["bKl"], castleRights["bK"], castleRights["bKr"] = castleRightsAfter
+        castleRights["wKl"], castleRights["wKr"], castleRights["bKl"], castleRights["bKr"] = castleRightsAfter
         self.enPassantTarget = enPassantAfter
 
         if capturedPiece != empty:
