@@ -66,6 +66,9 @@ class mainLoop:
             gamelines = self.board.gameOverMessage.split("\n")
             renderedLines = []
             totalHeight = 0
+
+            print(f"Average player time: {(constants.playerTotalTime / max(1, self.board.moves / 2)) / 1000 : .2f} seconds")
+            print(f"Average bot time: {(constants.botTotalTime / max(1, self.board.moves / 2)) / 1000 : .2f} seconds")
             
             for line in gamelines:
                 surface, rectangle = visuals.gameFont.render(line, fgcolor=(255, 0, 0), style=pygame.freetype.STYLE_STRONG)

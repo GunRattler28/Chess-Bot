@@ -11,28 +11,29 @@ tableSize = 1500007
 transpositionTable = [None] * tableSize
 
 def storeEvaluation(hash, depth, score, flag, bestMove):
-    transpositionTable[hash % tableSize] = {
-        "hash": hash,
-        "depth": depth,
-        "score": score,
-        "flag": flag,
-        "bestMove": bestMove
-    }
+    transpositionTable[hash % tableSize] = (
+        hash,
+        depth,
+        score,
+        flag,
+        bestMove
+    )
 
 def getEvaluation(hash, depth, alpha, beta):
     index = hash % tableSize
     position = transpositionTable[index]
-    if position is not None and position["hash"] == hash:
-        if position["depth"] >= depth:
-            score = position["score"]
-            flag = position["flag"]
+    if position is not None and position[0] == hash:
+        score = position[2]
+        flag = position[3]
+        bestMove = position[4]
+        if position[1] >= depth:
             if flag == exact:
-                return score, position["bestMove"]
+                return score, bestMove
             elif flag == upper and score <= alpha:
-                return score, position["bestMove"]
+                return score, bestMove
             elif flag == lower and score >= beta:
-                return score, position["bestMove"]
-        return None, position["bestMove"]
+                return score, bestMove
+        return None, bestMove
     return None, None
 
 def getAllPossibleMoves(board, colour):

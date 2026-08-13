@@ -1,4 +1,4 @@
-from engine.constants import rookDirections, bishopDirections, queenDirections, knightAtk, kingAtk, sounds, botColour, empty, queen, king, knight, rook, bishop, pawn, black, white, zobristKeys, zobristTurn, zobristCastling, zobristEnPassant
+from engine.constants import rookDirections, bishopDirections, queenDirections, knightAtk, kingAtk, sounds, botColour, empty, queen, king, knight, rook, bishop, pawn, black, white, zobristKeys, zobristTurn, zobristCastling, zobristEnPassant, phase
 from engine import visuals
 from bot import evaluation
 
@@ -68,6 +68,8 @@ class logic:
     def createSquareTable(self):
         self.squarePiece = [empty] * 64
         self.hash = 0
+        self.totalPieces = 0
+        endgame = evaluation.isEndgame(self)
         for piece, bitboard in self.piecePositions.items():
             board = bitboard
             while board:
@@ -81,12 +83,14 @@ class logic:
         for index in range(64):
             piece = self.squarePiece[index]
             if piece != empty:
-                self.evaluationScore += evaluation.getPieceScore(piece, index, False)
+                self.evaluationScore += evaluation.getPieceScore(piece, index, endgame)
 
     def updateSquare(self, row, column, newPiece):
         index = row * 8 + column
         oldPiece = self.squarePiece[index]
         endgame = evaluation.isEndgame(self)
+        if endgame != phase:
+            self.createSquareTable()
         if oldPiece != empty:
             self.totalPieces -= 1
             self.evaluationScore -= evaluation.getPieceScore(oldPiece, index, endgame)
@@ -333,6 +337,7 @@ class logic:
         if captured:
             if capturedSquare:
                 self.updateSquare(capturedSquare[0], capturedSquare[1], empty)
+                evaluation.isEndgame(self)
             else:        
                 self.updateSquare(end[0], end[1], empty)
 
@@ -349,6 +354,7 @@ class logic:
         if captured:
             if capturedSquare:
                 self.updateSquare(capturedSquare[0], capturedSquare[1], captured)
+                evaluation.isEndgame(self)
             else:
                 self.updateSquare(end[0], end[1], captured)
 
@@ -410,6 +416,7 @@ class logic:
             if capturedPiece != empty:
                 self.updateSquare(capturedRow, endColumn, empty)
                 capturedSquare = (capturedRow, endColumn)
+                evaluation.isEndgame(self)
                 enPassantCapture = True
                 if sound: 
                     sounds["capture"].play()
@@ -494,11 +501,6 @@ class logic:
         else: 
             self.gameOverMessage = None
 
-        if self.gameOverMessage:
-            from engine.constants import playerTotalTime, botTotalTime
-            print(f"Average player time: {(playerTotalTime / max(1, self.moves)) / 1000 : .2f} seconds")
-            print(f"Average bot time: {(botTotalTime / max(1, self.moves)) / 1000 : .2f} seconds")
-
     def previousMove(self, sound=True, simulation=False):
         from engine import visuals
         if not self.moveHistory: 
@@ -527,6 +529,7 @@ class logic:
         if capturedPiece != empty:
             if capturedSquare:
                 self.updateSquare(capturedSquare[0], capturedSquare[1], capturedPiece)
+                evaluation.isEndgame(self)
             else:
                 self.updateSquare(end[0], end[1], capturedPiece)
             if sound: sounds["capture"].play()
@@ -576,6 +579,7 @@ class logic:
 
         if capturedPiece != empty and capturedSquare:
             self.updateSquare(capturedSquare[0], capturedSquare[1], empty)
+            evaluation.isEndgame(self)
 
         if promotion is not None:
             self.updateSquare(end[0], end[1], promotion)
