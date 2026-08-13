@@ -55,14 +55,14 @@ def scoreMove(board, move, previousBestMove=None):
     if move == previousBestMove:
         return 999999
     
-    startRow, startCol, endRow, endCol = move
-    targetPiece = board.squarePiece[endRow * 8 + endCol]
+    startRow, startColumn, endRow, endColumn = move
+    targetPiece = board.squarePiece[endRow * 8 + endColumn]
     score = 0
     
     if targetPiece != empty:
         targetType = targetPiece & 7
         score += evaluation.pieceValues[targetType] * 10
-        attacker = board.squarePiece[startRow * 8 + startCol]
+        attacker = board.squarePiece[startRow * 8 + startColumn]
         if attacker != empty:
             atkType = attacker & 7
             score -= evaluation.pieceValues[atkType]
@@ -76,7 +76,7 @@ def minimax(board, depth, maximisingPlayer, startTime, timeLimit, alpha=-999999,
         return 0
     if depth == 0:
         return board.evaluationScore
-    if board.halfmoveClock >= 100 or board.positionHistory.count(board.zobristHash()) >= 3:
+    if board.halfmoveClock >= 100 or board.positionCounts.get(board.zobristHash(), 0) >= 3:
         return 0
     hash = board.zobristHash()
     score, bestMove = getEvaluation(hash, depth, alpha, beta)
@@ -91,8 +91,8 @@ def minimax(board, depth, maximisingPlayer, startTime, timeLimit, alpha=-999999,
     legalMovesFound = False
 
     for move in moves:
-        startRow, startCol, endRow, endCol = move
-        board.makeMove(startRow, startCol, endRow, endCol, sound=False, simulation=True)
+        startRow, startColumn, endRow, endColumn = move
+        board.makeMove(startRow, startColumn, endRow, endColumn, sound=False, simulation=True)
         if board.kingCheck(currentColour):
             board.previousMove(False, True)
             continue
@@ -139,8 +139,8 @@ def searchMovesAtDepth(board, moves, depth, alpha, beta, playerMaximising, botCo
     for move in moves:
         if constants.abortSearch:
             break
-        startRow, startCol, endRow, endCol = move
-        board.makeMove(startRow, startCol, endRow, endCol, sound=False, simulation=True)
+        startRow, startColumn, endRow, endColumn = move
+        board.makeMove(startRow, startColumn, endRow, endColumn, sound=False, simulation=True)
         
         if board.kingCheck(botColour):
             board.previousMove(False, True)

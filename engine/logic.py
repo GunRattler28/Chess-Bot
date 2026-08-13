@@ -11,6 +11,7 @@ class logic:
         self.moveHistory = []
         self.redoHistory = []
         self.positionHistory = []
+        self.positionCounts = {}
         self.squarePiece = [empty] * 64
         self.enPassantTarget = None
         self.hash = 0
@@ -58,6 +59,7 @@ class logic:
         newState.moveHistory = self.moveHistory.copy()
         newState.redoHistory = self.redoHistory.copy()
         newState.positionHistory = self.positionHistory.copy()
+        newState.positionCounts = self.positionCounts.copy()
         newState.hash = self.hash
         newState.whiteOccupied = self.whiteOccupied
         newState.blackOccupied = self.blackOccupied
@@ -458,8 +460,12 @@ class logic:
             self.enPassantTarget, 
             self.halfmoveClock
         ))
-
-        self.positionHistory.append(self.zobristHash())
+        currentHash = self.zobristHash()
+        self.positionHistory.append(currentHash)
+        if currentHash in self.positionCounts:
+            self.positionCounts[currentHash] += 1
+        else:
+            self.positionCounts[currentHash] = 1
 
         if not simulation:
             visuals.activeSquare = None
@@ -507,7 +513,10 @@ class logic:
 
         move = self.moveHistory.pop()
         if self.positionHistory: 
-            self.positionHistory.pop()
+            oldHash = self.positionHistory.pop()
+            self.positionCounts[oldHash] -= 1
+            if self.positionCounts[oldHash] == 0:
+                del self.positionCounts[oldHash]
 
         if not simulation: 
             self.redoHistory.append(move)
@@ -583,7 +592,12 @@ class logic:
             self.updateSquare(end[0], end[1], piece)
 
         self.moveHistory.append(move)
-        self.positionHistory.append(self.zobristHash())
+        currentHash = self.zobristHash()
+        self.positionHistory.append(currentHash)
+        if currentHash in self.positionCounts:
+            self.positionCounts[currentHash] += 1
+        else:
+            self.positionCounts[currentHash] = 1
 
         visuals.activeSquare = visuals.activeOutline = None
         visuals.possibleMoves.clear()

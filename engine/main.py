@@ -35,22 +35,20 @@ class mainLoop:
     def runBotTurn(self, board): 
         if self.bestMove is None and not self.searching:
             self.searching = True
-            self.botCooldownUntil = pygame.time.get_ticks() + 3000
+            self.botCooldownUntil = pygame.time.get_ticks() + (constants.timeLimit * 1000)
             constants.abortSearch = False
             self.searchThread = threading.Thread(target=self.searchMove, args=(board.zobristHash(), board.clone()), daemon=True)
             self.searchThread.start()
 
         if self.bestMove is not None and pygame.time.get_ticks() > self.botCooldownUntil:
-            startRow, startCol, endRow, endCol = self.bestMove
-            piece = board.squarePiece[startRow * 8 + startCol]
+            startRow, startColumn, endRow, endColumn = self.bestMove
+            piece = board.squarePiece[startRow * 8 + startColumn]
             if piece != constants.empty and (piece & 24) == constants.botColour:
-                board.makeMove(startRow, startCol, endRow, endCol)
+                board.makeMove(startRow, startColumn, endRow, endColumn)
                 board.gameState()
-                time = pygame.time.get_ticks() - self.botCooldownUntil + 3000
+                time = pygame.time.get_ticks() - self.botCooldownUntil + (constants.timeLimit * 1000)
                 constants.playerTimeStart = pygame.time.get_ticks()
                 print(f"Move: {board.moves:>3} | Evaluation Score: {board.evaluationScore:>5} | Time: {time / 1000:>6.2f} seconds | Depth: {self.searchedDepth:>2} | Endgame: {str(bot.evaluation.isEndgame(board)):>5} | Total pieces: {board.totalPieces:>2}")
-                constants.botTotalTime += time
-
             self.bestMove = None
             return True
             
@@ -67,7 +65,7 @@ class mainLoop:
             totalHeight = 0
 
             print(f"Average player time: {(constants.playerTotalTime / max(1, self.board.moves / 2)) / 1000 : .2f} seconds")
-            print(f"Average bot time: {(constants.botTotalTime / max(1, self.board.moves / 2)) / 1000 : .2f} seconds")
+            print(f"Average bot time: {constants.timeLimit : .2f} seconds")
             
             for line in gamelines:
                 surface, rectangle = visuals.gameFont.render(line, fgcolor=(255, 0, 0), style=pygame.freetype.STYLE_STRONG)

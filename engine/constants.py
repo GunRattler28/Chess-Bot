@@ -17,9 +17,8 @@ randomColour = random.randint(0, 1)
 botColour = black if randomColour else white
 playerTimeStart = 0
 playerTotalTime = 0
-botTotalTime = 0
 abortSearch = False
-timeLimit = 3
+timeLimit = 1.5
 
 piecesTextures = {
     (black | queen): pygame.transform.scale(pygame.image.load("images/pieces/bqueen.png").convert_alpha(), (positionSize, positionSize)),
