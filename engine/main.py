@@ -25,8 +25,7 @@ class mainLoop:
         self.running = True
         self.searchedDepth = None
 
-    def searchMove(self, hash):
-        boardCopy = self.board.clone()
+    def searchMove(self, hash, boardCopy):
         calculatedMove, searchedDepth = bot.bot.findBestMove(boardCopy, 10, constants.botColour, pygame.time.get_ticks(), constants.timeLimit * 1000)
         if self.searching and self.board.zobristHash() == hash:
             self.bestMove = calculatedMove
@@ -38,7 +37,7 @@ class mainLoop:
             self.searching = True
             self.botCooldownUntil = pygame.time.get_ticks() + 3000
             constants.abortSearch = False
-            self.searchThread = threading.Thread(target=self.searchMove, args=(board.zobristHash(),), daemon=True)
+            self.searchThread = threading.Thread(target=self.searchMove, args=(board.zobristHash(), board.clone()), daemon=True)
             self.searchThread.start()
 
         if self.bestMove is not None and pygame.time.get_ticks() > self.botCooldownUntil:

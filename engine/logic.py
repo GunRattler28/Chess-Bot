@@ -1,4 +1,4 @@
-from engine.constants import rookDirections, bishopDirections, queenDirections, knightAtk, kingAtk, sounds, botColour, empty, queen, king, knight, rook, bishop, pawn, black, white, zobristKeys, zobristTurn, zobristCastling, zobristEnPassant, phase
+from engine.constants import rookDirections, bishopDirections, queenDirections, knightAtk, kingAtk, sounds, botColour, empty, queen, king, knight, rook, bishop, pawn, black, white, zobristKeys, zobristTurn, zobristCastling, zobristEnPassant
 from engine import visuals
 from bot import evaluation
 
@@ -19,6 +19,7 @@ class logic:
         self.occupied = 0
         self.evaluationScore = 0
         self.totalPieces = 0
+        self.endgame = 0
 
         self.piecePositions = {
             (black | queen): 0x0000000000000008, 
@@ -63,13 +64,14 @@ class logic:
         newState.occupied = self.occupied
         newState.evaluationScore = self.evaluationScore
         newState.totalPieces = self.totalPieces
+        newState.endgame = self.endgame
         return newState
 
     def createSquareTable(self):
         self.squarePiece = [empty] * 64
         self.hash = 0
         self.totalPieces = 0
-        endgame = evaluation.isEndgame(self)
+        self.endgame = evaluation.isEndgame(self)
         for piece, bitboard in self.piecePositions.items():
             board = bitboard
             while board:
@@ -83,27 +85,27 @@ class logic:
         for index in range(64):
             piece = self.squarePiece[index]
             if piece != empty:
-                self.evaluationScore += evaluation.getPieceScore(piece, index, endgame)
+                self.evaluationScore += evaluation.getPieceScore(piece, index, self.endgame)
 
     def updateSquare(self, row, column, newPiece):
         index = row * 8 + column
         oldPiece = self.squarePiece[index]
-        endgame = evaluation.isEndgame(self)
-        if endgame != phase:
-            self.createSquareTable()
         if oldPiece != empty:
             self.totalPieces -= 1
-            self.evaluationScore -= evaluation.getPieceScore(oldPiece, index, endgame)
+            self.evaluationScore -= evaluation.getPieceScore(oldPiece, index, self.endgame)
             self.piecePositions[oldPiece] = self.piecePositions[oldPiece] & ~(1 << index)
             self.hash = self.hash ^ zobristKeys[oldPiece][index]
             if oldPiece & white:
                 self.whiteOccupied &= ~(1 << index)
             else:
                 self.blackOccupied &= ~(1 << index)
+                
+            if self.endgame != evaluation.isEndgame(self):
+                self.createSquareTable()
 
         if newPiece != empty:
             self.totalPieces += 1
-            self.evaluationScore += evaluation.getPieceScore(newPiece, index, endgame)
+            self.evaluationScore += evaluation.getPieceScore(newPiece, index, self.endgame)
             self.piecePositions[newPiece] = self.piecePositions[newPiece] | (1 << index)
             self.hash = self.hash ^ zobristKeys[newPiece][index]
             if newPiece & white:
@@ -337,7 +339,6 @@ class logic:
         if captured:
             if capturedSquare:
                 self.updateSquare(capturedSquare[0], capturedSquare[1], empty)
-                evaluation.isEndgame(self)
             else:        
                 self.updateSquare(end[0], end[1], empty)
 
@@ -354,7 +355,6 @@ class logic:
         if captured:
             if capturedSquare:
                 self.updateSquare(capturedSquare[0], capturedSquare[1], captured)
-                evaluation.isEndgame(self)
             else:
                 self.updateSquare(end[0], end[1], captured)
 
@@ -416,7 +416,6 @@ class logic:
             if capturedPiece != empty:
                 self.updateSquare(capturedRow, endColumn, empty)
                 capturedSquare = (capturedRow, endColumn)
-                evaluation.isEndgame(self)
                 enPassantCapture = True
                 if sound: 
                     sounds["capture"].play()
@@ -529,7 +528,6 @@ class logic:
         if capturedPiece != empty:
             if capturedSquare:
                 self.updateSquare(capturedSquare[0], capturedSquare[1], capturedPiece)
-                evaluation.isEndgame(self)
             else:
                 self.updateSquare(end[0], end[1], capturedPiece)
             if sound: sounds["capture"].play()
@@ -579,8 +577,6 @@ class logic:
 
         if capturedPiece != empty and capturedSquare:
             self.updateSquare(capturedSquare[0], capturedSquare[1], empty)
-            evaluation.isEndgame(self)
-
         if promotion is not None:
             self.updateSquare(end[0], end[1], promotion)
         else:

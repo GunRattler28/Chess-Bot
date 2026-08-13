@@ -9,7 +9,6 @@ pieceValues = {
     king: 99999
 }
 
-
 knightPositionScores = [
     -50, -40, -30, -30, -30, -30, -40, -50,
     -40, -20,   0,   5,   5,   0, -20, -40,

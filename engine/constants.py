@@ -20,7 +20,6 @@ playerTotalTime = 0
 botTotalTime = 0
 abortSearch = False
 timeLimit = 3
-phase = 0
 
 piecesTextures = {
     (black | queen): pygame.transform.scale(pygame.image.load("images/pieces/bqueen.png").convert_alpha(), (positionSize, positionSize)),

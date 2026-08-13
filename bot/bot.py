@@ -114,7 +114,7 @@ def minimax(board, depth, maximisingPlayer, startTime, timeLimit, alpha=-999999,
 
     if not legalMovesFound:
         if board.kingCheck(currentColour):
-            return (-999999 - depth) if maximisingPlayer else (999999 + depth)
+            return (-99999 - depth) if maximisingPlayer else (99999 + depth)
         else:
             return 0
 
