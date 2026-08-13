@@ -1,7 +1,7 @@
 import pygame
 from engine import visuals, constants
-from bot.modules import material
 from engine.constants import positionSize, white, empty
+import bot.evaluation
 
 def getBoardPos(x, y):
     column = x // positionSize
@@ -66,7 +66,7 @@ def onClick(x, y, board):
         board.makeMove(startRow, startColumn, row, column)
         board.gameState()
         time = pygame.time.get_ticks() - constants.playerTimeStart
-        print(f"Move: {board.moves}  Material Difference: {material.materialDif(board.piecePositions)}  Time: {time / 1000 : .2f} seconds  Searched to depth: 2")
+        print(f"Move: {board.moves:>3} | Evaluation Score: {board.evaluationScore:>5} | Time: {time / 1000:>6.2f} seconds | Depth:  2 | Endgame: {str(bot.evaluation.isEndgame(board)):>5} | Total pieces: {board.totalPieces:>2}")
         constants.playerTotalTime += time
     else:
         handleSelection(board, row, column)

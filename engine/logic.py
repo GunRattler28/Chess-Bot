@@ -1,5 +1,6 @@
 from engine.constants import rookDirections, bishopDirections, queenDirections, knightAtk, kingAtk, sounds, botColour, empty, queen, king, knight, rook, bishop, pawn, black, white, zobristKeys, zobristTurn, zobristCastling, zobristEnPassant
 from engine import visuals
+from bot import evaluation
 
 class logic:
     def __init__(self):
@@ -16,6 +17,8 @@ class logic:
         self.whiteOccupied = 0
         self.blackOccupied=  0
         self.occupied = 0
+        self.evaluationScore = 0
+        self.totalPieces = 0
 
         self.piecePositions = {
             (black | queen): 0x0000000000000008, 
@@ -58,6 +61,8 @@ class logic:
         newState.whiteOccupied = self.whiteOccupied
         newState.blackOccupied = self.blackOccupied
         newState.occupied = self.occupied
+        newState.evaluationScore = self.evaluationScore
+        newState.totalPieces = self.totalPieces
         return newState
 
     def createSquareTable(self):
@@ -70,12 +75,21 @@ class logic:
                 index = lsb.bit_length() - 1
                 self.squarePiece[index] = piece
                 self.hash = self.hash ^ zobristKeys[piece][index]
+                self.totalPieces += 1
                 board &= board - 1
+        self.evaluationScore = 0
+        for index in range(64):
+            piece = self.squarePiece[index]
+            if piece != empty:
+                self.evaluationScore += evaluation.getPieceScore(piece, index, False)
 
     def updateSquare(self, row, column, newPiece):
         index = row * 8 + column
         oldPiece = self.squarePiece[index]
+        endgame = evaluation.isEndgame(self)
         if oldPiece != empty:
+            self.totalPieces -= 1
+            self.evaluationScore -= evaluation.getPieceScore(oldPiece, index, endgame)
             self.piecePositions[oldPiece] = self.piecePositions[oldPiece] & ~(1 << index)
             self.hash = self.hash ^ zobristKeys[oldPiece][index]
             if oldPiece & white:
@@ -84,6 +98,8 @@ class logic:
                 self.blackOccupied &= ~(1 << index)
 
         if newPiece != empty:
+            self.totalPieces += 1
+            self.evaluationScore += evaluation.getPieceScore(newPiece, index, endgame)
             self.piecePositions[newPiece] = self.piecePositions[newPiece] | (1 << index)
             self.hash = self.hash ^ zobristKeys[newPiece][index]
             if newPiece & white:

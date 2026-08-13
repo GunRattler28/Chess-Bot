@@ -1,7 +1,7 @@
 import pygame
 import engine.constants as constants
 from engine.constants import white, black, empty
-from bot.modules import material, positions
+from bot import evaluation
 
 aspirationWindow = 50
 exact = 0
@@ -50,12 +50,6 @@ def getAllPossibleMoves(board, colour):
                 bitboard &= bitboard - 1
     return allMoves
 
-def totalScore(board):
-    score = 0
-    score += material.materialDif(board.piecePositions) * 5
-    score += positions.evaluatePositions(board.piecePositions)
-    return score
-
 def scoreMove(board, move, previousBestMove=None):
     if move == previousBestMove:
         return 999999
@@ -66,11 +60,11 @@ def scoreMove(board, move, previousBestMove=None):
     
     if targetPiece != empty:
         targetType = targetPiece & 7
-        score += material.pieceValues[targetType] * 10
+        score += evaluation.pieceValues[targetType] * 10
         attacker = board.squarePiece[startRow * 8 + startCol]
         if attacker != empty:
             atkType = attacker & 7
-            score -= material.pieceValues[atkType]
+            score -= evaluation.pieceValues[atkType]
     return score
 
 def minimax(board, depth, maximisingPlayer, startTime, timeLimit, alpha=-999999, beta=999999):
@@ -80,7 +74,7 @@ def minimax(board, depth, maximisingPlayer, startTime, timeLimit, alpha=-999999,
         constants.abortSearch = True
         return 0
     if depth == 0:
-        return totalScore(board)
+        return board.evaluationScore
     if board.halfmoveClock >= 100 or board.positionHistory.count(board.zobristHash()) >= 3:
         return 0
     hash = board.zobristHash()

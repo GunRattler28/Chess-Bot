@@ -10,8 +10,8 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 import threading
 from engine import visuals, inputHandler, logic, constants
-from bot import bot
-from bot.modules import material
+import bot.bot
+import bot.evaluation
 
 class mainLoop:
     def __init__(self):
@@ -27,7 +27,7 @@ class mainLoop:
 
     def searchMove(self, hash):
         boardCopy = self.board.clone()
-        calculatedMove, searchedDepth = bot.findBestMove(boardCopy, 10, constants.botColour, pygame.time.get_ticks(), constants.timeLimit * 1000)
+        calculatedMove, searchedDepth = bot.bot.findBestMove(boardCopy, 10, constants.botColour, pygame.time.get_ticks(), constants.timeLimit * 1000)
         if self.searching and self.board.zobristHash() == hash:
             self.bestMove = calculatedMove
             self.searchedDepth = searchedDepth
@@ -49,7 +49,7 @@ class mainLoop:
                 board.gameState()
                 time = pygame.time.get_ticks() - self.botCooldownUntil + 3000
                 constants.playerTimeStart = pygame.time.get_ticks()
-                print(f"Move: {board.moves}  Material Difference: {material.materialDif(board.piecePositions)}  Time: {time / 1000 : .2f} seconds  Searched to depth: {self.searchedDepth}")
+                print(f"Move: {board.moves:>3} | Evaluation Score: {board.evaluationScore:>5} | Time: {time / 1000:>6.2f} seconds | Depth: {self.searchedDepth:>2} | Endgame: {str(bot.evaluation.isEndgame(board)):>5} | Total pieces: {board.totalPieces:>2}")
                 constants.botTotalTime += time
 
             self.bestMove = None

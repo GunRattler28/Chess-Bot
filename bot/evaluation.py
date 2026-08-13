@@ -1,5 +1,15 @@
 from engine.constants import white, black, pawn, knight, bishop, rook, queen, king, empty
 
+pieceValues = {
+    pawn: 10,
+    bishop: 40,
+    knight: 45,
+    rook: 70,
+    queen: 130,
+    king: 99999
+}
+
+
 knightPositionScores = [
     -50, -40, -30, -30, -30, -30, -40, -50,
     -40, -20,   0,   5,   5,   0, -20, -40,
@@ -77,53 +87,42 @@ kingEndgamePositionScores = [
     -50, -30, -30, -30, -30, -30, -30, -50
 ]
 
-def isEndgame(board):
-    totalPieces = 0
-    for bitboard in board.values():
-        totalPieces += bitboard.bit_count()
-        
-    wQ = board[white | queen]
-    bQ = board[black | queen]
+positionTables = {
+    pawn: pawnPositionScores,
+    bishop: bishopPositionScores,
+    knight: knightPositionScores,
+    rook: rookPositionScores,
+    queen: queenPositionScores,
+}
 
-    if (wQ == 0 and bQ == 0) or totalPieces < 10:
+def isEndgame(board):
+    wQ = board.piecePositions[white | queen]
+    bQ = board.piecePositions[black | queen]
+    if (wQ == 0 and bQ == 0) and board.totalPieces < 16:
         return True
-        
     return False
 
-def evaluatePositions(board):
+def getPieceScore(piece, index, endgame=False):
+    if piece == empty:
+        return 0
+    
+    colour = piece & 24
+    pieceType = piece & 7
     score = 0
-    endgame = isEndgame(board)
-    for piece, bitboard in board.items():
-        if piece == empty:
-            continue
-        isWhite = piece & white
-        pType = piece & 7
-        while bitboard:
-            lsb = bitboard & -bitboard
-            index = lsb.bit_length() - 1
-            if isWhite:
-                index = index
-            else:
-                index = index ^ 56
-            value = 0
-            if pType == knight:
-                value = knightPositionScores[index]
-            elif pType == pawn:
-                value = pawnPositionScores[index]
-            elif pType == bishop:
-                value = bishopPositionScores[index]
-            elif pType == rook:
-                value = rookPositionScores[index]
-            elif pType == queen:
-                value = queenPositionScores[index]
-            elif pType == king:
-                if endgame:
-                    value = kingEndgamePositionScores[index]
-                else:
-                    value = kingPositionScores[index]
-            if isWhite:
-                score += value
-            else:
-                score -= value
-            bitboard &= bitboard - 1
-    return score
+    score += (pieceValues[pieceType] * 5)
+
+    if colour == black:
+        index = index ^ 56
+        
+    if pieceType == king:
+        if endgame:
+            score += kingEndgamePositionScores[index]
+        else:
+            score += kingPositionScores[index]
+    else:
+        score += positionTables[pieceType][index]
+
+    if colour == white:
+        return score
+    else:
+        return -score
