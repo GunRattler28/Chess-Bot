@@ -66,7 +66,7 @@ def onClick(x, y, board):
         board.makeMove(startRow, startColumn, row, column)
         board.gameState()
         time = pygame.time.get_ticks() - constants.playerTimeStart
-        print(f"Move: {board.moves:>3} | Evaluation Score: {board.evaluationScore:>5} | Time: {time / 1000:>6.2f} seconds | Depth:  2 | Endgame: {str(bot.evaluation.isEndgame(board)):>5} | Total pieces: {board.totalPieces:>2}")
+        print(f"Move: {board.moves:>3} | Evaluation Score: {board.evaluationScore:>5} | Time: {time / 1000:>6.2f} seconds | Depth: N/A | Endgame: {str(bot.evaluation.isEndgame(board)):>5} | Total pieces: {board.totalPieces:>2}")
         constants.playerTotalTime += time
     else:
         handleSelection(board, row, column)

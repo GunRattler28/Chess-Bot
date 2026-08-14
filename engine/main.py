@@ -35,6 +35,8 @@ class mainLoop:
 
     def runBotTurn(self, board): 
         if self.bestMove is None and not self.searching:
+            if self.searchThread and self.searchThread.is_alive():
+                return False
             self.searching = True
             self.botCooldownUntil = pygame.time.get_ticks() + (constants.timeLimit * 1000)
             constants.abortSearch = False
@@ -49,7 +51,7 @@ class mainLoop:
                 board.gameState()
                 time = pygame.time.get_ticks() - self.botCooldownUntil + (constants.timeLimit * 1000)
                 constants.playerTimeStart = pygame.time.get_ticks()
-                print(f"Move: {board.moves:>3} | Evaluation Score: {board.evaluationScore:>5} | Time: {time / 1000:>6.2f} seconds | Depth: {self.searchedDepth:>2} | Endgame: {str(bot.evaluation.isEndgame(board)):>5} | Total pieces: {board.totalPieces:>2}")
+                print(f"Move: {board.moves:>3} | Evaluation Score: {board.evaluationScore:>5} | Time: {time / 1000:>6.2f} seconds | Depth: {self.searchedDepth:>3} | Endgame: {str(bot.evaluation.isEndgame(board)):>5} | Total pieces: {board.totalPieces:>2}")
             self.bestMove = None
             return True
             

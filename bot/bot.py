@@ -173,6 +173,9 @@ def findBestMove(board, depth, botColour, startTime, timeLimit):
     playerMaximising = (botColour == white)
     bestMove = None
     moves = sorted(getAllPossibleMoves(board, botColour), key=lambda move: scoreMove(board, move, bestMove), reverse=True)
+    if not moves:
+        return None, 0
+    bestMove = moves[0]
     savedRedo = board.redoHistory.copy()
     savedMoves = board.moveHistory.copy()
     savedPositions = board.positionHistory.copy()
