@@ -73,7 +73,6 @@ class logic:
         self.squarePiece = [empty] * 64
         self.hash = 0
         self.totalPieces = 0
-        self.endgame = evaluation.isEndgame(self)
         for piece, bitboard in self.piecePositions.items():
             board = bitboard
             while board:
@@ -83,6 +82,7 @@ class logic:
                 self.hash = self.hash ^ zobristKeys[piece][index]
                 self.totalPieces += 1
                 board &= board - 1
+        self.endgame = evaluation.isEndgame(self)
 
         if self.turnColour == black:
             self.hash = self.hash ^ zobristTurn
