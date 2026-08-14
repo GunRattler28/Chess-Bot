@@ -24,7 +24,7 @@ class mainLoop:
         self.botCooldownUntil = 0
         self.running = True
         self.searchedDepth = None
-        self.gameoverMsg = None
+        self.currentGameOverMessage = None
 
     def searchMove(self, hash, boardCopy):
         calculatedMove, searchedDepth = bot.bot.findBestMove(boardCopy, 10, constants.botColour, pygame.time.get_ticks(), constants.timeLimit * 1000)
@@ -60,15 +60,10 @@ class mainLoop:
         visuals.drawHighlights(self.board)
         visuals.drawArrows()
 
-        if self.board.gameOverMessage != self.gameoverMsg:
-            self.gameoverMsg = self.board.gameOverMessage
+        if self.board.gameOverMessage: 
             gamelines = self.board.gameOverMessage.split("\n")
             renderedLines = []
             totalHeight = 0
-
-            print(f"Average player time: {(constants.playerTotalTime / max(1, self.board.moves / 2)) / 1000 : .2f} seconds")
-            print(f"Average bot time: {constants.timeLimit : .2f} seconds")
-            
             for line in gamelines:
                 surface, rectangle = visuals.gameFont.render(line, fgcolor=(255, 0, 0), style=pygame.freetype.STYLE_STRONG)
                 renderedLines.append((surface, rectangle))
@@ -85,6 +80,11 @@ class mainLoop:
                 rectangle.y = currentY
                 visuals.screen.blit(surface, rectangle)
                 currentY += rectangle.height + 8
+
+        if self.board.gameOverMessage != self.currentGameOverMessage:
+            self.currentGameOverMessage = self.board.gameOverMessage
+            print(f"Average player time: {(constants.playerTotalTime / max(1, self.board.moves / 2)) / 1000 : .2f} seconds")
+            print(f"Average bot time: {constants.timeLimit : .2f} seconds")
 
         pygame.display.flip()
         visuals.redraw = False
