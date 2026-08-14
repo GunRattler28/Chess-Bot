@@ -83,6 +83,17 @@ class logic:
                 self.totalPieces += 1
                 board &= board - 1
         self.endgame = evaluation.isEndgame(self)
+
+        if self.turnColour == black:
+            self.hash = self.hash ^ zobristTurn
+
+        for castlingRight, state in self.castleRights.items():
+            if state:
+                self.hash = self.hash ^ zobristCastling[castlingRight]
+
+        if self.enPassantTarget != None:
+            self.hash = self.hash ^ zobristEnPassant[self.enPassantTarget[1]]
+        
         self.evaluationScore = 0
         for index in range(64):
             piece = self.squarePiece[index]
@@ -125,20 +136,22 @@ class logic:
                 self.blackOccupied |= bitboard
         self.occupied = (self.whiteOccupied | self.blackOccupied)
 
-    def zobristHash(self):
-        lhash = self.hash
-        if self.turnColour == black:
-            lhash = lhash ^ zobristTurn
+    def switchTurn(self):
+        self.turnColour = black if self.turnColour == white else white
+        self.hash = self.hash ^ zobristTurn
 
-        for castlingRight in ["wKl", "wKr", "bKl", "bKr"]:
-            if self.castleRights[castlingRight] == True:
-                lhash = lhash ^ zobristCastling[castlingRight]
+    def setCastleRights(self, key, value):
+        if self.castleRights[key] != value:
+            self.castleRights[key] = value
+            self.hash = self.hash ^ zobristCastling[key]
 
-        if self.enPassantTarget != None:
-            columnIndex = self.enPassantTarget[1]
-            lhash = lhash ^ zobristEnPassant[columnIndex]
-
-        return lhash
+    def setEnPassantTarget(self, target):
+        if self.enPassantTarget != target:
+            if self.enPassantTarget != None:
+                self.hash = self.hash ^ zobristEnPassant[self.enPassantTarget[1]]
+            self.enPassantTarget = target
+            if self.enPassantTarget != None:
+                self.hash = self.hash ^ zobristEnPassant[self.enPassantTarget[1]]  
 
     def slidingMoves(self, row, column, movements, friendlyOccupied, occupied, possibleMoves):
         for rowChange, columnChange in movements:
@@ -371,29 +384,20 @@ class logic:
         self.moveCastleRook(movingPiece, start, end)
 
         if movingPiece == (white | king): 
-            self.castleRights["wKl"] = False
-            self.castleRights["wKr"] = False
-        elif movingPiece == (black | king): 
-            self.castleRights["bKl"] = False
-            self.castleRights["bKr"] = False
+            self.setCastleRights("wKl", False)
+            self.setCastleRights("wKr", False)
+        elif movingPiece == (black | king):
+            self.setCastleRights("bKl", False)
+            self.setCastleRights("bKr", False)
 
-        if start == (7, 0): 
-            self.castleRights["wKl"] = False
-        elif start == (7, 7): 
-            self.castleRights["wKr"] = False
-        elif start == (0, 0): 
-            self.castleRights["bKl"] = False
-        elif start == (0, 7): 
-            self.castleRights["bKr"] = False
-
-        if end == (7, 0): 
-            self.castleRights["wKl"] = False
-        elif end == (7, 7): 
-            self.castleRights["wKr"] = False
-        elif end == (0, 0): 
-            self.castleRights["bKl"] = False
-        elif end == (0, 7): 
-            self.castleRights["bKr"] = False
+        if start == (7, 0) or end == (7, 0): 
+            self.setCastleRights("wKl", False)
+        if start == (7, 7) or end == (7, 7): 
+            self.setCastleRights("wKr", False)
+        if start == (0, 0) or end == (0, 0): 
+            self.setCastleRights("bKl", False)
+        if start == (0, 7) or end == (0, 7): 
+            self.setCastleRights("bKr", False)
 
         enPassantCapture = False
         capturedPiece = target
@@ -428,10 +432,10 @@ class logic:
         pieceToPlace = promotion if promotion is not None else movingPiece
         self.updateSquare(endRow, endColumn, pieceToPlace)
 
-        self.enPassantTarget = ((startRow + endRow) // 2, startColumn) if (movingPiece & 7) == pawn and abs(endRow - startRow) == 2 else None
-        self.turnColour = black if self.turnColour == white else white    
+        self.setEnPassantTarget(((startRow + endRow) // 2, startColumn) if (movingPiece & 7) == pawn and abs(endRow - startRow) == 2 else None)
+        self.switchTurn()
         self.halfmoveClock = 0 if (movingPiece & 7) == pawn or target != empty or enPassantCapture else self.halfmoveClock + 1
-        currentHash = self.zobristHash()
+        currentHash = self.hash
         self.positionCounts[currentHash] = self.positionCounts.get(currentHash, 0) + 1
 
         if simulation:
@@ -477,10 +481,14 @@ class logic:
         self.positionCounts[currentHash] -= 1
         if self.positionCounts[currentHash] == 0:
             del self.positionCounts[currentHash]
-        self.turnColour = black if self.turnColour == white else white
+            
+        self.switchTurn()
         self.halfmoveClock = halfmoveClock
-        self.castleRights["wKl"], self.castleRights["wKr"], self.castleRights["bKl"], self.castleRights["bKr"] = castleRightsBefore
-        self.enPassantTarget = enPassantBefore
+        self.setCastleRights("wKl", castleRightsBefore[0])
+        self.setCastleRights("wKr", castleRightsBefore[1])
+        self.setCastleRights("bKl", castleRightsBefore[2])
+        self.setCastleRights("bKr", castleRightsBefore[3])
+        self.setEnPassantTarget(enPassantBefore)
 
         self.updateSquare(end[0], end[1], empty)
         self.updateSquare(start[0], start[1], movingPiece)
@@ -495,7 +503,7 @@ class logic:
 
     def gameState(self, sound=True):
         
-        if self.positionHistory.count(self.zobristHash()) >= 3:
+        if self.positionHistory.count(self.hash) >= 3:
             self.gameOverMessage = "Three-fold \nRepetition!\nNobody  wins!"
             if sound: sounds["checkmate"].play()
             return
@@ -540,12 +548,16 @@ class logic:
             self.redoHistory.append(move)
 
         piece, start, end, capturedPiece, capturedSquare, enPassantBefore, castleRightsBefore, promotion, castleRightsAfter, enPassantAfter, halfmoveClock = move
-        self.turnColour = black if self.turnColour == white else white    
+        self.switchTurn()
         self.moves -= 1
         self.halfmoveClock = halfmoveClock - 1
-        
-        self.castleRights["wKl"], self.castleRights["wKr"], self.castleRights["bKl"], self.castleRights["bKr"] = castleRightsBefore
-        self.enPassantTarget = enPassantBefore
+
+        self.setCastleRights("wKl", castleRightsBefore[0])
+        self.setCastleRights("wKr", castleRightsBefore[1])
+        self.setCastleRights("bKl", castleRightsBefore[2])
+        self.setCastleRights("bKr", castleRightsBefore[3])
+
+        self.setEnPassantTarget(enPassantBefore)
 
         self.updateSquare(end[0], end[1], empty)
         self.updateSquare(start[0], start[1], piece)
@@ -588,13 +600,16 @@ class logic:
         move = self.redoHistory.pop()
         piece, start, end, capturedPiece, capturedSquare, enPassantBefore, castleRightsBefore, promotion, castleRightsAfter, enPassantAfter, halfmoveClock = move
 
-        self.turnColour = black if self.turnColour == white else white
+        self.switchTurn()
         self.moves += 1
         self.halfmoveClock = halfmoveClock
-        
-        castleRights = self.castleRights
-        castleRights["wKl"], castleRights["wKr"], castleRights["bKl"], castleRights["bKr"] = castleRightsAfter
-        self.enPassantTarget = enPassantAfter
+
+        self.setCastleRights("wKl", castleRightsAfter[0])
+        self.setCastleRights("wKr", castleRightsAfter[1])
+        self.setCastleRights("bKl", castleRightsAfter[2])
+        self.setCastleRights("bKr", castleRightsAfter[3])
+
+        self.setEnPassantTarget(enPassantAfter)
 
         if capturedPiece != empty:
             sounds["capture"].play()
@@ -612,7 +627,7 @@ class logic:
             self.updateSquare(end[0], end[1], piece)
 
         self.moveHistory.append(move)
-        currentHash = self.zobristHash()
+        currentHash = self.hash
         self.positionHistory.append(currentHash)
         if currentHash in self.positionCounts:
             self.positionCounts[currentHash] += 1

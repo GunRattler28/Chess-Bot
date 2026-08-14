@@ -76,9 +76,9 @@ def minimax(board, depth, maximisingPlayer, startTime, timeLimit, alpha=-999999,
         return 0
     if depth == 0:
         return board.evaluationScore
-    if board.halfmoveClock >= 100 or board.positionCounts.get(board.zobristHash(), 0) >= 3:
+    if board.halfmoveClock >= 100 or board.positionCounts.get(board.hash, 0) >= 3:
         return 0
-    hash = board.zobristHash()
+    hash = board.hash
     score, bestMove = getEvaluation(hash, depth, alpha, beta)
     if score is not None:
         return score
