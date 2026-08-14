@@ -101,9 +101,6 @@ class logic:
                 self.whiteOccupied &= ~(1 << index)
             else:
                 self.blackOccupied &= ~(1 << index)
-                
-            if self.endgame != evaluation.isEndgame(self):
-                self.createSquareTable()
 
         if newPiece != empty:
             self.totalPieces += 1
@@ -431,10 +428,11 @@ class logic:
         pieceToPlace = promotion if promotion is not None else movingPiece
         self.updateSquare(endRow, endColumn, pieceToPlace)
 
-
         self.enPassantTarget = ((startRow + endRow) // 2, startColumn) if (movingPiece & 7) == pawn and abs(endRow - startRow) == 2 else None
         self.turnColour = black if self.turnColour == white else white    
         self.halfmoveClock = 0 if (movingPiece & 7) == pawn or target != empty or enPassantCapture else self.halfmoveClock + 1
+        currentHash = self.zobristHash()
+        self.positionCounts[currentHash] = self.positionCounts.get(currentHash, 0) + 1
 
         if simulation:
             return (
@@ -446,7 +444,7 @@ class logic:
                 enPassantBefore,
                 self.halfmoveClock, 
                 castleRightsBefore, 
-                promotion
+                currentHash
             )
         else:
             castleRightsAfter = (self.castleRights["wKl"], self.castleRights["wKr"], self.castleRights["bKl"], self.castleRights["bKr"])
@@ -463,11 +461,10 @@ class logic:
                 self.enPassantTarget, 
                 self.halfmoveClock
             ))
-            currentHash = self.zobristHash()
             self.positionHistory.append(currentHash)
-            self.positionCounts[currentHash] = self.positionCounts.get(currentHash, 0) + 1
-            self.moves += 1
-
+            self.moves += 1                
+            if self.endgame != evaluation.isEndgame(self):
+                self.createSquareTable()
             visuals.activeSquare = None
             visuals.activeOutline = None
             visuals.moveIndicator.clear()
@@ -476,7 +473,10 @@ class logic:
             visuals.redraw = True
 
     def unmakeMove(self, undoInfo):
-        movingPiece, start, end, capturedPiece, capturedSquare, enPassantBefore, halfmoveClock, castleRightsBefore, promotion = undoInfo
+        movingPiece, start, end, capturedPiece, capturedSquare, enPassantBefore, halfmoveClock, castleRightsBefore, currentHash = undoInfo
+        self.positionCounts[currentHash] -= 1
+        if self.positionCounts[currentHash] == 0:
+            del self.positionCounts[currentHash]
         self.turnColour = black if self.turnColour == white else white
         self.halfmoveClock = halfmoveClock
         self.castleRights["wKl"], self.castleRights["wKr"], self.castleRights["bKl"], self.castleRights["bKr"] = castleRightsBefore
@@ -563,6 +563,8 @@ class logic:
         self.moveCastleRook(piece, start, end, undo=True)
 
         if not simulation:
+            if self.endgame != evaluation.isEndgame(self):
+                self.createSquareTable()
             from engine import visuals
             visuals.activeSquare = visuals.activeOutline = None
             visuals.possibleMoves.clear()
@@ -616,7 +618,9 @@ class logic:
             self.positionCounts[currentHash] += 1
         else:
             self.positionCounts[currentHash] = 1
-
+                
+        if self.endgame != evaluation.isEndgame(self):
+            self.createSquareTable()
         visuals.activeSquare = visuals.activeOutline = None
         visuals.possibleMoves.clear()
         visuals.moveIndicator.clear()

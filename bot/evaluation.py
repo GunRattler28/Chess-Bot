@@ -97,7 +97,7 @@ positionTables = {
 def isEndgame(board):
     wQ = board.piecePositions[white | queen]
     bQ = board.piecePositions[black | queen]
-    if (wQ == 0 and bQ == 0) and board.totalPieces < 16:
+    if ((wQ == 0 and bQ == 0) and board.totalPieces < 16) or board.totalPieces < 8:
         return True
     return False
 
