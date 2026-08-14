@@ -92,13 +92,14 @@ def minimax(board, depth, maximisingPlayer, startTime, timeLimit, alpha=-999999,
 
     for move in moves:
         startRow, startColumn, endRow, endColumn = move
-        board.makeMove(startRow, startColumn, endRow, endColumn, sound=False, simulation=True)
-        if board.kingCheck(currentColour):
-            board.previousMove(False, True)
+        undoInfo = board.makeMove(startRow, startColumn, endRow, endColumn, simulation=True)
+        if board.kingCheck(currentColour):        
+            board.unmakeMove(undoInfo)
             continue
+
         legalMovesFound = True
         score = minimax(board, depth - 1, not maximisingPlayer, startTime, timeLimit, alpha, beta, )
-        board.previousMove(sound=False, simulation=True)
+        board.unmakeMove(undoInfo)
         if maximisingPlayer:
             if score > bestScore:
                 bestScore = score
@@ -140,14 +141,14 @@ def searchMovesAtDepth(board, moves, depth, alpha, beta, playerMaximising, botCo
         if constants.abortSearch:
             break
         startRow, startColumn, endRow, endColumn = move
-        board.makeMove(startRow, startColumn, endRow, endColumn, sound=False, simulation=True)
+        undoInfo = board.makeMove(startRow, startColumn, endRow, endColumn, simulation=True)
         
-        if board.kingCheck(botColour):
-            board.previousMove(False, True)
+        if board.kingCheck(botColour):        
+            board.unmakeMove(undoInfo)
             continue
             
         score = minimax(board, depth - 1, not playerMaximising, startTime, timeLimit, alpha, beta)
-        board.previousMove(sound=False, simulation=True)
+        board.unmakeMove(undoInfo)
         
         if playerMaximising:
             if score > currentBestScore:

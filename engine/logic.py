@@ -363,21 +363,13 @@ class logic:
         if piece in (white | king, black | king): 
             self.moveCastleRook(piece, start, end, undo=True)
 
-    def makeMove(self, startRow, startColumn, endRow, endColumn, sound=True, simulation=False):
-        
+    def makeMove(self, startRow, startColumn, endRow, endColumn, simulation=False):
         movingPiece = self.squarePiece[startRow * 8 + startColumn]
         target = self.squarePiece[endRow * 8 + endColumn]
         start, end = (startRow, startColumn), (endRow, endColumn)
 
-        turnColourBefore = self.turnColour
-        movesBefore = self.moves
-        halfmoveClockBefore = self.halfmoveClock
         enPassantBefore = self.enPassantTarget
-        castleRights = self.castleRights
-        castleRightsBefore = (castleRights["wKl"], castleRights["wKr"], castleRights["bKl"], castleRights["bKr"])
-        capturedPiece = target
-        capturedSquare = None
-        promotion = None
+        castleRightsBefore = (self.castleRights["wKl"], self.castleRights["wKr"], self.castleRights["bKl"], self.castleRights["bKr"])
 
         self.moveCastleRook(movingPiece, start, end)
 
@@ -406,11 +398,9 @@ class logic:
         elif end == (0, 7): 
             self.castleRights["bKr"] = False
 
-        if not simulation:
-            visuals.possibleMoves.clear()
-            self.redoHistory.clear()
-
         enPassantCapture = False
+        capturedPiece = target
+        capturedSquare = None
 
         if (movingPiece & 7) == pawn and target == empty and startColumn != endColumn and self.enPassantTarget == (endRow, endColumn):
             capturedRow = endRow - (-1 if (movingPiece & 24) == white else 1)
@@ -419,14 +409,16 @@ class logic:
                 self.updateSquare(capturedRow, endColumn, empty)
                 capturedSquare = (capturedRow, endColumn)
                 enPassantCapture = True
-                if sound: 
+                if not simulation: 
                     sounds["capture"].play()
 
-        if not enPassantCapture:
-            if target != empty and sound:
+        if not simulation:
+            if target != empty:
                 sounds["capture"].play()
-            elif sound:
+            else:
                 sounds["move"].play()
+            visuals.possibleMoves.clear()
+            self.redoHistory.clear()
 
         self.updateSquare(startRow, startColumn, empty)
         promotion = None
@@ -439,41 +431,67 @@ class logic:
         pieceToPlace = promotion if promotion is not None else movingPiece
         self.updateSquare(endRow, endColumn, pieceToPlace)
 
+
         self.enPassantTarget = ((startRow + endRow) // 2, startColumn) if (movingPiece & 7) == pawn and abs(endRow - startRow) == 2 else None
         self.turnColour = black if self.turnColour == white else white    
-        self.moves += 1
         self.halfmoveClock = 0 if (movingPiece & 7) == pawn or target != empty or enPassantCapture else self.halfmoveClock + 1
-        castleRightsAfter = (castleRights["wKl"], castleRights["wKr"], castleRights["bKl"], castleRights["bKr"])
-        self.moveHistory.append((
-            movingPiece, 
-            start, 
-            end, 
-            capturedPiece, 
-            capturedSquare,
-            enPassantBefore, 
-            turnColourBefore, 
-            movesBefore, 
-            halfmoveClockBefore,
-            castleRightsBefore, 
-            promotion,
-            castleRightsAfter, 
-            self.enPassantTarget, 
-            self.halfmoveClock
-        ))
-        currentHash = self.zobristHash()
-        self.positionHistory.append(currentHash)
-        if currentHash in self.positionCounts:
-            self.positionCounts[currentHash] += 1
-        else:
-            self.positionCounts[currentHash] = 1
 
-        if not simulation:
+        if simulation:
+            return (
+                movingPiece, 
+                start, 
+                end, 
+                capturedPiece, 
+                capturedSquare, 
+                enPassantBefore,
+                self.halfmoveClock, 
+                castleRightsBefore, 
+                promotion
+            )
+        else:
+            castleRightsAfter = (self.castleRights["wKl"], self.castleRights["wKr"], self.castleRights["bKl"], self.castleRights["bKr"])
+            self.moveHistory.append((
+                movingPiece, 
+                start, 
+                end, 
+                capturedPiece, 
+                capturedSquare,
+                enPassantBefore,
+                castleRightsBefore, 
+                promotion, 
+                castleRightsAfter, 
+                self.enPassantTarget, 
+                self.halfmoveClock
+            ))
+            currentHash = self.zobristHash()
+            self.positionHistory.append(currentHash)
+            self.positionCounts[currentHash] = self.positionCounts.get(currentHash, 0) + 1
+            self.moves += 1
+
             visuals.activeSquare = None
             visuals.activeOutline = None
             visuals.moveIndicator.clear()
             visuals.possibleMoves.clear()
             visuals.lastMove = (startRow, startColumn, endRow, endColumn)
             visuals.redraw = True
+
+    def unmakeMove(self, undoInfo):
+        movingPiece, start, end, capturedPiece, capturedSquare, enPassantBefore, halfmoveClock, castleRightsBefore, promotion = undoInfo
+        self.turnColour = black if self.turnColour == white else white
+        self.halfmoveClock = halfmoveClock
+        self.castleRights["wKl"], self.castleRights["wKr"], self.castleRights["bKl"], self.castleRights["bKr"] = castleRightsBefore
+        self.enPassantTarget = enPassantBefore
+
+        self.updateSquare(end[0], end[1], empty)
+        self.updateSquare(start[0], start[1], movingPiece)
+        
+        if capturedPiece != empty:
+            if capturedSquare:
+                self.updateSquare(capturedSquare[0], capturedSquare[1], capturedPiece)
+            else:
+                self.updateSquare(end[0], end[1], capturedPiece)
+
+        self.moveCastleRook(movingPiece, start, end, undo=True)
 
     def gameState(self, sound=True):
         
@@ -506,12 +524,12 @@ class logic:
         else: 
             self.gameOverMessage = None
 
-    def previousMove(self, sound=True, simulation=False):
-        from engine import visuals
+    def previousMove(self, simulation=False):
         if not self.moveHistory: 
             return
 
         move = self.moveHistory.pop()
+
         if self.positionHistory: 
             oldHash = self.positionHistory.pop()
             self.positionCounts[oldHash] -= 1
@@ -521,14 +539,12 @@ class logic:
         if not simulation: 
             self.redoHistory.append(move)
 
-        piece, start, end, capturedPiece, capturedSquare, enPassantBefore, turnColour, moves, halfmoveClockBefore, castleRightsBefore, promotion, castleRightsAfter, enPassantAfter, halfmoveClockAfter = move
-
-        self.turnColour = turnColour
-        self.moves = moves
-        self.halfmoveClock = halfmoveClockBefore
+        piece, start, end, capturedPiece, capturedSquare, enPassantBefore, castleRightsBefore, promotion, castleRightsAfter, enPassantAfter, halfmoveClock = move
+        self.turnColour = black if self.turnColour == white else white    
+        self.moves -= 1
+        self.halfmoveClock = halfmoveClock - 1
         
-        castleRights = self.castleRights
-        castleRights["wKl"], castleRights["wKr"], castleRights["bKl"], castleRights["bKr"] = castleRightsBefore
+        self.castleRights["wKl"], self.castleRights["wKr"], self.castleRights["bKl"], self.castleRights["bKr"] = castleRightsBefore
         self.enPassantTarget = enPassantBefore
 
         self.updateSquare(end[0], end[1], empty)
@@ -539,19 +555,21 @@ class logic:
                 self.updateSquare(capturedSquare[0], capturedSquare[1], capturedPiece)
             else:
                 self.updateSquare(end[0], end[1], capturedPiece)
-            if sound: sounds["capture"].play()
-        else:
-            if sound: sounds["move"].play()
+            if not simulation:
+                sounds["capture"].play()
+        elif not simulation:
+            sounds["move"].play()
 
         self.moveCastleRook(piece, start, end, undo=True)
 
         if not simulation:
+            from engine import visuals
             visuals.activeSquare = visuals.activeOutline = None
             visuals.possibleMoves.clear()
             visuals.moveIndicator.clear()
             visuals.lines.clear()
             visuals.strategyCircles.clear()
-            self.gameState(sound)
+            self.gameState()
             
             if len(self.moveHistory) > 0:
                 secondLastMove = self.moveHistory[-1]
@@ -566,11 +584,11 @@ class logic:
             return
 
         move = self.redoHistory.pop()
-        piece, start, end, capturedPiece, capturedSquare, enPassantBefore, turnColour, moves, halfmoveClockBefore, castleRightsBefore, promotion, castleRightsAfter, enPassantAfter, halfmoveClockAfter = move
+        piece, start, end, capturedPiece, capturedSquare, enPassantBefore, castleRightsBefore, promotion, castleRightsAfter, enPassantAfter, halfmoveClock = move
 
-        self.turnColour = black if turnColour == white else white
-        self.moves = moves + 1
-        self.halfmoveClock = halfmoveClockAfter
+        self.turnColour = black if self.turnColour == white else white
+        self.moves += 1
+        self.halfmoveClock = halfmoveClock
         
         castleRights = self.castleRights
         castleRights["wKl"], castleRights["wKr"], castleRights["bKl"], castleRights["bKr"] = castleRightsAfter

@@ -24,6 +24,7 @@ class mainLoop:
         self.botCooldownUntil = 0
         self.running = True
         self.searchedDepth = None
+        self.gameoverMsg = None
 
     def searchMove(self, hash, boardCopy):
         calculatedMove, searchedDepth = bot.bot.findBestMove(boardCopy, 10, constants.botColour, pygame.time.get_ticks(), constants.timeLimit * 1000)
@@ -58,8 +59,9 @@ class mainLoop:
         visuals.drawBoard(self.board)
         visuals.drawHighlights(self.board)
         visuals.drawArrows()
-        
-        if self.board.gameOverMessage:
+
+        if self.board.gameOverMessage != self.gameoverMsg:
+            self.gameoverMsg = self.board.gameOverMessage
             gamelines = self.board.gameOverMessage.split("\n")
             renderedLines = []
             totalHeight = 0
