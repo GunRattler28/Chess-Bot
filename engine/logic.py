@@ -432,7 +432,15 @@ class logic:
         pieceToPlace = promotion if promotion is not None else movingPiece
         self.updateSquare(endRow, endColumn, pieceToPlace)
 
-        self.setEnPassantTarget(((startRow + endRow) // 2, startColumn) if (movingPiece & 7) == pawn and abs(endRow - startRow) == 2 else None)
+        enPassantTarget = None
+        if (movingPiece & 7) == pawn and abs(endRow - startRow) == 2:
+            enemyPawn = black | pawn if (movingPiece & 24) == white else white | pawn
+            if endColumn > 0 and self.squarePiece[endRow * 8 + endColumn - 1] == enemyPawn:
+                enPassantTarget = ((startRow + endRow) // 2, startColumn)
+            elif endColumn < 7 and self.squarePiece[endRow * 8 + endColumn + 1] == enemyPawn:
+                enPassantTarget = ((startRow + endRow) // 2, startColumn)
+
+        self.setEnPassantTarget(enPassantTarget)
         self.switchTurn()
         self.halfmoveClock = 0 if (movingPiece & 7) == pawn or target != empty or enPassantCapture else self.halfmoveClock + 1
         currentHash = self.hash
