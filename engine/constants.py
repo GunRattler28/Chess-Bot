@@ -82,12 +82,11 @@ for colour in [white, black]:
 
 zobristTurn = random.getrandbits(64)
 
-zobristCastling = {
-    "wKl": random.getrandbits(64),
-    "wKr": random.getrandbits(64),
-    "bKl": random.getrandbits(64),
-    "bKr": random.getrandbits(64)
-}
+zobristCastling = []
+
+for i in range(16):
+    key = random.getrandbits(64)
+    zobristCastling.append(key)
 
 zobristEnPassant = []
 
