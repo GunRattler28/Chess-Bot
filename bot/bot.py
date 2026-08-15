@@ -7,11 +7,11 @@ aspirationWindow = 50
 exact = 0
 upper = 1
 lower = 2
-tableSize = 1048576
+tableSize = 1500007
 transpositionTable = [None] * tableSize
 
 def storeEvaluation(hash, depth, score, flag, bestMove):
-    transpositionTable[hash & (tableSize - 1)] = (
+    transpositionTable[hash % tableSize] = (
         hash,
         depth,
         score,
@@ -20,7 +20,7 @@ def storeEvaluation(hash, depth, score, flag, bestMove):
     )
 
 def getEvaluation(hash, depth, alpha, beta):
-    index = hash & (tableSize - 1)
+    index = hash % tableSize
     position = transpositionTable[index]
     if position is not None and position[0] == hash:
         score = position[2]
