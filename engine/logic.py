@@ -21,6 +21,7 @@ class logic:
         self.evaluationScore = 0
         self.totalPieces = 0
         self.endgame = 0
+        self.castleRights = 0b1111
 
         self.piecePositions = {
             (black | queen): 0x0000000000000008, 
@@ -37,13 +38,6 @@ class logic:
             (white | pawn): 0x00FF000000000000
         }
 
-        self.castleRights = {
-            "wKl": True,
-            "wKr": True,
-            "bKl": True,
-            "bKr": True,
-        }
-
         self.updateOccupied()
 
     def clone(self):
@@ -54,7 +48,7 @@ class logic:
         newState.enPassantTarget = self.enPassantTarget
         newState.gameOverMessage = self.gameOverMessage
         newState.piecePositions = self.piecePositions.copy()
-        newState.castleRights = self.castleRights.copy()
+        newState.castleRights = self.castleRights
         newState.squarePiece = self.squarePiece.copy()
         newState.moveHistory = self.moveHistory.copy()
         newState.redoHistory = self.redoHistory.copy()
@@ -67,6 +61,7 @@ class logic:
         newState.evaluationScore = self.evaluationScore
         newState.totalPieces = self.totalPieces
         newState.endgame = self.endgame
+        newState.castleRights = self.castleRights
         return newState
 
     def createSquareTable(self):
@@ -87,9 +82,7 @@ class logic:
         if self.turnColour == black:
             self.hash = self.hash ^ zobristTurn
 
-        for castlingRight, state in self.castleRights.items():
-            if state:
-                self.hash = self.hash ^ zobristCastling[castlingRight]
+        self.hash = self.hash ^ zobristCastling[self.castleRights]
 
         if self.enPassantTarget != None:
             self.hash = self.hash ^ zobristEnPassant[self.enPassantTarget[1]]
@@ -139,11 +132,6 @@ class logic:
     def switchTurn(self):
         self.turnColour = black if self.turnColour == white else white
         self.hash = self.hash ^ zobristTurn
-
-    def setCastleRights(self, key, value):
-        if self.castleRights[key] != value:
-            self.castleRights[key] = value
-            self.hash = self.hash ^ zobristCastling[key]
 
     def setEnPassantTarget(self, target):
         if self.enPassantTarget != target:
@@ -237,11 +225,16 @@ class logic:
     def addCastleMoves(self, pieceColour, possibleMoves):
         row = 7 if pieceColour == white else 0
         enemy = black if pieceColour == white else white
-        cStr = "w" if pieceColour == white else "b"
-        if (self.castleRights[cStr + "Kr"] and self.squarePiece[row * 8 + 5] == empty and self.squarePiece[row * 8 + 6] == empty and not self.kingCheck(pieceColour) and not self.isSquareAttacked(row, 5, enemy) and not self.isSquareAttacked(row, 6, enemy) and self.squarePiece[row * 8 + 7] == (pieceColour | rook)):
+        if pieceColour == white:
+            kl = 1
+            kr = 2
+        else:
+            kl = 4
+            kr = 8
+        if (self.castleRights & kr and self.squarePiece[row * 8 + 5] == empty and self.squarePiece[row * 8 + 6] == empty and not self.kingCheck(pieceColour) and not self.isSquareAttacked(row, 5, enemy) and not self.isSquareAttacked(row, 6, enemy) and self.squarePiece[row * 8 + 7] == (pieceColour | rook)):
             possibleMoves.append((row, 6))
 
-        if (self.castleRights[cStr + "Kl"] and self.squarePiece[row * 8 + 1] == empty and self.squarePiece[row * 8 + 2] == empty and self.squarePiece[row * 8 + 3] == empty and not self.kingCheck(pieceColour) and not self.isSquareAttacked(row, 3, enemy) and not self.isSquareAttacked(row, 2, enemy) and self.squarePiece[row * 8 + 0] == (pieceColour | rook)):
+        if (self.castleRights & kl and self.squarePiece[row * 8 + 1] == empty and self.squarePiece[row * 8 + 2] == empty and self.squarePiece[row * 8 + 3] == empty and not self.kingCheck(pieceColour) and not self.isSquareAttacked(row, 3, enemy) and not self.isSquareAttacked(row, 2, enemy) and self.squarePiece[row * 8 + 0] == (pieceColour | rook)):
             possibleMoves.append((row, 2))
 
     def calculateLegalMoves(self, row, column, includeCastling):
@@ -379,25 +372,28 @@ class logic:
         start, end = (startRow, startColumn), (endRow, endColumn)
 
         enPassantBefore = self.enPassantTarget
-        castleRightsBefore = (self.castleRights["wKl"], self.castleRights["wKr"], self.castleRights["bKl"], self.castleRights["bKr"])
-
+        castleRightsBefore = self.castleRights
         self.moveCastleRook(movingPiece, start, end)
+        newCastleRights = self.castleRights
 
         if movingPiece == (white | king): 
-            self.setCastleRights("wKl", False)
-            self.setCastleRights("wKr", False)
+            self.castleRights &= ~0b0011
         elif movingPiece == (black | king):
-            self.setCastleRights("bKl", False)
-            self.setCastleRights("bKr", False)
+            self.castleRights &= ~0b1100
 
         if start == (7, 0) or end == (7, 0): 
-            self.setCastleRights("wKl", False)
+            self.castleRights &= ~0b0001
         if start == (7, 7) or end == (7, 7): 
-            self.setCastleRights("wKr", False)
+            self.castleRights &= ~0b0010
         if start == (0, 0) or end == (0, 0): 
-            self.setCastleRights("bKl", False)
+            self.castleRights &= ~0b0100
         if start == (0, 7) or end == (0, 7): 
-            self.setCastleRights("bKr", False)
+            self.castleRights &= ~0b1000
+
+        if self.castleRights != newCastleRights:
+            self.hash ^= zobristCastling[self.castleRights]
+            self.castleRights = self.castleRights
+            self.hash ^= zobristCastling[self.castleRights]
 
         enPassantCapture = False
         capturedPiece = target
@@ -432,7 +428,15 @@ class logic:
         pieceToPlace = promotion if promotion is not None else movingPiece
         self.updateSquare(endRow, endColumn, pieceToPlace)
 
-        self.setEnPassantTarget(((startRow + endRow) // 2, startColumn) if (movingPiece & 7) == pawn and abs(endRow - startRow) == 2 else None)
+        enPassantTarget = None
+        if (movingPiece & 7) == pawn and abs(endRow - startRow) == 2:
+            enemyPawn = black | pawn if (movingPiece & 24) == white else white | pawn
+            if endColumn > 0 and self.squarePiece[endRow * 8 + endColumn - 1] == enemyPawn:
+                enPassantTarget = ((startRow + endRow) // 2, startColumn)
+            elif endColumn < 7 and self.squarePiece[endRow * 8 + endColumn + 1] == enemyPawn:
+                enPassantTarget = ((startRow + endRow) // 2, startColumn)
+
+        self.setEnPassantTarget(enPassantTarget)
         self.switchTurn()
         self.halfmoveClock = 0 if (movingPiece & 7) == pawn or target != empty or enPassantCapture else self.halfmoveClock + 1
         currentHash = self.hash
@@ -451,7 +455,6 @@ class logic:
                 currentHash
             )
         else:
-            castleRightsAfter = (self.castleRights["wKl"], self.castleRights["wKr"], self.castleRights["bKl"], self.castleRights["bKr"])
             self.moveHistory.append((
                 movingPiece, 
                 start, 
@@ -461,7 +464,7 @@ class logic:
                 enPassantBefore,
                 castleRightsBefore, 
                 promotion, 
-                castleRightsAfter, 
+                self.castleRights, 
                 self.enPassantTarget, 
                 self.halfmoveClock
             ))
@@ -484,10 +487,10 @@ class logic:
             
         self.switchTurn()
         self.halfmoveClock = halfmoveClock
-        self.setCastleRights("wKl", castleRightsBefore[0])
-        self.setCastleRights("wKr", castleRightsBefore[1])
-        self.setCastleRights("bKl", castleRightsBefore[2])
-        self.setCastleRights("bKr", castleRightsBefore[3])
+        if self.castleRights != castleRightsBefore:
+            self.hash ^= zobristCastling[self.castleRights]
+            self.castleRights = castleRightsBefore
+            self.hash ^= zobristCastling[self.castleRights]
         self.setEnPassantTarget(enPassantBefore)
 
         self.updateSquare(end[0], end[1], empty)
@@ -552,10 +555,10 @@ class logic:
         self.moves -= 1
         self.halfmoveClock = halfmoveClock - 1
 
-        self.setCastleRights("wKl", castleRightsBefore[0])
-        self.setCastleRights("wKr", castleRightsBefore[1])
-        self.setCastleRights("bKl", castleRightsBefore[2])
-        self.setCastleRights("bKr", castleRightsBefore[3])
+        if self.castleRights != castleRightsBefore:
+            self.hash ^= zobristCastling[self.castleRights]
+            self.castleRights = castleRightsBefore
+            self.hash ^= zobristCastling[self.castleRights]
 
         self.setEnPassantTarget(enPassantBefore)
 
@@ -604,10 +607,10 @@ class logic:
         self.moves += 1
         self.halfmoveClock = halfmoveClock
 
-        self.setCastleRights("wKl", castleRightsAfter[0])
-        self.setCastleRights("wKr", castleRightsAfter[1])
-        self.setCastleRights("bKl", castleRightsAfter[2])
-        self.setCastleRights("bKr", castleRightsAfter[3])
+        if self.castleRights != castleRightsBefore:
+            self.hash ^= zobristCastling[self.castleRights]
+            self.castleRights = castleRightsBefore
+            self.hash ^= zobristCastling[self.castleRights]
 
         self.setEnPassantTarget(enPassantAfter)
 
