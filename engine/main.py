@@ -25,7 +25,7 @@ class mainLoop:
         self.bestMove = None
         self.searching = False
         self.searchThread = None
-        self.board = logic.logic()
+        self.board = logic.logic() # This the object that everything in logic.py is part of
         self.board.createSquareTable()
         self.board.positionHistory.append(self.board.hash)
         self.botCooldownUntil = 0
