@@ -9,6 +9,9 @@ upper = 1
 lower = 2
 tableSize = 1048576
 transpositionTable = [None] * tableSize
+pruneMoves = []
+for i in range(20):
+    pruneMoves.append([None, None])
 
 def storeEvaluation(hash, depth, score, flag, bestMove):
     transpositionTable[hash & (tableSize - 1)] = (
@@ -51,7 +54,7 @@ def getAllPossibleMoves(board, colour):
                 bitboard &= bitboard - 1
     return allMoves
 
-def scoreMove(board, move, previousBestMove=None):
+def scoreMove(board, move, depth, previousBestMove=None):
     if move == previousBestMove:
         return 100000
     
@@ -64,11 +67,17 @@ def scoreMove(board, move, previousBestMove=None):
 
     if (movingType == pawn) and (endRow == promotionRow):
         score += 10000
-        
+
     if targetPiece != empty:
         targetType = targetPiece & 7
         score += evaluation.pieceValues[targetType] * 10
         score -= evaluation.pieceValues[movingType]
+    else:
+        if depth <= len(pruneMoves):
+            if move == pruneMoves[depth][0]:
+                score += 9000
+            elif move == pruneMoves[depth][1]:
+                score += 8000
     return score
 
 def minimax(board, depth, maximisingPlayer, startTime, timeLimit, alpha=-999999, beta=999999):
@@ -90,7 +99,7 @@ def minimax(board, depth, maximisingPlayer, startTime, timeLimit, alpha=-999999,
     currentColour = white if maximisingPlayer else black
     moves = getAllPossibleMoves(board, currentColour)
     bestScore = -999999 if maximisingPlayer else 999999
-    moves.sort(key=lambda move: scoreMove(board, move, bestMove), reverse=True)
+    moves.sort(key=lambda move: scoreMove(board, move, depth, bestMove), reverse=True)
     legalMovesFound = False
 
     for move in moves:
@@ -114,6 +123,10 @@ def minimax(board, depth, maximisingPlayer, startTime, timeLimit, alpha=-999999,
                 bestMove = move
             beta = min(beta, bestScore)
         if beta <= alpha:
+            targetPiece = board.squarePiece[endRow * 8 + endColumn]
+            if targetPiece == empty and depth < len(pruneMoves):
+                pruneMoves[depth][1] = pruneMoves[depth][0]
+                pruneMoves[depth][0] = move
             break
 
     if not legalMovesFound:
@@ -165,6 +178,10 @@ def searchMovesAtDepth(board, moves, depth, alpha, beta, playerMaximising, botCo
             beta = min(beta, score)
             
         if beta <= alpha:
+            targetPiece = board.squarePiece[endRow * 8 + endColumn]
+            if targetPiece == empty and depth < len(pruneMoves):
+                pruneMoves[depth][1] = pruneMoves[depth][0]
+                pruneMoves[depth][0] = move
             break
             
     return currentBestScore, currentBestMove
@@ -175,7 +192,7 @@ def findBestMove(board, depth, botColour, startTime, timeLimit):
     
     playerMaximising = (botColour == white)
     bestMove = None
-    moves = sorted(getAllPossibleMoves(board, botColour), key=lambda move: scoreMove(board, move, bestMove), reverse=True)
+    moves = sorted(getAllPossibleMoves(board, botColour), key=lambda move: scoreMove(board, move, depth, bestMove), reverse=True)
     if not moves:
         return None, 0
     bestMove = moves[0]
