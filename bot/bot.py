@@ -1,6 +1,6 @@
 import pygame
-import engine.constants as constants
-from engine.constants import white, black, empty
+from engine import constants, logic
+from engine.constants import white, black, empty, pawn
 from bot import evaluation
 
 aspirationWindow = 50
@@ -53,19 +53,22 @@ def getAllPossibleMoves(board, colour):
 
 def scoreMove(board, move, previousBestMove=None):
     if move == previousBestMove:
-        return 999999
+        return 100000
     
     startRow, startColumn, endRow, endColumn = move
+    movingPiece = board.squarePiece[startRow * 8 + startColumn]
+    movingType = movingPiece & 7
     targetPiece = board.squarePiece[endRow * 8 + endColumn]
     score = 0
-    
+    promotionRow = 0 if (movingPiece & 24) == white else 7
+
+    if (movingType == pawn) and (endRow == promotionRow):
+        score += 10000
+        
     if targetPiece != empty:
         targetType = targetPiece & 7
         score += evaluation.pieceValues[targetType] * 10
-        attacker = board.squarePiece[startRow * 8 + startColumn]
-        if attacker != empty:
-            atkType = attacker & 7
-            score -= evaluation.pieceValues[atkType]
+        score -= evaluation.pieceValues[movingType]
     return score
 
 def minimax(board, depth, maximisingPlayer, startTime, timeLimit, alpha=-999999, beta=999999):
