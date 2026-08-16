@@ -10,7 +10,7 @@ lower = 2
 tableSize = 1048576
 transpositionTable = [None] * tableSize
 pruneMoves = []
-for i in range(20):
+for i in range(50):
     pruneMoves.append([None, None])
 
 def storeEvaluation(hash, depth, score, flag, bestMove):
@@ -54,7 +54,7 @@ def getAllPossibleMoves(board, colour):
                 bitboard &= bitboard - 1
     return allMoves
 
-def scoreMove(board, move, depth, previousBestMove=None):
+def scoreMove(board, move, ply, previousBestMove=None):
     if move == previousBestMove:
         return 100000
     
@@ -73,14 +73,14 @@ def scoreMove(board, move, depth, previousBestMove=None):
         score += evaluation.pieceValues[targetType] * 10
         score -= evaluation.pieceValues[movingType]
     else:
-        if depth <= len(pruneMoves):
-            if move == pruneMoves[depth][0]:
+        if ply < len(pruneMoves):
+            if move == pruneMoves[ply][0]:
                 score += 9000
-            elif move == pruneMoves[depth][1]:
+            elif move == pruneMoves[ply][1]:
                 score += 8000
     return score
 
-def minimax(board, depth, maximisingPlayer, startTime, timeLimit, alpha=-999999, beta=999999):
+def minimax(board, depth, ply, maximisingPlayer, startTime, timeLimit, alpha=-999999, beta=999999):
     if constants.abortSearch:
         return 0
     if (pygame.time.get_ticks() - startTime) > timeLimit:
@@ -99,7 +99,7 @@ def minimax(board, depth, maximisingPlayer, startTime, timeLimit, alpha=-999999,
     currentColour = white if maximisingPlayer else black
     moves = getAllPossibleMoves(board, currentColour)
     bestScore = -999999 if maximisingPlayer else 999999
-    moves.sort(key=lambda move: scoreMove(board, move, depth, bestMove), reverse=True)
+    moves.sort(key=lambda move: scoreMove(board, move, ply, bestMove), reverse=True)
     legalMovesFound = False
 
     for move in moves:
@@ -110,7 +110,7 @@ def minimax(board, depth, maximisingPlayer, startTime, timeLimit, alpha=-999999,
             continue
 
         legalMovesFound = True
-        score = minimax(board, depth - 1, not maximisingPlayer, startTime, timeLimit, alpha, beta, )
+        score = minimax(board, depth - 1, ply + 1, not maximisingPlayer, startTime, timeLimit, alpha, beta, )
         board.unmakeMove(undoInfo)
         if maximisingPlayer:
             if score > bestScore:
@@ -124,9 +124,10 @@ def minimax(board, depth, maximisingPlayer, startTime, timeLimit, alpha=-999999,
             beta = min(beta, bestScore)
         if beta <= alpha:
             targetPiece = board.squarePiece[endRow * 8 + endColumn]
-            if targetPiece == empty and depth < len(pruneMoves):
-                pruneMoves[depth][1] = pruneMoves[depth][0]
-                pruneMoves[depth][0] = move
+            if targetPiece == empty and ply < len(pruneMoves):
+                if move != pruneMoves[ply][0]:
+                    pruneMoves[ply][1] = pruneMoves[ply][0]
+                    pruneMoves[ply][0] = move
             break
 
     if not legalMovesFound:
@@ -146,7 +147,7 @@ def minimax(board, depth, maximisingPlayer, startTime, timeLimit, alpha=-999999,
         storeEvaluation(hash, depth, bestScore, flag, bestMove)
     return bestScore
 
-def searchMovesAtDepth(board, moves, depth, alpha, beta, playerMaximising, botColour, startTime, timeLimit):
+def searchMovesAtDepth(board, moves, depth, ply, alpha, beta, playerMaximising, botColour, startTime, timeLimit):
     if (pygame.time.get_ticks() - startTime) > timeLimit:
         return 0, None
     
@@ -163,7 +164,7 @@ def searchMovesAtDepth(board, moves, depth, alpha, beta, playerMaximising, botCo
             board.unmakeMove(undoInfo)
             continue
             
-        score = minimax(board, depth - 1, not playerMaximising, startTime, timeLimit, alpha, beta)
+        score = minimax(board, depth - 1, ply + 1, not playerMaximising, startTime, timeLimit, alpha, beta)
         board.unmakeMove(undoInfo)
         
         if playerMaximising:
@@ -179,9 +180,10 @@ def searchMovesAtDepth(board, moves, depth, alpha, beta, playerMaximising, botCo
             
         if beta <= alpha:
             targetPiece = board.squarePiece[endRow * 8 + endColumn]
-            if targetPiece == empty and depth < len(pruneMoves):
-                pruneMoves[depth][1] = pruneMoves[depth][0]
-                pruneMoves[depth][0] = move
+            if targetPiece == empty and ply < len(pruneMoves):
+                if move != pruneMoves[ply][0]:
+                    pruneMoves[ply][1] = pruneMoves[ply][0]
+                    pruneMoves[ply][0] = move
             break
             
     return currentBestScore, currentBestMove
@@ -192,7 +194,7 @@ def findBestMove(board, depth, botColour, startTime, timeLimit):
     
     playerMaximising = (botColour == white)
     bestMove = None
-    moves = sorted(getAllPossibleMoves(board, botColour), key=lambda move: scoreMove(board, move, depth, bestMove), reverse=True)
+    moves = sorted(getAllPossibleMoves(board, botColour), key=lambda move: scoreMove(board, move, 0, bestMove), reverse=True)
     if not moves:
         return None, 0
     bestMove = moves[0]
@@ -215,11 +217,11 @@ def findBestMove(board, depth, botColour, startTime, timeLimit):
             initialAlpha = -999999
             initialBeta = 999999
 
-        currentBestScore, currentBestMove = searchMovesAtDepth(board, moves, currentDepth, initialAlpha, initialBeta, playerMaximising, botColour, startTime, timeLimit)
+        currentBestScore, currentBestMove = searchMovesAtDepth(board, moves, currentDepth, 0, initialAlpha, initialBeta, playerMaximising, botColour, startTime, timeLimit)
         if constants.abortSearch:
             break
         if currentDepth >= 4 and (currentBestScore <= initialAlpha or currentBestScore >= initialBeta):
-            currentBestScore, currentBestMove = searchMovesAtDepth(board, moves, currentDepth, -999999, 999999, playerMaximising, botColour, startTime, timeLimit)
+            currentBestScore, currentBestMove = searchMovesAtDepth(board, moves, currentDepth, 0, -999999, 999999, playerMaximising, botColour, startTime, timeLimit)
             if constants.abortSearch:
                         break
         previousScore = currentBestScore
