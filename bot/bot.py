@@ -56,7 +56,7 @@ def getAllPossibleMoves(board, colour):
 
 def scoreMove(board, move, ply, previousBestMove=None):
     if move == previousBestMove:
-        return 100000
+        return 1000000
     
     startRow, startColumn, endRow, endColumn = move
     movingPiece = board.squarePiece[startRow * 8 + startColumn]
@@ -66,9 +66,10 @@ def scoreMove(board, move, ply, previousBestMove=None):
     promotionRow = 0 if (movingPiece & 24) == white else 7
 
     if (movingType == pawn) and (endRow == promotionRow):
-        score += 10000
+        score += 100000
 
     if targetPiece != empty:
+        score += 10000
         targetType = targetPiece & 7
         score += evaluation.pieceValues[targetType] * 10
         score -= evaluation.pieceValues[movingType]
