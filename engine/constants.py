@@ -1,24 +1,29 @@
 import pygame
 import random
 
-empty = 0
-pawn = 1
-knight = 2
-bishop = 3
-rook = 4
-queen = 5
-king = 6
-white = 8
-black = 16
+# How each piece and colour is represented in binary
+
+empty = 0b00000
+pawn = 0b00001
+knight = 0b00010
+bishop = 0b00011
+rook = 0b00100
+queen = 0b00101
+king = 0b00110
+white = 0b01000
+black = 0b10000
 
 windowSize = 800
-positionSize = windowSize // 8
-randomColour = random.randint(0, 1)
+positionSize = windowSize // 8 # Size of the piece textures
+
+randomColour = random.randint(0, 1) # Randomises what colour the player starts as
 botColour = black if randomColour else white
 playerTimeStart = 0
-playerTotalTime = 0
+playerTotalTime = 0 # The total time the player has taken in making moves
 abortSearch = False
-timeLimit = 1.5
+timeLimit = 1.5 # How long the bot has to search for a move each turn
+
+# Dictionary of each colour + piece binary code as the keys and the textures as the values
 
 piecesTextures = {
     (black | queen): pygame.transform.scale(pygame.image.load("images/pieces/bqueen.png").convert_alpha(), (positionSize, positionSize)),
