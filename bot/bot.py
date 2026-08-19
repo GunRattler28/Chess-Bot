@@ -1,6 +1,6 @@
 import pygame
-from engine import constants, logic
-from engine.constants import white, black, empty, pawn
+from engine import constants
+from engine.constants import white, black, empty, pawn, king
 from bot import evaluation
 
 aspirationWindow = 50
@@ -59,10 +59,24 @@ def scoreMove(board, move, ply, previousBestMove=None):
         return 1000000
     
     startRow, startColumn, endRow, endColumn = move
+    index = endRow * 8 + endColumn
     movingPiece = board.squarePiece[startRow * 8 + startColumn]
     movingType = movingPiece & 7
+    movingColour = movingPiece & 24
     targetPiece = board.squarePiece[endRow * 8 + endColumn]
     score = 0
+
+    if movingColour == black:
+        index = index ^ 56
+            
+    if movingType == king:
+        if board.endgame:
+            score += evaluation.kingEndgamePositionScores[index] * 10
+        else:
+            score += evaluation.kingPositionScores[index] * 10
+    else:
+        score += evaluation.positionTables[movingType][index]
+
     promotionRow = 0 if (movingPiece & 24) == white else 7
 
     if (movingType == pawn) and (endRow == promotionRow):
