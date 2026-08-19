@@ -11,6 +11,7 @@ tableSize = 1048576
 transpositionTable = [None] * tableSize
 historyTable = [0] * 4096   # All moves. From every square to every other square. 64 * 64
 pruneMoves = []
+minimumDepth = 3 # The depth the bot has to be at before it can use null move pruning. The earlier it is used (higher value) the more safer it is as the opponent has more time to capitalise. The later is is used (lower value) the higher the gain and risk
 for i in range(50):
     pruneMoves.append([None, None])
 
@@ -102,13 +103,13 @@ def scoreMove(board, move, ply, previousBestMove=None):
 
     return score
 
-def minimax(board, depth, ply, maximisingPlayer, startTime, timeLimit, alpha=-999999, beta=999999):
+def minimax(board, depth, ply, maximisingPlayer, startTime, timeLimit, alpha=-999999, beta=999999, allowNull=True):
     if constants.abortSearch:
         return 0
     if (pygame.time.get_ticks() - startTime) > timeLimit:
         constants.abortSearch = True
         return 0
-    if depth == 0:
+    if depth <= 0:
         return board.evaluationScore
     if board.halfmoveClock >= 100 or board.positionCounts.get(board.hash, 0) >= 3:
         return 0
@@ -119,6 +120,19 @@ def minimax(board, depth, ply, maximisingPlayer, startTime, timeLimit, alpha=-99
     initialAlpha = alpha
     initialBeta = beta
     currentColour = white if maximisingPlayer else black
+    if allowNull and depth >= minimumDepth and not board.kingCheck(currentColour) and not board.endgame:
+        depthSkip = (depth // 6) + 2 # Reduced evaluation depth during null move pruning. Calculated by some random ahh formula that gives a depth skip based off of current depth.
+        savedEnPassant = board.enPassantTarget
+        board.setEnPassantTarget(None)
+        board.switchTurn()
+        score = minimax(board, depth - depthSkip, ply + 1, not maximisingPlayer, startTime, timeLimit, alpha, beta, False)
+        board.switchTurn()
+        board.setEnPassantTarget(savedEnPassant)
+        if maximisingPlayer and score >= beta:
+            return beta
+        elif not maximisingPlayer and score <= alpha:
+            return alpha 
+
     moves = getAllPossibleMoves(board, currentColour)
     bestScore = -999999 if maximisingPlayer else 999999
     moves.sort(key=lambda move: scoreMove(board, move, ply, bestMove), reverse=True)
@@ -132,7 +146,7 @@ def minimax(board, depth, ply, maximisingPlayer, startTime, timeLimit, alpha=-99
             continue
 
         legalMovesFound = True
-        score = minimax(board, depth - 1, ply + 1, not maximisingPlayer, startTime, timeLimit, alpha, beta, )
+        score = minimax(board, depth - 1, ply + 1, not maximisingPlayer, startTime, timeLimit, alpha, beta)
         board.unmakeMove(undoInfo)
         if maximisingPlayer:
             if score > bestScore:
