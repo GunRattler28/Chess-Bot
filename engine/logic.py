@@ -374,7 +374,6 @@ class logic:
         enPassantBefore = self.enPassantTarget
         castleRightsBefore = self.castleRights
         self.moveCastleRook(movingPiece, start, end)
-        newCastleRights = self.castleRights
 
         if movingPiece == (white | king): 
             self.castleRights &= ~0b0011
@@ -390,9 +389,8 @@ class logic:
         if start == (0, 7) or end == (0, 7): 
             self.castleRights &= ~0b1000
 
-        if self.castleRights != newCastleRights:
-            self.hash ^= zobristCastling[self.castleRights]
-            self.castleRights = self.castleRights
+        if self.castleRights != castleRightsBefore:
+            self.hash ^= zobristCastling[castleRightsBefore]
             self.hash ^= zobristCastling[self.castleRights]
 
         enPassantCapture = False
@@ -489,8 +487,8 @@ class logic:
         self.halfmoveClock = halfmoveClock
         if self.castleRights != castleRightsBefore:
             self.hash ^= zobristCastling[self.castleRights]
+            self.hash ^= zobristCastling[castleRightsBefore]
             self.castleRights = castleRightsBefore
-            self.hash ^= zobristCastling[self.castleRights]
         self.setEnPassantTarget(enPassantBefore)
 
         self.updateSquare(end[0], end[1], empty)
@@ -557,8 +555,8 @@ class logic:
 
         if self.castleRights != castleRightsBefore:
             self.hash ^= zobristCastling[self.castleRights]
+            self.hash ^= zobristCastling[castleRightsBefore]
             self.castleRights = castleRightsBefore
-            self.hash ^= zobristCastling[self.castleRights]
 
         self.setEnPassantTarget(enPassantBefore)
 
@@ -607,10 +605,10 @@ class logic:
         self.moves += 1
         self.halfmoveClock = halfmoveClock
 
-        if self.castleRights != castleRightsBefore:
-            self.hash ^= zobristCastling[self.castleRights]
-            self.castleRights = castleRightsBefore
-            self.hash ^= zobristCastling[self.castleRights]
+        if castleRightsBefore != castleRightsAfter:
+            self.hash ^= zobristCastling[castleRightsBefore]
+            self.hash ^= zobristCastling[castleRightsAfter]
+            self.castleRights = castleRightsAfter
 
         self.setEnPassantTarget(enPassantAfter)
 
