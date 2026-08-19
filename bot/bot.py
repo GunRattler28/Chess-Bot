@@ -11,6 +11,8 @@ tableSize = 1048576
 transpositionTable = [None] * tableSize
 historyTable = [0] * 4096   # All moves. From every square to every other square. 64 * 64
 pruneMoves = []
+minimumDepth = 3 # The depth the bot has to be at before it can use null move pruning. The earlier it is used (higher value) the more likely to miss stuff. The later is is used (lower value) the less the gain is
+depthSkip = 3 # Reduced evaluation depth during null move pruning
 for i in range(50):
     pruneMoves.append([None, None])
 
@@ -108,7 +110,7 @@ def minimax(board, depth, ply, maximisingPlayer, startTime, timeLimit, alpha=-99
     if (pygame.time.get_ticks() - startTime) > timeLimit:
         constants.abortSearch = True
         return 0
-    if depth == 0:
+    if depth <= 0:
         return board.evaluationScore
     if board.halfmoveClock >= 100 or board.positionCounts.get(board.hash, 0) >= 3:
         return 0
@@ -119,12 +121,11 @@ def minimax(board, depth, ply, maximisingPlayer, startTime, timeLimit, alpha=-99
     initialAlpha = alpha
     initialBeta = beta
     currentColour = white if maximisingPlayer else black
-
-    if allowNull and depth >= 3 and not board.kingCheck(currentColour) and not board.endgame:
+    if allowNull and depth >= minimumDepth and not board.kingCheck(currentColour) and not board.endgame:
         savedEnPassant = board.enPassantTarget
         board.setEnPassantTarget(None)
         board.switchTurn()
-        score = minimax(board, depth - 3, ply + 1, not maximisingPlayer, startTime, timeLimit, alpha, beta, False)
+        score = minimax(board, depth - depthSkip, ply + 1, not maximisingPlayer, startTime, timeLimit, alpha, beta, False)
         board.switchTurn()
         board.setEnPassantTarget(savedEnPassant)
         if maximisingPlayer and score >= beta:
