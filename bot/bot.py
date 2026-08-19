@@ -11,8 +11,7 @@ tableSize = 1048576
 transpositionTable = [None] * tableSize
 historyTable = [0] * 4096   # All moves. From every square to every other square. 64 * 64
 pruneMoves = []
-minimumDepth = 3 # The depth the bot has to be at before it can use null move pruning. The earlier it is used (higher value) the more likely to miss stuff. The later is is used (lower value) the less the gain is
-depthSkip = 3 # Reduced evaluation depth during null move pruning
+minimumDepth = 3 # The depth the bot has to be at before it can use null move pruning. The earlier it is used (higher value) the more safer it is as the opponent has more time to capitalise. The later is is used (lower value) the higher the gain and risk
 for i in range(50):
     pruneMoves.append([None, None])
 
@@ -122,6 +121,7 @@ def minimax(board, depth, ply, maximisingPlayer, startTime, timeLimit, alpha=-99
     initialBeta = beta
     currentColour = white if maximisingPlayer else black
     if allowNull and depth >= minimumDepth and not board.kingCheck(currentColour) and not board.endgame:
+        depthSkip = (depth // 6) + 2 # Reduced evaluation depth during null move pruning. Calculated by some random ahh formula that gives a depth skip based off of current depth.
         savedEnPassant = board.enPassantTarget
         board.setEnPassantTarget(None)
         board.switchTurn()
@@ -146,7 +146,7 @@ def minimax(board, depth, ply, maximisingPlayer, startTime, timeLimit, alpha=-99
             continue
 
         legalMovesFound = True
-        score = minimax(board, depth - 1, ply + 1, not maximisingPlayer, startTime, timeLimit, alpha, beta, )
+        score = minimax(board, depth - 1, ply + 1, not maximisingPlayer, startTime, timeLimit, alpha, beta)
         board.unmakeMove(undoInfo)
         if maximisingPlayer:
             if score > bestScore:
