@@ -1,6 +1,6 @@
 import pygame
-import engine.constants as constants
-from engine.constants import white, black, empty
+from engine import constants
+from engine.constants import white, black, empty, pawn, king
 from bot import evaluation
 
 aspirationWindow = 50
@@ -9,6 +9,10 @@ upper = 1
 lower = 2
 tableSize = 1048576
 transpositionTable = [None] * tableSize
+historyTable = [0] * 4096   # All moves. From every square to every other square. 64 * 64
+pruneMoves = []
+for i in range(50):
+    pruneMoves.append([None, None])
 
 def storeEvaluation(hash, depth, score, flag, bestMove):
     transpositionTable[hash & (tableSize - 1)] = (
@@ -51,24 +55,54 @@ def getAllPossibleMoves(board, colour):
                 bitboard &= bitboard - 1
     return allMoves
 
-def scoreMove(board, move, previousBestMove=None):
+def scoreMove(board, move, ply, previousBestMove=None):
     if move == previousBestMove:
-        return 999999
+        return 1000000
     
     startRow, startColumn, endRow, endColumn = move
+    startIndex = startRow * 8 + startColumn
+    endIndex = endRow * 8 + endColumn
+    movingPiece = board.squarePiece[startRow * 8 + startColumn]
+    movingType = movingPiece & 7
+    movingColour = movingPiece & 24
     targetPiece = board.squarePiece[endRow * 8 + endColumn]
     score = 0
-    
+
+    if movingColour == black:
+        endIndex = endIndex ^ 56
+            
+    if movingType == king:
+        if board.endgame:
+            score += evaluation.kingEndgamePositionScores[endIndex] * 10
+        else:
+            score += evaluation.kingPositionScores[endIndex] * 10
+    else:
+        score += evaluation.positionTables[movingType][endIndex]
+
+    promotionRow = 0 if (movingPiece & 24) == white else 7
+
+    if (movingType == pawn) and (endRow == promotionRow):
+        score += 100000
+
     if targetPiece != empty:
+        score += 10000
         targetType = targetPiece & 7
         score += evaluation.pieceValues[targetType] * 10
-        attacker = board.squarePiece[startRow * 8 + startColumn]
-        if attacker != empty:
-            atkType = attacker & 7
-            score -= evaluation.pieceValues[atkType]
+        score -= evaluation.pieceValues[movingType]
+        return score
+    elif ply < len(pruneMoves) and move == pruneMoves[ply][0]:
+        score += 9000    
+        return score
+    elif ply < len(pruneMoves) and move == pruneMoves[ply][1]:
+        score += 8000
+        return score
+    
+    historyTableIndex = startIndex * 64 + endIndex
+    score += min(historyTable[historyTableIndex], 7000) # To make sure that the other stuff are evaluated before this
+
     return score
 
-def minimax(board, depth, maximisingPlayer, startTime, timeLimit, alpha=-999999, beta=999999):
+def minimax(board, depth, ply, maximisingPlayer, startTime, timeLimit, alpha=-999999, beta=999999):
     if constants.abortSearch:
         return 0
     if (pygame.time.get_ticks() - startTime) > timeLimit:
@@ -87,7 +121,7 @@ def minimax(board, depth, maximisingPlayer, startTime, timeLimit, alpha=-999999,
     currentColour = white if maximisingPlayer else black
     moves = getAllPossibleMoves(board, currentColour)
     bestScore = -999999 if maximisingPlayer else 999999
-    moves.sort(key=lambda move: scoreMove(board, move, bestMove), reverse=True)
+    moves.sort(key=lambda move: scoreMove(board, move, ply, bestMove), reverse=True)
     legalMovesFound = False
 
     for move in moves:
@@ -98,7 +132,7 @@ def minimax(board, depth, maximisingPlayer, startTime, timeLimit, alpha=-999999,
             continue
 
         legalMovesFound = True
-        score = minimax(board, depth - 1, not maximisingPlayer, startTime, timeLimit, alpha, beta, )
+        score = minimax(board, depth - 1, ply + 1, not maximisingPlayer, startTime, timeLimit, alpha, beta, )
         board.unmakeMove(undoInfo)
         if maximisingPlayer:
             if score > bestScore:
@@ -111,6 +145,14 @@ def minimax(board, depth, maximisingPlayer, startTime, timeLimit, alpha=-999999,
                 bestMove = move
             beta = min(beta, bestScore)
         if beta <= alpha:
+            targetPiece = board.squarePiece[endRow * 8 + endColumn]
+            if targetPiece == empty and ply < len(pruneMoves):
+                if move != pruneMoves[ply][0]:
+                    pruneMoves[ply][1] = pruneMoves[ply][0]
+                    pruneMoves[ply][0] = move
+                startIndex = startRow * 8 + startColumn
+                endIndex = endRow * 8 + endColumn
+                historyTable[startIndex * 64 + endIndex] += (depth * depth) # Higher the depth closer to the start of search since minimax counts down to 0. Higher depths prune more moves than lower depths
             break
 
     if not legalMovesFound:
@@ -130,7 +172,7 @@ def minimax(board, depth, maximisingPlayer, startTime, timeLimit, alpha=-999999,
         storeEvaluation(hash, depth, bestScore, flag, bestMove)
     return bestScore
 
-def searchMovesAtDepth(board, moves, depth, alpha, beta, playerMaximising, botColour, startTime, timeLimit):
+def searchMovesAtDepth(board, moves, depth, ply, alpha, beta, playerMaximising, botColour, startTime, timeLimit):
     if (pygame.time.get_ticks() - startTime) > timeLimit:
         return 0, None
     
@@ -147,7 +189,7 @@ def searchMovesAtDepth(board, moves, depth, alpha, beta, playerMaximising, botCo
             board.unmakeMove(undoInfo)
             continue
             
-        score = minimax(board, depth - 1, not playerMaximising, startTime, timeLimit, alpha, beta)
+        score = minimax(board, depth - 1, ply + 1, not playerMaximising, startTime, timeLimit, alpha, beta)
         board.unmakeMove(undoInfo)
         
         if playerMaximising:
@@ -162,6 +204,14 @@ def searchMovesAtDepth(board, moves, depth, alpha, beta, playerMaximising, botCo
             beta = min(beta, score)
             
         if beta <= alpha:
+            targetPiece = board.squarePiece[endRow * 8 + endColumn]
+            if targetPiece == empty and ply < len(pruneMoves):
+                if move != pruneMoves[ply][0]:
+                    pruneMoves[ply][1] = pruneMoves[ply][0]
+                    pruneMoves[ply][0] = move
+                startIndex = startRow * 8 + startColumn
+                endIndex = endRow * 8 + endColumn
+                historyTable[startIndex * 64 + endIndex] += (depth * depth) # Higher the depth closer to the start of search since minimax counts down to 0. Higher depths prune more moves than lower depths
             break
             
     return currentBestScore, currentBestMove
@@ -172,7 +222,7 @@ def findBestMove(board, depth, botColour, startTime, timeLimit):
     
     playerMaximising = (botColour == white)
     bestMove = None
-    moves = sorted(getAllPossibleMoves(board, botColour), key=lambda move: scoreMove(board, move, bestMove), reverse=True)
+    moves = sorted(getAllPossibleMoves(board, botColour), key=lambda move: scoreMove(board, move, 0, bestMove), reverse=True)
     if not moves:
         return None, 0
     bestMove = moves[0]
@@ -195,11 +245,11 @@ def findBestMove(board, depth, botColour, startTime, timeLimit):
             initialAlpha = -999999
             initialBeta = 999999
 
-        currentBestScore, currentBestMove = searchMovesAtDepth(board, moves, currentDepth, initialAlpha, initialBeta, playerMaximising, botColour, startTime, timeLimit)
+        currentBestScore, currentBestMove = searchMovesAtDepth(board, moves, currentDepth, 0, initialAlpha, initialBeta, playerMaximising, botColour, startTime, timeLimit)
         if constants.abortSearch:
             break
         if currentDepth >= 4 and (currentBestScore <= initialAlpha or currentBestScore >= initialBeta):
-            currentBestScore, currentBestMove = searchMovesAtDepth(board, moves, currentDepth, -999999, 999999, playerMaximising, botColour, startTime, timeLimit)
+            currentBestScore, currentBestMove = searchMovesAtDepth(board, moves, currentDepth, 0, -999999, 999999, playerMaximising, botColour, startTime, timeLimit)
             if constants.abortSearch:
                         break
         previousScore = currentBestScore
