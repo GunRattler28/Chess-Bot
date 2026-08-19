@@ -9,6 +9,7 @@ upper = 1
 lower = 2
 tableSize = 1048576
 transpositionTable = [None] * tableSize
+historyTable = [0] * 4096   # All moves. From every square to every other square. 64 * 64
 pruneMoves = []
 for i in range(50):
     pruneMoves.append([None, None])
@@ -59,7 +60,8 @@ def scoreMove(board, move, ply, previousBestMove=None):
         return 1000000
     
     startRow, startColumn, endRow, endColumn = move
-    index = endRow * 8 + endColumn
+    startIndex = startRow * 8 + startColumn
+    endIndex = endRow * 8 + endColumn
     movingPiece = board.squarePiece[startRow * 8 + startColumn]
     movingType = movingPiece & 7
     movingColour = movingPiece & 24
@@ -67,15 +69,15 @@ def scoreMove(board, move, ply, previousBestMove=None):
     score = 0
 
     if movingColour == black:
-        index = index ^ 56
+        endIndex = endIndex ^ 56
             
     if movingType == king:
         if board.endgame:
-            score += evaluation.kingEndgamePositionScores[index] * 10
+            score += evaluation.kingEndgamePositionScores[endIndex] * 10
         else:
-            score += evaluation.kingPositionScores[index] * 10
+            score += evaluation.kingPositionScores[endIndex] * 10
     else:
-        score += evaluation.positionTables[movingType][index]
+        score += evaluation.positionTables[movingType][endIndex]
 
     promotionRow = 0 if (movingPiece & 24) == white else 7
 
@@ -87,12 +89,17 @@ def scoreMove(board, move, ply, previousBestMove=None):
         targetType = targetPiece & 7
         score += evaluation.pieceValues[targetType] * 10
         score -= evaluation.pieceValues[movingType]
-    else:
-        if ply < len(pruneMoves):
-            if move == pruneMoves[ply][0]:
-                score += 9000
-            elif move == pruneMoves[ply][1]:
-                score += 8000
+        return score
+    elif ply < len(pruneMoves) and move == pruneMoves[ply][0]:
+        score += 9000    
+        return score
+    elif ply < len(pruneMoves) and move == pruneMoves[ply][1]:
+        score += 8000
+        return score
+    
+    historyTableIndex = startIndex * 64 + endIndex
+    score += min(historyTable[historyTableIndex], 7000) # To make sure that the other stuff are evaluated before this
+
     return score
 
 def minimax(board, depth, ply, maximisingPlayer, startTime, timeLimit, alpha=-999999, beta=999999):
@@ -143,6 +150,9 @@ def minimax(board, depth, ply, maximisingPlayer, startTime, timeLimit, alpha=-99
                 if move != pruneMoves[ply][0]:
                     pruneMoves[ply][1] = pruneMoves[ply][0]
                     pruneMoves[ply][0] = move
+                startIndex = startRow * 8 + startColumn
+                endIndex = endRow * 8 + endColumn
+                historyTable[startIndex * 64 + endIndex] += (depth * depth) # Higher the depth closer to the start of search since minimax counts down to 0. Higher depths prune more moves than lower depths
             break
 
     if not legalMovesFound:
@@ -199,6 +209,9 @@ def searchMovesAtDepth(board, moves, depth, ply, alpha, beta, playerMaximising, 
                 if move != pruneMoves[ply][0]:
                     pruneMoves[ply][1] = pruneMoves[ply][0]
                     pruneMoves[ply][0] = move
+                startIndex = startRow * 8 + startColumn
+                endIndex = endRow * 8 + endColumn
+                historyTable[startIndex * 64 + endIndex] += (depth * depth) # Higher the depth closer to the start of search since minimax counts down to 0. Higher depths prune more moves than lower depths
             break
             
     return currentBestScore, currentBestMove
