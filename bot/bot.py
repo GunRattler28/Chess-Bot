@@ -102,7 +102,7 @@ def scoreMove(board, move, ply, previousBestMove=None):
 
     return score
 
-def minimax(board, depth, ply, maximisingPlayer, startTime, timeLimit, alpha=-999999, beta=999999):
+def minimax(board, depth, ply, maximisingPlayer, startTime, timeLimit, alpha=-999999, beta=999999, allowNull=True):
     if constants.abortSearch:
         return 0
     if (pygame.time.get_ticks() - startTime) > timeLimit:
@@ -119,6 +119,19 @@ def minimax(board, depth, ply, maximisingPlayer, startTime, timeLimit, alpha=-99
     initialAlpha = alpha
     initialBeta = beta
     currentColour = white if maximisingPlayer else black
+
+    if allowNull and depth >= 3 and not board.kingCheck(currentColour) and not board.endgame:
+        savedEnPassant = board.enPassantTarget
+        board.setEnPassantTarget(None)
+        board.switchTurn()
+        score = minimax(board, depth - 3, ply + 1, not maximisingPlayer, startTime, timeLimit, alpha, beta, False)
+        board.switchTurn()
+        board.setEnPassantTarget(savedEnPassant)
+        if maximisingPlayer and score >= beta:
+            return beta
+        elif not maximisingPlayer and score <= alpha:
+            return alpha 
+
     moves = getAllPossibleMoves(board, currentColour)
     bestScore = -999999 if maximisingPlayer else 999999
     moves.sort(key=lambda move: scoreMove(board, move, ply, bestMove), reverse=True)
