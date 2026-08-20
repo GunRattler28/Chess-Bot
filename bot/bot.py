@@ -255,7 +255,11 @@ def findBestMove(board, depth, botColour, startTime, timeLimit):
     
     playerMaximising = (botColour == white)
     bestMove = None
-    moves = sorted(getAllPossibleMoves(board, botColour), key=lambda move: scoreMove(board, move, 0, bestMove), reverse=True)
+    moves = getAllPossibleMoves(board, botColour)
+    moveScores = {}
+    for move in moves:
+        moveScores[move] = scoreMove(board, move, 0, bestMove) # Dictionary containing each move and their priority based off of scoreMove()
+    moves.sort(key=moveScores.get, reverse=True) # Sort by values in moveScores
     if not moves:
         return None, 0
     bestMove = moves[0]
