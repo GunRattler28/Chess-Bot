@@ -133,9 +133,12 @@ def minimax(board, depth, ply, maximisingPlayer, startTime, timeLimit, alpha=-99
         elif not maximisingPlayer and score <= alpha:
             return alpha 
 
-    moves = getAllPossibleMoves(board, currentColour)
     bestScore = -999999 if maximisingPlayer else 999999
-    moves.sort(key=lambda move: scoreMove(board, move, ply, bestMove), reverse=True)
+    moves = getAllPossibleMoves(board, currentColour)
+    moveScores = {}
+    for move in moves:
+        moveScores[move] = scoreMove(board, move, ply, bestMove) # Dictionary containing each move and their priority based off of scoreMove()
+    moves.sort(key=moveScores.get, reverse=True) # Sort by values in moveScores
     legalMovesFound = False
 
     for move in moves:
