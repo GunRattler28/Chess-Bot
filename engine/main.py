@@ -34,7 +34,7 @@ class mainLoop:
         self.currentGameOverMessage = None 
 
     def searchMove(self, hash, boardCopy):
-        calculatedMove, searchedDepth = bot.bot.findBestMove(boardCopy, 10, constants.botColour, pygame.time.get_ticks(), constants.timeLimit * 1000) # Gets the best move from bot.py with a max search depth of 10
+        calculatedMove, searchedDepth = bot.bot.findBestMove(boardCopy, 20, constants.botColour, pygame.time.get_ticks(), constants.timeLimit * 1000) # Gets the best move from bot.py with a max search depth of 10
         if self.searching and self.board.hash == hash: # Makes sure that best move is only assigned if the bot is supposed to be searching and the current board hash is the same hash as when the search started.
             self.bestMove = calculatedMove             # Ensures that going back and playing a different move quickly causes the bot to rethink. Playing the same move after going back within the time limit won't
             self.searchedDepth = searchedDepth         # restart the search meaning you won't have to wait as long

@@ -149,7 +149,15 @@ def minimax(board, depth, ply, maximisingPlayer, startTime, timeLimit, alpha=-99
             continue
 
         legalMovesFound = True
-        score = minimax(board, depth - 1, ply + 1, not maximisingPlayer, startTime, timeLimit, alpha, beta)
+
+        if depth >= 3 and (moveScores[move] < 7000):
+            reduced = (depth // 6) + 2
+            score = minimax(board, depth - 1 - reduced, ply + 1, not maximisingPlayer, startTime, timeLimit, alpha, beta)
+            if (maximisingPlayer and score > alpha) or (not maximisingPlayer and score < beta):
+                score = minimax(board, depth - 1, ply + 1, not maximisingPlayer, startTime, timeLimit, alpha, beta)
+        else:
+            score = minimax(board, depth - 1, ply + 1, not maximisingPlayer, startTime, timeLimit, alpha, beta)
+
         board.unmakeMove(undoInfo)
         if maximisingPlayer:
             if score > bestScore:
@@ -200,13 +208,21 @@ def searchMovesAtDepth(board, moves, depth, ply, alpha, beta, playerMaximising, 
         if constants.abortSearch:
             break
         startRow, startColumn, endRow, endColumn = move
+        moveScore = scoreMove(board, move, ply, currentBestMove)
         undoInfo = board.makeMove(startRow, startColumn, endRow, endColumn, simulation=True)
         
-        if board.kingCheck(botColour):        
+        if board.kingCheck(botColour):
             board.unmakeMove(undoInfo)
             continue
-            
-        score = minimax(board, depth - 1, ply + 1, not playerMaximising, startTime, timeLimit, alpha, beta)
+        
+        if depth >= 3 and (moveScore < 7000):
+            reduced = (depth // 6) + 2
+            score = minimax(board, depth - 1 - reduced, ply + 1, not playerMaximising, startTime, timeLimit, alpha, beta)
+            if (playerMaximising and score > alpha) or (not playerMaximising and score < beta):
+                score = minimax(board, depth - 1, ply + 1, not playerMaximising, startTime, timeLimit, alpha, beta)
+        else:
+            score = minimax(board, depth - 1, ply + 1, not playerMaximising, startTime, timeLimit, alpha, beta)
+
         board.unmakeMove(undoInfo)
         
         if playerMaximising:
