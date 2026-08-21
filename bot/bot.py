@@ -110,7 +110,7 @@ def minimax(board, depth, ply, maximisingPlayer, startTime, timeLimit, alpha=-99
         constants.abortSearch = True
         return 0
     if depth <= 0:
-        return quiescentSearch(board, alpha, beta, maximisingPlayer, ply)
+        return quiescentSearch(board, alpha, beta, maximisingPlayer, ply, startTime, timeLimit)
     if board.halfmoveClock >= 100 or board.positionCounts.get(board.hash, 0) >= 3:
         return 0
     hash = board.hash
@@ -198,10 +198,14 @@ def minimax(board, depth, ply, maximisingPlayer, startTime, timeLimit, alpha=-99
 
     return bestScore
 
-def quiescentSearch(board, alpha, beta, maximisingPlayer, ply):
+def quiescentSearch(board, alpha, beta, maximisingPlayer, ply, startTime, timeLimit):
     bestScore = board.evaluationScore
 
     if constants.abortSearch:
+        return bestScore
+
+    if (pygame.time.get_ticks() - startTime) > timeLimit:
+        constants.abortSearch = True
         return bestScore
 
     # If the current score isn't the best score so far no need to evaluate further as there is already a better path
@@ -209,13 +213,11 @@ def quiescentSearch(board, alpha, beta, maximisingPlayer, ply):
     if maximisingPlayer:
         if bestScore >= beta:
             return beta
-        if bestScore < alpha:
-            return alpha
+        alpha = max(alpha, bestScore)
     else:
         if bestScore <= alpha:
             return alpha
-        if bestScore > beta:
-            beta = bestScore # If it is better than their current best guaranteed outcome update beta to score
+        beta = min(beta, bestScore) # If it is better than their current best guaranteed outcome update beta to score
 
     currentColour = white if maximisingPlayer else black
     moves = getAllPossibleMoves(board, currentColour)
@@ -243,7 +245,7 @@ def quiescentSearch(board, alpha, beta, maximisingPlayer, ply):
             board.unmakeMove(undoInfo)
             continue # Continue skips to next iteration
 
-        score = quiescentSearch(board, alpha, beta, maximisingPlayer, ply + 1)
+        score = quiescentSearch(board, alpha, beta, not maximisingPlayer, ply + 1, startTime, timeLimit)
         board.unmakeMove(undoInfo)
 
         if maximisingPlayer:
@@ -252,6 +254,9 @@ def quiescentSearch(board, alpha, beta, maximisingPlayer, ply):
         else:
             bestScore = min(bestScore, score)
             beta = min(beta, bestScore)
+
+        if beta <= alpha:
+            break
 
     return bestScore
 
