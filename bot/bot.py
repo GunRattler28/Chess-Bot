@@ -256,10 +256,14 @@ def quiescentSearch(board, alpha, beta, maximisingPlayer, ply, startTime, timeLi
         board.unmakeMove(undoInfo)
 
         if maximisingPlayer:
-            bestScore = max(bestScore, score)
+            if score > bestScore:
+                bestScore = score
+                bestMove = move
             alpha = max (alpha, bestScore)
         else:
-            bestScore = min(bestScore, score)
+            if score < bestScore:
+                bestScore = score
+                bestMove = move
             beta = min(beta, bestScore)
 
         if beta <= alpha:
