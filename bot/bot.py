@@ -197,6 +197,63 @@ def minimax(board, depth, ply, maximisingPlayer, startTime, timeLimit, alpha=-99
         storeEvaluation(hash, depth, bestScore, flag, bestMove)
     return bestScore
 
+def quiescentSearch(board, alpha, beta, maximisingPlayer, ply):
+    bestScore = board.evaluationScore
+
+    if constants.abortSearch:
+        return bestScore
+
+    # If the current score isn't the best score so far no need to evaluate further as there is already a better path
+
+    if maximisingPlayer:
+        if bestScore >= beta:
+            return beta
+        if bestScore < alpha:
+            return alpha
+    else:
+        if bestScore <= alpha:
+            return alpha
+        if bestScore > beta:
+            beta = bestScore # If it is better than their current best guaranteed outcome update beta to score
+
+    currentColour = white if maximisingPlayer else black
+    moves = getAllPossibleMoves(board, currentColour)
+    captures = []
+    for move in moves:
+        startRow, startColumn, endRow, endColumn = move
+        movingPiece = board.squarePiece(startRow * 8, startColumn)
+        target = board.squarePiece(endRow * 8, endColumn) # If target isn't empty then it is a capture
+        if (target != empty) or ((movingPiece & 7) == pawn and (startColumn != endColumn)): # If the moving piece is a pawn and it changes column it must be an en passant
+            captures.append(move)
+
+    # Sort captures
+
+    moveScores = {}
+    for move in captures:
+        moveScores[move] = scoreMove(board, move, ply) # Dictionary containing each move and their priority based off of scoreMove()
+    moves.sort(key=moveScores.get, reverse=True) # Sort by values in moveScores
+
+    for move in captures:
+        if constants.abortSearch:
+            return bestScore
+        startRow, startColumn, endRow, endColumn = move
+        undoInfo = board.makeMove(startRow, startColumn, endRow, endColumn, True)
+        if board.kingCheck(currentColour): # If move is illegal as it puts king in check
+            board.unmakeMove(undoInfo)
+            continue # Continue skips to next iteration
+
+        score = quiescentSearch(board, alpha, beta, maximisingPlayer, ply + 1)
+        board.unmakeMove(undoInfo)
+
+        if maximisingPlayer:
+            bestScore = max(bestScore, score)
+            alpha = max (alpha, bestScore)
+        else:
+            bestScore = min(bestScore, score)
+            beta = min(beta, bestScore)
+
+    return bestScore
+
 def searchMovesAtDepth(board, moves, depth, ply, alpha, beta, playerMaximising, botColour, startTime, timeLimit):
     if (pygame.time.get_ticks() - startTime) > timeLimit:
         return 0, None
