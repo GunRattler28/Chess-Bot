@@ -120,18 +120,26 @@ def minimax(board, depth, ply, maximisingPlayer, startTime, timeLimit, alpha=-99
     initialAlpha = alpha
     initialBeta = beta
     currentColour = white if maximisingPlayer else black
+
+    # Null Move Pruning (NMP)
+
     if allowNull and depth >= minimumDepth and not board.kingCheck(currentColour) and not board.endgame:
-        depthSkip = (depth // 6) + 2 # Reduced evaluation depth during null move pruning. Calculated by some random ahh formula that gives a depth skip based off of current depth.
-        savedEnPassant = board.enPassantTarget
-        board.setEnPassantTarget(None)
-        board.switchTurn()
-        score = minimax(board, depth - depthSkip, ply + 1, not maximisingPlayer, startTime, timeLimit, alpha, beta, False)
-        board.switchTurn()
-        board.setEnPassantTarget(savedEnPassant)
+        depthSkip = (depth // 6) + 2 # Reduced evaluation depth during NMP. Calculated by some random ahh formula that gives a depth skip based off of current depth.
+        savedEnPassant = board.enPassantTarget # Stores current en passant so that it can be set back to current afterwards 
+        board.setEnPassantTarget(None) # Sets en passant target to none as it is simulating the bot passing its go. En passants can only be made on the same turn they become available
+        board.switchTurn() # Switches colours
+        score = minimax(board, depth - depthSkip, ply + 1, not maximisingPlayer, startTime, timeLimit, alpha, beta, False) # Evaluates move at reduced depth
+        board.switchTurn() # Switches colours again so back to original
+        board.setEnPassantTarget(savedEnPassant) # Sets en passant back to original so that nothing changed from at first
+
+        # If the move is bad as expected just return the beta or alpha
+
         if maximisingPlayer and score >= beta:
             return beta
         elif not maximisingPlayer and score <= alpha:
             return alpha 
+
+        # If not re-evaluate at full depth
 
     bestScore = -999999 if maximisingPlayer else 999999
     moves = getAllPossibleMoves(board, currentColour)
