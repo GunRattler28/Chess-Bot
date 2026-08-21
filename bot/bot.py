@@ -7,39 +7,39 @@ aspirationWindow = 50
 exact = 0
 upper = 1
 lower = 2
-tableSize = 1048576
-transpositionTable = [None] * tableSize
+tableSize = 1048576 # Size of transposition table. 2 raised to power of 20. Means that (table size - 1) can be used to create a mask of all 1s and a 0 at the start
+transpositionTable = [None] * tableSize # Creates an empty transposition table
 historyTable = [0] * 4096   # All moves. From every square to every other square. 64 * 64
 pruneMoves = []
 minimumDepth = 3 # The depth the bot has to be at before it can use null move pruning. The earlier it is used (higher value) the more safer it is as the opponent has more time to capitalise. The later is is used (lower value) the higher the gain and risk
 for i in range(50):
-    pruneMoves.append([None, None])
+    pruneMoves.append([None, None]) # Creates 50, 2 element long arrays
 
 def storeEvaluation(hash, depth, score, flag, bestMove):
-    transpositionTable[hash & (tableSize - 1)] = (
-        hash,
-        depth,
-        score,
-        flag,
-        bestMove
+    transpositionTable[hash & (tableSize - 1)] = ( # hash & mask creates the index in the table
+        hash, # Hash of the position
+        depth, # Depth the position was evaluated to
+        score, # The evaluation score
+        flag, # Whether the score is the lowerbound, upperbound or exact
+        bestMove # The best move to make in the position
     )
 
 def getEvaluation(hash, depth, alpha, beta):
-    index = hash & (tableSize - 1)
+    index = hash & (tableSize - 1) # Gets index of transposition table 
     position = transpositionTable[index]
-    if position is not None and position[0] == hash:
+    if position is not None and position[0] == hash: # If the hash in the table is correct then the evaluation will also be correct
         score = position[2]
         flag = position[3]
         bestMove = position[4]
-        if position[1] >= depth:
+        if position[1] >= depth: # Making sure the depth the position was evaluated to is adequate
             if flag == exact:
-                return score, bestMove
+                return score, bestMove # If score is exact move score return score and best move
             elif flag == upper and score <= alpha:
-                return score, bestMove
+                return score, bestMove # If score is upperbound return score and best move
             elif flag == lower and score >= beta:
-                return score, bestMove
-        return None, bestMove
-    return None, None
+                return score, bestMove # If score is lowerbound return score and best move
+        return None, bestMove # Only return bestMove if evaluation wasn't to an adequate depth
+    return None, None # If nothing else just return None, None so that whatever called the functions can get a response
 
 def getAllPossibleMoves(board, colour):
     allMoves = []
@@ -197,11 +197,11 @@ def minimax(board, depth, ply, maximisingPlayer, startTime, timeLimit, alpha=-99
             return 0
 
     if bestScore <= initialAlpha:
-        flag = upper
+        flag = upper # So transposition table knows that the value is only the upperbound of the move score
     elif bestScore >= initialBeta:
-        flag = lower
+        flag = lower # So transposition table knows that the value is only the lowerbound of the move score
     else:
-        flag = exact
+        flag = exact # So transposition table knows that the value is the exact move score
 
     if not constants.abortSearch:
         storeEvaluation(hash, depth, bestScore, flag, bestMove)
