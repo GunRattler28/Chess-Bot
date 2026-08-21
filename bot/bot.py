@@ -110,7 +110,7 @@ def minimax(board, depth, ply, maximisingPlayer, startTime, timeLimit, alpha=-99
         constants.abortSearch = True
         return 0
     if depth <= 0:
-        return board.evaluationScore
+        return quiescentSearch(board, alpha, beta, maximisingPlayer, ply)
     if board.halfmoveClock >= 100 or board.positionCounts.get(board.hash, 0) >= 3:
         return 0
     hash = board.hash
@@ -195,6 +195,7 @@ def minimax(board, depth, ply, maximisingPlayer, startTime, timeLimit, alpha=-99
 
     if not constants.abortSearch:
         storeEvaluation(hash, depth, bestScore, flag, bestMove)
+
     return bestScore
 
 def quiescentSearch(board, alpha, beta, maximisingPlayer, ply):
@@ -221,8 +222,8 @@ def quiescentSearch(board, alpha, beta, maximisingPlayer, ply):
     captures = []
     for move in moves:
         startRow, startColumn, endRow, endColumn = move
-        movingPiece = board.squarePiece(startRow * 8, startColumn)
-        target = board.squarePiece(endRow * 8, endColumn) # If target isn't empty then it is a capture
+        movingPiece = board.squarePiece[startRow * 8 + startColumn]
+        target = board.squarePiece[endRow * 8 + endColumn] # If target isn't empty then it is a capture
         if (target != empty) or ((movingPiece & 7) == pawn and (startColumn != endColumn)): # If the moving piece is a pawn and it changes column it must be an en passant
             captures.append(move)
 
@@ -231,13 +232,13 @@ def quiescentSearch(board, alpha, beta, maximisingPlayer, ply):
     moveScores = {}
     for move in captures:
         moveScores[move] = scoreMove(board, move, ply) # Dictionary containing each move and their priority based off of scoreMove()
-    moves.sort(key=moveScores.get, reverse=True) # Sort by values in moveScores
+    captures.sort(key=moveScores.get, reverse=True) # Sort by values in moveScores
 
     for move in captures:
         if constants.abortSearch:
             return bestScore
         startRow, startColumn, endRow, endColumn = move
-        undoInfo = board.makeMove(startRow, startColumn, endRow, endColumn, True)
+        undoInfo = board.makeMove(startRow, startColumn, endRow, endColumn, simulation=True)
         if board.kingCheck(currentColour): # If move is illegal as it puts king in check
             board.unmakeMove(undoInfo)
             continue # Continue skips to next iteration
