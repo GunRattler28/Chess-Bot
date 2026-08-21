@@ -199,14 +199,20 @@ def minimax(board, depth, ply, maximisingPlayer, startTime, timeLimit, alpha=-99
     return bestScore
 
 def quiescentSearch(board, alpha, beta, maximisingPlayer, ply, startTime, timeLimit):
-    bestScore = board.evaluationScore
-
     if constants.abortSearch:
-        return bestScore
+        return board.evaluationScore
 
     if (pygame.time.get_ticks() - startTime) > timeLimit:
         constants.abortSearch = True
-        return bestScore
+        return board.evaluationScore
+
+    score, bestMove = getEvaluation(board.hash, 0, alpha, beta)
+    if score != None:
+        return score
+
+    initialAlpha = alpha
+    initialBeta = beta
+    bestScore = board.evaluationScore
 
     # If the current score isn't the best score so far no need to evaluate further as there is already a better path
 
@@ -239,6 +245,7 @@ def quiescentSearch(board, alpha, beta, maximisingPlayer, ply, startTime, timeLi
     for move in captures:
         if constants.abortSearch:
             return bestScore
+        
         startRow, startColumn, endRow, endColumn = move
         undoInfo = board.makeMove(startRow, startColumn, endRow, endColumn, simulation=True)
         if board.kingCheck(currentColour): # If move is illegal as it puts king in check
@@ -257,6 +264,16 @@ def quiescentSearch(board, alpha, beta, maximisingPlayer, ply, startTime, timeLi
 
         if beta <= alpha:
             break
+
+    if bestScore <= initialAlpha:
+        flag = upper
+    elif bestScore >= initialBeta:
+        flag = lower
+    else:
+        flag = exact
+
+    if not constants.abortSearch:
+        storeEvaluation(board.hash, 0, bestScore, flag, bestMove)
 
     return bestScore
 
