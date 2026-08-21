@@ -110,7 +110,7 @@ def minimax(board, depth, ply, maximisingPlayer, startTime, timeLimit, alpha=-99
         constants.abortSearch = True
         return 0
     if depth <= 0:
-        return board.evaluationScore
+        return quiescentSearch(board, alpha, beta, maximisingPlayer, ply, startTime, timeLimit)
     if board.halfmoveClock >= 100 or board.positionCounts.get(board.hash, 0) >= 3:
         return 0
     hash = board.hash
@@ -195,6 +195,90 @@ def minimax(board, depth, ply, maximisingPlayer, startTime, timeLimit, alpha=-99
 
     if not constants.abortSearch:
         storeEvaluation(hash, depth, bestScore, flag, bestMove)
+
+    return bestScore
+
+def quiescentSearch(board, alpha, beta, maximisingPlayer, ply, startTime, timeLimit):
+    if constants.abortSearch:
+        return board.evaluationScore
+
+    if (pygame.time.get_ticks() - startTime) > timeLimit:
+        constants.abortSearch = True
+        return board.evaluationScore
+
+    score, bestMove = getEvaluation(board.hash, 0, alpha, beta)
+    if score != None:
+        return score
+
+    initialAlpha = alpha
+    initialBeta = beta
+    bestScore = board.evaluationScore
+
+    # If the current score isn't the best score so far no need to evaluate further as there is already a better path
+
+    if maximisingPlayer:
+        if bestScore >= beta:
+            return beta
+        alpha = max(alpha, bestScore)
+    else:
+        if bestScore <= alpha:
+            return alpha
+        beta = min(beta, bestScore) # If it is better than their current best guaranteed outcome update beta to score
+
+    currentColour = white if maximisingPlayer else black
+    moves = getAllPossibleMoves(board, currentColour)
+    captures = []
+    for move in moves:
+        startRow, startColumn, endRow, endColumn = move
+        movingPiece = board.squarePiece[startRow * 8 + startColumn]
+        target = board.squarePiece[endRow * 8 + endColumn] # If target isn't empty then it is a capture
+        if (target != empty) or ((movingPiece & 7) == pawn and (startColumn != endColumn)): # If the moving piece is a pawn and it changes column it must be an en passant
+            captures.append(move)
+
+    # Sort captures
+
+    moveScores = {}
+    for move in captures:
+        moveScores[move] = scoreMove(board, move, ply) # Dictionary containing each move and their priority based off of scoreMove()
+    captures.sort(key=moveScores.get, reverse=True) # Sort by values in moveScores
+
+    for move in captures:
+        if constants.abortSearch:
+            return bestScore
+        
+        startRow, startColumn, endRow, endColumn = move
+        undoInfo = board.makeMove(startRow, startColumn, endRow, endColumn, simulation=True)
+        if board.kingCheck(currentColour): # If move is illegal as it puts king in check
+            board.unmakeMove(undoInfo)
+            continue # Continue skips to next iteration
+
+        score = quiescentSearch(board, alpha, beta, not maximisingPlayer, ply + 1, startTime, timeLimit)
+        board.unmakeMove(undoInfo)
+
+        if maximisingPlayer:
+            if score > bestScore:
+                bestScore = score
+                bestMove = move
+            alpha = max (alpha, bestScore)
+        else:
+            if score < bestScore:
+                bestScore = score
+                bestMove = move
+            beta = min(beta, bestScore)
+
+        if beta <= alpha:
+            break
+
+    if bestScore <= initialAlpha:
+        flag = upper
+    elif bestScore >= initialBeta:
+        flag = lower
+    else:
+        flag = exact
+
+    if not constants.abortSearch:
+        storeEvaluation(board.hash, 0, bestScore, flag, bestMove)
+
     return bestScore
 
 def searchMovesAtDepth(board, moves, depth, ply, alpha, beta, playerMaximising, botColour, startTime, timeLimit):
