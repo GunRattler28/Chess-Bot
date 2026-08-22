@@ -529,7 +529,7 @@ class logic:
         else: 
             self.gameOverMessage = None
 
-    def previousMove(self, simulation=False):
+    def previousMove(self):
         if not self.moveHistory: 
             return
 
@@ -541,8 +541,7 @@ class logic:
             if self.positionCounts[oldHash] == 0:
                 del self.positionCounts[oldHash]
 
-        if not simulation: 
-            self.redoHistory.append(move)
+        self.redoHistory.append(move)
 
         piece, start, end, capturedPiece, capturedSquare, enPassantBefore, castleRightsBefore, promotion, castleRightsAfter, enPassantAfter, halfmoveClock = move
         self.switchTurn()
@@ -564,30 +563,27 @@ class logic:
                 self.updateSquare(capturedSquare[0], capturedSquare[1], capturedPiece)
             else:
                 self.updateSquare(end[0], end[1], capturedPiece)
-            if not simulation:
-                sounds["capture"].play()
-        elif not simulation:
+            sounds["capture"].play()
+        else:
             sounds["move"].play()
 
         self.moveCastleRook(piece, start, end, undo=True)
-
-        if not simulation:
-            if self.endgame != evaluation.isEndgame(self):
-                self.createSquareTable()
-            from engine import visuals
-            visuals.activeSquare = visuals.activeOutline = None
-            visuals.possibleMoves.clear()
-            visuals.moveIndicator.clear()
-            visuals.lines.clear()
-            visuals.strategyCircles.clear()
-            self.gameState()
-            
-            if len(self.moveHistory) > 0:
-                secondLastMove = self.moveHistory[-1]
-                visuals.lastMove = (secondLastMove[1][0], secondLastMove[1][1], secondLastMove[2][0], secondLastMove[2][1])
-            else:
-                visuals.lastMove = None
-            visuals.redraw = True
+        if self.endgame != evaluation.isEndgame(self):
+            self.createSquareTable()
+        from engine import visuals
+        visuals.activeSquare = visuals.activeOutline = None
+        visuals.possibleMoves.clear()
+        visuals.moveIndicator.clear()
+        visuals.lines.clear()
+        visuals.strategyCircles.clear()
+        self.gameState()
+        
+        if len(self.moveHistory) > 0:
+            secondLastMove = self.moveHistory[-1]
+            visuals.lastMove = (secondLastMove[1][0], secondLastMove[1][1], secondLastMove[2][0], secondLastMove[2][1])
+        else:
+            visuals.lastMove = None
+        visuals.redraw = True
 
     def redoMove(self):
         from engine import visuals
