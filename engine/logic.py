@@ -24,18 +24,18 @@ class logic:
         self.castleRights = 0b1111
 
         self.piecePositions = {
-            (black | queen): 0x0000000000000008, 
-            (black | king): 0x0000000000000010, 
-            (black | bishop): 0x0000000000000024,
-            (black | knight): 0x0000000000000042, 
-            (black | rook): 0x0000000000000081, 
-            (black | pawn): 0x000000000000FF00,
-            (white | queen): 0x0800000000000000, 
-            (white | king): 0x1000000000000000, 
-            (white | bishop): 0x2400000000000000,
-            (white | knight): 0x4200000000000000, 
-            (white | rook): 0x8100000000000000, 
-            (white | pawn): 0x00FF000000000000
+            (black | queen): 0x0000000000000000, 
+            (black | king): 0x0000000000000000, 
+            (black | bishop): 0x0000000000000000,
+            (black | knight): 0x0000000000000000, 
+            (black | rook): 0x0000000000000000, 
+            (black | pawn): 0x0000000000000000,
+            (white | queen): 0x0000000000000000, 
+            (white | king): 0x0000000000000000, 
+            (white | bishop): 0x0000000000000000,
+            (white | knight): 0x0000000000000000, 
+            (white | rook): 0x0000000000000000, 
+            (white | pawn): 0x0000000000000000
         }
 
         self.updateOccupied()
@@ -155,7 +155,7 @@ class logic:
                 enColumm = ord(enPassant[0]) - 97 # ord gets ASCII code of the letter. ASCII code - 97 (ASCII code for a) shows how many columns past a it is
                 self.enPassantTarget = (enRow, enColumm)
 
-            self.halfmoveClock = halfMove
+            self.halfmoveClock = int(halfMove)
             self.moves = (int(fullMoves) - 1) * 2 + (1 if self.turnColour == black else 0)
 
             self.moveHistory.clear()
