@@ -32,11 +32,12 @@ class mainLoop:
         self.running = True
         self.searchedDepth = None
         self.currentGameOverMessage = None
+        print(constants.fen)
         if self.board.loadFEN(constants.fen):
             print("FEN string loaded!")
         else:
             print("Invalid FEN string. Defaulting to standard starting position")
-            self.board.loadFEN("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR")
+            self.board.loadFEN("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1")
 
     def searchMove(self, hash, boardCopy):
         calculatedMove, searchedDepth = bot.bot.findBestMove(boardCopy, 20, constants.botColour, pygame.time.get_ticks(), constants.timeLimit * 1000) # Gets the best move from bot.py with a max search depth of 10
