@@ -94,77 +94,81 @@ class logic:
                 self.evaluationScore += evaluation.getPieceScore(piece, index, self.endgame)
 
     def loadFEN(self, fen):
-        fenParts = fen.split(" ")
-        placements = fenParts[0]
-        colour = fenParts[1]
-        castlingRights = fenParts[2]
-        enPassant = fenParts[3]
-        halfMove = fenParts[4]
-        fullMoves = fenParts[5]
+        try:
+            fenParts = fen.split(" ")
+            placements = fenParts[0]
+            colour = fenParts[1]
+            castlingRights = fenParts[2]
+            enPassant = fenParts[3]
+            halfMove = fenParts[4]
+            fullMoves = fenParts[5]
 
-        pieceCode = {
-            "p": black | pawn,
-            "n": black | knight,
-            "b": black | bishop,
-            "r": black | rook,
-            "q": black | queen,
-            "k": black | king,
-            "P": white | pawn,
-            "N": white | knight,
-            "B": white | bishop,
-            "R": white | rook,
-            "Q": white | queen,
-            "K": white | king
-        }
+            pieceCode = {
+                "p": black | pawn,
+                "n": black | knight,
+                "b": black | bishop,
+                "r": black | rook,
+                "q": black | queen,
+                "k": black | king,
+                "P": white | pawn,
+                "N": white | knight,
+                "B": white | bishop,
+                "R": white | rook,
+                "Q": white | queen,
+                "K": white | king
+            }
 
-        for bitboard in self.piecePositions.keys():
-            self.piecePositions[bitboard] = 0
+            for bitboard in self.piecePositions.keys():
+                self.piecePositions[bitboard] = 0
 
-        row = 0
-        column = 0
+            row = 0
+            column = 0
 
-        for character in placements:
-            if character == "/":
-                row += 1
-                column = 0
-            elif character.isdigit():
-                column += int(character)
+            for character in placements:
+                if character == "/":
+                    row += 1
+                    column = 0
+                elif character.isdigit():
+                    column += int(character)
+                else:
+                    piece = pieceCode[character]
+                    index = row * 8 + column
+                    self.piecePositions[piece] |= (1 << index)
+                    column += 1
+
+            self.turnColour = white if colour == "w" else black
+
+            self.castleRights = 0
+            if "q" in castlingRights:
+                self.castleRights |= 1
+            if "k" in castlingRights:
+                self.castleRights |= 2
+            if "Q" in castlingRights:
+                self.castleRights |= 1
+            if "K" in castlingRights:
+                self.castleRights |= 1
+
+            if enPassant == "-":
+                self.enPassantTarget = None
             else:
-                piece = pieceCode[character]
-                index = row * 8 + column
-                self.piecePositions[piece] |= (1 << index)
-                column += 1
+                enRow = 8 - int(enPassant[1]) # Because for me it is reversed
+                enColumm = ord(enPassant[0]) - 97 # ord gets ASCII code of the letter. ASCII code - 97 (ASCII code for a) shows how many columns past a it is
+                self.enPassantTarget = (enRow, enColumm)
 
-        self.turnColour = white if colour == "w" else black
+            self.halfmoveClock = halfMove
+            self.moves = (int(fullMoves) - 1) * 2 + (1 if self.turnColour == black else 0)
 
-        self.castleRights = 0
-        if "q" in castlingRights:
-            self.castleRights |= 1
-        elif "k" in castlingRights:
-            self.castleRights |= 2
-        elif "Q" in castlingRights:
-            self.castleRights |= 1
-        elif "K" in castlingRights:
-            self.castleRights |= 1
-
-        if enPassant == "-":
-            self.enPassantTarget = None
-        else:
-            enRow = 8 - int(enPassant[1]) # Because for me it is reversed
-            enColumm = ord(enPassant[0]) - 65 # ord gets ASCII code of the letter. ASCII code - 65 (ASCII code for a) shows how many columns past a it is
-            self.enPassantTarget = (enRow, enColumm)
-
-        self.halfmoveClock = halfMove
-        self.moves = (fullMoves - 1) * 2 + (1 if self.turnColour == black else 0)
-
-        self.moveHistory.clear()
-        self.redoHistory.clear()
-        self.positionHistory.clear()
-        self.positionCounts.clear()
-        self.updateOccupied()
-        self.createSquareTable()
-        self.positionHistory.append(self.hash)
-        self.positionCounts[self.hash] = 1
+            self.moveHistory.clear()
+            self.redoHistory.clear()
+            self.positionHistory.clear()
+            self.positionCounts.clear()
+            self.updateOccupied()
+            self.createSquareTable()
+            self.positionHistory.append(self.hash)
+            self.positionCounts[self.hash] = 1
+            return True
+        except:
+            return False
 
     def updateSquare(self, row, column, newPiece):
         index = row * 8 + column
