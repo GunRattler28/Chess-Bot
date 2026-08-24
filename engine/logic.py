@@ -61,7 +61,6 @@ class logic:
         newState.evaluationScore = self.evaluationScore
         newState.totalPieces = self.totalPieces
         newState.endgame = self.endgame
-        newState.castleRights = self.castleRights
         return newState
 
     def createSquareTable(self):
