@@ -144,9 +144,9 @@ class logic:
             if "k" in castlingRights:
                 self.castleRights |= 2
             if "Q" in castlingRights:
-                self.castleRights |= 1
+                self.castleRights |= 4
             if "K" in castlingRights:
-                self.castleRights |= 1
+                self.castleRights |= 8
 
             if enPassant == "-":
                 self.enPassantTarget = None
