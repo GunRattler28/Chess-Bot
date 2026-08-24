@@ -24,18 +24,18 @@ class logic:
         self.castleRights = 0b1111
 
         self.piecePositions = {
-            (black | queen): 0x0000000000000008, 
-            (black | king): 0x0000000000000010, 
-            (black | bishop): 0x0000000000000024,
-            (black | knight): 0x0000000000000042, 
-            (black | rook): 0x0000000000000081, 
-            (black | pawn): 0x000000000000FF00,
-            (white | queen): 0x0800000000000000, 
-            (white | king): 0x1000000000000000, 
-            (white | bishop): 0x2400000000000000,
-            (white | knight): 0x4200000000000000, 
-            (white | rook): 0x8100000000000000, 
-            (white | pawn): 0x00FF000000000000
+            (black | queen): 0x0000000000000000, 
+            (black | king): 0x0000000000000000, 
+            (black | bishop): 0x0000000000000000,
+            (black | knight): 0x0000000000000000, 
+            (black | rook): 0x0000000000000000, 
+            (black | pawn): 0x0000000000000000,
+            (white | queen): 0x0000000000000000, 
+            (white | king): 0x0000000000000000, 
+            (white | bishop): 0x0000000000000000,
+            (white | knight): 0x0000000000000000, 
+            (white | rook): 0x0000000000000000, 
+            (white | pawn): 0x0000000000000000
         }
 
         self.updateOccupied()
@@ -92,6 +92,85 @@ class logic:
             piece = self.squarePiece[index]
             if piece != empty:
                 self.evaluationScore += evaluation.getPieceScore(piece, index, self.endgame)
+
+    def loadFEN(self, fen):
+        try:
+            fenParts = fen.split(" ")
+            placements = fenParts[0]
+            colour = fenParts[1]
+            castlingRights = fenParts[2]
+            enPassant = fenParts[3]
+            halfMove = fenParts[4]
+            fullMoves = fenParts[5]
+
+            pieceCode = {
+                "p": black | pawn,
+                "n": black | knight,
+                "b": black | bishop,
+                "r": black | rook,
+                "q": black | queen,
+                "k": black | king,
+                "P": white | pawn,
+                "N": white | knight,
+                "B": white | bishop,
+                "R": white | rook,
+                "Q": white | queen,
+                "K": white | king
+            }
+
+            for bitboard in self.piecePositions.keys():
+                self.piecePositions[bitboard] = 0
+
+            self.squarePiece = [empty] * 64
+
+            row = 0
+            column = 0
+
+            for character in placements:
+                if character == "/":
+                    row += 1
+                    column = 0
+                elif character.isdigit():
+                    column += int(character)
+                else:
+                    piece = pieceCode[character]
+                    index = row * 8 + column
+                    self.piecePositions[piece] |= (1 << index)
+                    column += 1
+
+            self.turnColour = white if colour == "w" else black
+
+            self.castleRights = 0
+            if "q" in castlingRights:
+                self.castleRights |= 1
+            if "k" in castlingRights:
+                self.castleRights |= 2
+            if "Q" in castlingRights:
+                self.castleRights |= 4
+            if "K" in castlingRights:
+                self.castleRights |= 8
+
+            if enPassant == "-":
+                self.enPassantTarget = None
+            else:
+                enRow = 8 - int(enPassant[1]) # Because for me it is reversed
+                enColumm = ord(enPassant[0]) - 97 # ord gets ASCII code of the letter. ASCII code - 97 (ASCII code for a) shows how many columns past a it is
+                self.enPassantTarget = (enRow, enColumm)
+
+            self.halfmoveClock = int(halfMove)
+            self.moves = (int(fullMoves) - 1) * 2 + (1 if self.turnColour == black else 0)
+
+            self.moveHistory.clear()
+            self.redoHistory.clear()
+            self.positionHistory.clear()
+            self.positionCounts.clear()
+            self.updateOccupied()
+            self.createSquareTable()
+            self.positionHistory.append(self.hash)
+            self.positionCounts[self.hash] = 1
+            return True
+        except:
+            return False
 
     def updateSquare(self, row, column, newPiece):
         index = row * 8 + column
