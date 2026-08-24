@@ -121,6 +121,8 @@ class logic:
             for bitboard in self.piecePositions.keys():
                 self.piecePositions[bitboard] = 0
 
+            self.squarePiece = [empty] * 64
+
             row = 0
             column = 0
 
