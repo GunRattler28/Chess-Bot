@@ -581,11 +581,11 @@ class logic:
 
         self.moveCastleRook(movingPiece, start, end, undo=True)
 
-    def gameState(self, sound=True):
+    def gameState(self):
         
         if self.positionHistory.count(self.hash) >= 3:
             self.gameOverMessage = "Three-fold \nRepetition!\nNobody  wins!"
-            if sound: sounds["checkmate"].play()
+            sounds["checkmate"].play()
             return
 
         inCheck = self.kingCheck(self.turnColour)
@@ -593,22 +593,18 @@ class logic:
             if inCheck:
                 winner = "Black" if self.turnColour == white else "White"
                 self.gameOverMessage = f"Checkmate!\n{winner}  wins!"
-                if sound: 
-                    sounds["checkmate"].play()
+                sounds["checkmate"].play()
             else:
                 self.gameOverMessage = "Stalemate!\nNobody  wins!"
-                if sound: 
-                    sounds["checkmate"].play()
-        elif inCheck and sound: 
+                sounds["checkmate"].play()
+        elif inCheck: 
             sounds["check"].play()
         elif self.halfmoveClock >= 100:
             self.gameOverMessage = "50-move rule\nDraw!"
-            if sound: 
-                sounds["checkmate"].play()
+            sounds["checkmate"].play()
         elif self.insufficientMat():
             self.gameOverMessage = "Insufficient  Material! \n Nobody  wins"
-            if sound: 
-                sounds["checkmate"].play()
+            sounds["checkmate"].play()
         else: 
             self.gameOverMessage = None
 
