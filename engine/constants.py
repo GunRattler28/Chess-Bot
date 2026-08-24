@@ -16,7 +16,7 @@ black = 0b10000
 windowSize = 800
 positionSize = windowSize // 8 # Size of the piece textures
 
-fen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
+fen = None
 randomColour = random.randint(0, 1) # Randomises what colour the player starts as
 botColour = black if randomColour else white
 playerTimeStart = 0
