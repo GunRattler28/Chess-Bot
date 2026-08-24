@@ -141,13 +141,13 @@ class logic:
             self.turnColour = white if colour == "w" else black
 
             self.castleRights = 0
-            if "q" in castlingRights:
-                self.castleRights |= 1
-            if "k" in castlingRights:
-                self.castleRights |= 2
             if "Q" in castlingRights:
-                self.castleRights |= 4
+                self.castleRights |= 1
             if "K" in castlingRights:
+                self.castleRights |= 2
+            if "q" in castlingRights:
+                self.castleRights |= 4
+            if "k" in castlingRights:
                 self.castleRights |= 8
 
             if enPassant == "-":
