@@ -23,7 +23,6 @@ except:
 promotionActive = False
 activeOutline = None
 activeSquare = None
-moveIndicator = []
 possibleMoves = []
 lines = []
 rightClickStart = None

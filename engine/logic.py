@@ -550,7 +550,6 @@ class logic:
                 self.createSquareTable()
             visuals.activeSquare = None
             visuals.activeOutline = None
-            visuals.moveIndicator.clear()
             visuals.possibleMoves.clear()
             visuals.lastMove = (startRow, startColumn, endRow, endColumn)
             visuals.redraw = True
@@ -652,7 +651,6 @@ class logic:
         from engine import visuals
         visuals.activeSquare = visuals.activeOutline = None
         visuals.possibleMoves.clear()
-        visuals.moveIndicator.clear()
         visuals.lines.clear()
         visuals.strategyCircles.clear()
         self.gameState()
@@ -710,7 +708,6 @@ class logic:
             self.createSquareTable()
         visuals.activeSquare = visuals.activeOutline = None
         visuals.possibleMoves.clear()
-        visuals.moveIndicator.clear()
         visuals.lines.clear()
         visuals.strategyCircles.clear()
         visuals.lastMove = (start[0], start[1], end[0], end[1])
