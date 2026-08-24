@@ -61,7 +61,6 @@ class logic:
         newState.evaluationScore = self.evaluationScore
         newState.totalPieces = self.totalPieces
         newState.endgame = self.endgame
-        newState.castleRights = self.castleRights
         return newState
 
     def createSquareTable(self):
@@ -550,8 +549,6 @@ class logic:
             if self.endgame != evaluation.isEndgame(self):
                 self.createSquareTable()
             visuals.activeSquare = None
-            visuals.activeOutline = None
-            visuals.moveIndicator.clear()
             visuals.possibleMoves.clear()
             visuals.lastMove = (startRow, startColumn, endRow, endColumn)
             visuals.redraw = True
@@ -581,11 +578,11 @@ class logic:
 
         self.moveCastleRook(movingPiece, start, end, undo=True)
 
-    def gameState(self, sound=True):
+    def gameState(self):
         
         if self.positionHistory.count(self.hash) >= 3:
             self.gameOverMessage = "Three-fold \nRepetition!\nNobody  wins!"
-            if sound: sounds["checkmate"].play()
+            sounds["checkmate"].play()
             return
 
         inCheck = self.kingCheck(self.turnColour)
@@ -593,26 +590,22 @@ class logic:
             if inCheck:
                 winner = "Black" if self.turnColour == white else "White"
                 self.gameOverMessage = f"Checkmate!\n{winner}  wins!"
-                if sound: 
-                    sounds["checkmate"].play()
+                sounds["checkmate"].play()
             else:
                 self.gameOverMessage = "Stalemate!\nNobody  wins!"
-                if sound: 
-                    sounds["checkmate"].play()
-        elif inCheck and sound: 
+                sounds["checkmate"].play()
+        elif inCheck: 
             sounds["check"].play()
         elif self.halfmoveClock >= 100:
             self.gameOverMessage = "50-move rule\nDraw!"
-            if sound: 
-                sounds["checkmate"].play()
+            sounds["checkmate"].play()
         elif self.insufficientMat():
             self.gameOverMessage = "Insufficient  Material! \n Nobody  wins"
-            if sound: 
-                sounds["checkmate"].play()
+            sounds["checkmate"].play()
         else: 
             self.gameOverMessage = None
 
-    def previousMove(self, simulation=False):
+    def previousMove(self):
         if not self.moveHistory: 
             return
 
@@ -624,8 +617,7 @@ class logic:
             if self.positionCounts[oldHash] == 0:
                 del self.positionCounts[oldHash]
 
-        if not simulation: 
-            self.redoHistory.append(move)
+        self.redoHistory.append(move)
 
         piece, start, end, capturedPiece, capturedSquare, enPassantBefore, castleRightsBefore, promotion, castleRightsAfter, enPassantAfter, halfmoveClock = move
         self.switchTurn()
@@ -647,30 +639,27 @@ class logic:
                 self.updateSquare(capturedSquare[0], capturedSquare[1], capturedPiece)
             else:
                 self.updateSquare(end[0], end[1], capturedPiece)
-            if not simulation:
-                sounds["capture"].play()
-        elif not simulation:
+            sounds["capture"].play()
+        else:
             sounds["move"].play()
 
         self.moveCastleRook(piece, start, end, undo=True)
 
-        if not simulation:
-            if self.endgame != evaluation.isEndgame(self):
-                self.createSquareTable()
-            from engine import visuals
-            visuals.activeSquare = visuals.activeOutline = None
-            visuals.possibleMoves.clear()
-            visuals.moveIndicator.clear()
-            visuals.lines.clear()
-            visuals.strategyCircles.clear()
-            self.gameState()
-            
-            if len(self.moveHistory) > 0:
-                secondLastMove = self.moveHistory[-1]
-                visuals.lastMove = (secondLastMove[1][0], secondLastMove[1][1], secondLastMove[2][0], secondLastMove[2][1])
-            else:
-                visuals.lastMove = None
-            visuals.redraw = True
+        if self.endgame != evaluation.isEndgame(self):
+            self.createSquareTable()
+        from engine import visuals
+        visuals.activeSquare = None
+        visuals.possibleMoves.clear()
+        visuals.lines.clear()
+        visuals.strategyCircles.clear()
+        self.gameState()
+        
+        if len(self.moveHistory) > 0:
+            secondLastMove = self.moveHistory[-1]
+            visuals.lastMove = (secondLastMove[1][0], secondLastMove[1][1], secondLastMove[2][0], secondLastMove[2][1])
+        else:
+            visuals.lastMove = None
+        visuals.redraw = True
 
     def redoMove(self):
         from engine import visuals
@@ -716,9 +705,8 @@ class logic:
                 
         if self.endgame != evaluation.isEndgame(self):
             self.createSquareTable()
-        visuals.activeSquare = visuals.activeOutline = None
+        visuals.activeSquare = None
         visuals.possibleMoves.clear()
-        visuals.moveIndicator.clear()
         visuals.lines.clear()
         visuals.strategyCircles.clear()
         visuals.lastMove = (start[0], start[1], end[0], end[1])
