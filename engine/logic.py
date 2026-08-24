@@ -549,7 +549,6 @@ class logic:
             if self.endgame != evaluation.isEndgame(self):
                 self.createSquareTable()
             visuals.activeSquare = None
-            visuals.activeOutline = None
             visuals.possibleMoves.clear()
             visuals.lastMove = (startRow, startColumn, endRow, endColumn)
             visuals.redraw = True
@@ -649,7 +648,7 @@ class logic:
         if self.endgame != evaluation.isEndgame(self):
             self.createSquareTable()
         from engine import visuals
-        visuals.activeSquare = visuals.activeOutline = None
+        visuals.activeSquare = None
         visuals.possibleMoves.clear()
         visuals.lines.clear()
         visuals.strategyCircles.clear()
@@ -706,7 +705,7 @@ class logic:
                 
         if self.endgame != evaluation.isEndgame(self):
             self.createSquareTable()
-        visuals.activeSquare = visuals.activeOutline = None
+        visuals.activeSquare = None
         visuals.possibleMoves.clear()
         visuals.lines.clear()
         visuals.strategyCircles.clear()

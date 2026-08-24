@@ -21,7 +21,6 @@ except:
     gameFont = pygame.freetype.SysFont(None, 64, bold=True)
 
 promotionActive = False
-activeOutline = None
 activeSquare = None
 possibleMoves = []
 lines = []
