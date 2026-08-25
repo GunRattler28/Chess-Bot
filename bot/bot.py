@@ -271,7 +271,7 @@ def findBestMove(board, depth, botColour, startTime, timeLimit):
     moveScores = {}
     for move in moves:
         moveScores[move] = scoreMove(board, move, 0, bestMove) # Dictionary containing each move and their priority based off of scoreMove()
-    moves.sort(key=moveScores.get, reverse=True) # Sort by values in moveScores
+    moves.sort(key=moveScores.get, reverse=True) # Sort by values in moveScores. Descending order
     if not moves:
         return None, 0
     bestMove = moves[0]

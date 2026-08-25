@@ -36,8 +36,8 @@ class mainLoop:
     def searchMove(self, hash, boardCopy):
         calculatedMove, searchedDepth = bot.bot.findBestMove(boardCopy, 20, constants.botColour, pygame.time.get_ticks(), constants.timeLimit * 1000) # Gets the best move from bot.py with a max search depth of 10
         if self.searching and self.board.hash == hash: # Makes sure that best move is only assigned if the bot is supposed to be searching and the current board hash is the same hash as when the search started.
-            self.bestMove = calculatedMove             # Ensures that going back and playing a different move quickly causes the bot to rethink. Playing the same move after going back within the time limit won't
-            self.searchedDepth = searchedDepth         # restart the search meaning you won't have to wait as long
+            self.bestMove = calculatedMove
+            self.searchedDepth = searchedDepth
         self.searching = False
 
     def runBotTurn(self, board): 
@@ -50,10 +50,12 @@ class mainLoop:
             self.searchThread = threading.Thread(target=self.searchMove, args=(board.hash, board.clone()), daemon=True) # Creates a thread to find best move so that it doesn't freeze on the bot's turn
             self.searchThread.start()
 
+        # Makes the bot's move after enough time has passed
+
         if self.bestMove is not None and pygame.time.get_ticks() > self.botCooldownUntil: # Make sure enough time has passed and the bot is allowed to move
             startRow, startColumn, endRow, endColumn = self.bestMove
-            piece = board.squarePiece[startRow * 8 + startColumn] # Gets the piece the bot wants to move
-            if piece != constants.empty and (piece & 24) == constants.botColour: # Makes sure the piece is actually one of the bots pieces
+            piece = board.squarePiece[startRow * 8 + startColumn]
+            if piece != constants.empty and (piece & 24) == constants.botColour:
                 board.makeMove(startRow, startColumn, endRow, endColumn)
                 board.gameState() # Checks if the game is over
                 time = pygame.time.get_ticks() - self.botCooldownUntil + (constants.timeLimit * 1000)
@@ -70,7 +72,7 @@ class mainLoop:
         visuals.drawArrows() # Draws the arrows the user has made
 
         if self.board.gameOverMessage: 
-            gamelines = self.board.gameOverMessage.split("\n") # Split the message into lines
+            gamelines = self.board.gameOverMessage.split("\n")
             renderedLines = []
             totalHeight = 0
             for line in gamelines:
@@ -89,10 +91,10 @@ class mainLoop:
                 visuals.screen.blit(surface, rectangle) # Writes the text
                 currentY += rectangle.height + 8 # Updates y value so that next line is written below
 
-        if self.board.gameOverMessage != self.currentGameOverMessage: # If previous value of game over message isn't the same as current it means game just ended
-            self.currentGameOverMessage = self.board.gameOverMessage # Update previous value to be current value so this only happens on the turn the game ends
-            print(f"Average player time: {(constants.playerTotalTime / max(1, self.board.moves / 2)) / 1000 : .2f} seconds") # Displays the players average time per move in seconds with 2 dp
-            print(f"Average bot time: {constants.timeLimit : .2f} seconds") # Displays the bots time limit per move, in seconds with 2 dp
+        if self.board.gameOverMessage != self.currentGameOverMessage:
+            self.currentGameOverMessage = self.board.gameOverMessage
+            print(f"Average player time: {(constants.playerTotalTime / max(1, self.board.moves / 2)) / 1000 : .2f} seconds")
+            print(f"Average bot time: {constants.timeLimit : .2f} seconds")
 
         pygame.display.flip() # Updates the screen
         visuals.redraw = False # Changes redraw to false so that the screen is only redrawn when a change happens
