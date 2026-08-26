@@ -1,6 +1,6 @@
 import pygame
 from engine import visuals, constants
-from engine.constants import positionSize, white, empty
+from engine.constants import positionSize, white, empty, botColour
 import bot.evaluation
 
 def getBoardPos(x, y):
@@ -17,7 +17,7 @@ def handleInputs(inputs, board):
             
         elif event.type == pygame.MOUSEBUTTONDOWN:
             if event.button == 1: 
-                if not inputs.searching: 
+                if not (board.turnColour == botColour): 
                     onClick(event.pos[0], event.pos[1], board)
                 else:
                     clearArrows()
