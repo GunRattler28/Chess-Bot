@@ -1,7 +1,7 @@
 import pygame
 import pygame.freetype
 import math
-from engine.constants import windowSize, positionSize, piecesTextures, overlays, botColour, empty, white, knight, bishop, rook, queen
+from engine.constants import windowSize, positionSize, piecesTextures, overlays, botColour, empty, white, knight, bishop, rook, queen, premove
 
 pygame.init()
 pygame.mixer.init()
@@ -46,6 +46,13 @@ def drawBoard(board):
                     color = "#97C997"
                 elif column == endColumn and row == endRow:
                     color = "#8DCE8D"
+            if premove:
+                startRow, startColumn, endRow, endColumn = premove
+                if column == startColumn and row == startRow:
+                    color = "#FF9900"
+                elif column == endColumn and row == endRow:
+                    color = "#FF4800"
+
             pygame.draw.rect(screen, color, (drawCol * positionSize, drawRow * positionSize, positionSize, positionSize))
             piece = board.squarePiece[row * 8 + column]
             if piece != empty:
