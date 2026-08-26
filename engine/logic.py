@@ -370,7 +370,8 @@ class logic:
                     capturedPiece = self.squarePiece[capturedSquare[0] * 8 + capturedSquare[1]]
 
             self.simulateMove(piece, (row, column), (endRow, endColumn), capturedPiece, capturedSquare)
-            if not self.kingCheck(piece & 24): validMoves.append((endRow, endColumn))
+            if not self.kingCheck(piece & 24): 
+                validMoves.append((endRow, endColumn))
             self.undoMove(piece, (row, column), (endRow, endColumn), capturedPiece, capturedSquare)
 
         return validMoves

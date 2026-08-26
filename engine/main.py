@@ -39,6 +39,18 @@ class mainLoop:
             print("Invalid FEN string. Defaulting to standard starting position")
             self.board.loadFEN("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1")
 
+    def executePremove(self):
+        startRow, startColumn, endRow, endColumn = constants.premove
+        constants.premove = None
+        piece = self.board.squarePiece[startRow * 8 + startColumn]
+        playerColour = constants.white if constants.botColour == constants.black else constants.black
+        if piece != constants.empty and (piece & 24) == playerColour:
+            moves = self.board.fullyLegalMove(startRow, startColumn)
+            if (endRow, endColumn) in moves:
+                self.board.makeMove(startRow, startColumn, endRow, endColumn)
+                self.board.gameState()
+                print(f"Move: {self.board.moves:>3} | Evaluation Score: {self.board.evaluationScore:>5} | Time: 0.00 seconds | Depth: {self.searchedDepth:>3} | Endgame: {str(bot.evaluation.isEndgame(self.board)):>5} | Total pieces: {self.board.totalPieces:>2}")
+
     def searchMove(self, hash, boardCopy):
         calculatedMove, searchedDepth = bot.bot.findBestMove(boardCopy, 20, constants.botColour, pygame.time.get_ticks(), constants.timeLimit * 1000) # Gets the best move from bot.py with a max search depth of 10
         if self.searching and self.board.hash == hash: # Makes sure that best move is only assigned if the bot is supposed to be searching and the current board hash is the same hash as when the search started.
@@ -67,6 +79,8 @@ class mainLoop:
                 time = pygame.time.get_ticks() - self.botCooldownUntil + (constants.timeLimit * 1000)
                 constants.playerTimeStart = pygame.time.get_ticks()
                 print(f"Move: {board.moves:>3} | Evaluation Score: {board.evaluationScore:>5} | Time: {time / 1000:>6.2f} seconds | Depth: {self.searchedDepth:>3} | Endgame: {str(bot.evaluation.isEndgame(board)):>5} | Total pieces: {board.totalPieces:>2}")
+                if constants.premove != None:
+                    self.executePremove()
             self.bestMove = None
             return True
             
