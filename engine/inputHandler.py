@@ -1,6 +1,6 @@
 import pygame
 from engine import visuals, constants
-from engine.constants import positionSize, white, empty, botColour
+from engine.constants import positionSize, white, black, empty, botColour
 import bot.evaluation
 
 def getBoardPos(x, y):
@@ -57,7 +57,21 @@ def onClick(x, y, board):
     if not (0 <= row < 8 and 0 <= column < 8):
         return
 
-    if visuals.activeSquare is None:
+    playerColour = white if botColour == black else black
+
+    if board.turnColour == botColour:
+        piece = board.squarePiece[row * 8 + column]
+        if visuals.activeSquare == None:
+            if piece != empty and (piece & 24) == playerColour:
+                visuals.activeSquare = [row, column]
+        else:
+            startRow, startColumn = visuals.activeSquare
+            if (row, column) != (startRow , startColumn):
+                constants.premove = (row, column, startRow, startColumn)
+            visuals.activeSquare = None
+            visuals.redraw = True
+
+    if visuals.activeSquare == None:
         handleSelection(board, row, column)
         return
 
