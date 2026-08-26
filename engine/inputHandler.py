@@ -17,10 +17,7 @@ def handleInputs(inputs, board):
             
         elif event.type == pygame.MOUSEBUTTONDOWN:
             if event.button == 1: 
-                if not (board.turnColour == botColour): 
-                    onClick(event.pos[0], event.pos[1], board)
-                else:
-                    clearArrows()
+                onClick(event.pos[0], event.pos[1], board)
             elif event.button == 3: 
                 onRightClick(event.pos[0], event.pos[1])
                 
