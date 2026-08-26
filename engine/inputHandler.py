@@ -67,7 +67,7 @@ def onClick(x, y, board):
         else:
             startRow, startColumn = visuals.activeSquare
             if (row, column) != (startRow , startColumn):
-                constants.premove = (row, column, startRow, startColumn)
+                constants.premove = (startRow, startColumn, row, column)
             visuals.activeSquare = None
             visuals.redraw = True
 
