@@ -1,7 +1,8 @@
 import pygame
 import pygame.freetype
 import math
-from engine.constants import windowSize, positionSize, piecesTextures, overlays, botColour, empty, white, knight, bishop, rook, queen, premove
+import constants
+from engine.constants import windowSize, positionSize, piecesTextures, overlays, botColour, empty, white, knight, bishop, rook, queen
 
 pygame.init()
 pygame.mixer.init()
@@ -46,8 +47,8 @@ def drawBoard(board):
                     color = "#97C997"
                 elif column == endColumn and row == endRow:
                     color = "#8DCE8D"
-            if premove:
-                startRow, startColumn, endRow, endColumn = premove
+            if constants.premove:
+                startRow, startColumn, endRow, endColumn = constants.premove
                 if column == startColumn and row == startRow:
                     color = "#FF9900"
                 elif column == endColumn and row == endRow:
