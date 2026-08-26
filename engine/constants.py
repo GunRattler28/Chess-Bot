@@ -41,10 +41,14 @@ piecesTextures = {
     (white | pawn): pygame.transform.scale(pygame.image.load("images/pieces/wpawn.png").convert_alpha(), (positionSize, positionSize))
 }
 
+# Dictionary of the red and green overlays that are used to show legal move, highlights and whether the king is in check
+
 overlays = {
     "red": pygame.transform.scale(pygame.image.load("images/redOverlay.png").convert_alpha(), (positionSize, positionSize)),
     "green": pygame.transform.scale(pygame.image.load("images/greenOverlay.png").convert_alpha(), (positionSize, positionSize))
 }
+
+# Dictionary of the different sounds that can play
 
 sounds = {
     "move": pygame.mixer.Sound("sounds/Move.mp3"),
@@ -53,11 +57,15 @@ sounds = {
     "checkmate": pygame.mixer.Sound("sounds/Checkmate.mp3"),
 }
 
+# Arrays of each move each piece can do stored as tuples (offset x, offset y)
+
 knightMoves = [(2, 1), (2, -1), (-2, 1), (-2, -1), (1, 2), (1, -2), (-1, 2), (-1, -2)]
 kingMoves = [(1,0), (-1,0), (0,1), (0,-1), (1,1), (1,-1), (-1,1), (-1,-1)]
 rookDirections = [(1,0), (-1,0), (0,1), (0,-1)]
 bishopDirections = [(1,1), (1,-1), (-1,1), (-1,-1)]
 queenDirections = rookDirections + bishopDirections
+
+# Creates an array of each square a piece type can move to from each square. Used for O(1) lookup time instead of calculating each turn
 
 def createAttackTable(offsets):
     table = [0] * 64
@@ -71,10 +79,12 @@ def createAttackTable(offsets):
         table[square] = mask
     return table
 
+# Creates array for king and knight of where they can move from each location
+
 knightAtk = createAttackTable(knightMoves)
 kingAtk = createAttackTable(kingMoves)
 
-random.seed(1149)
+random.seed(1149) # Used to ensure that using random generates the same result for each input so that zobrist hashing can be used
 
 zobristKeys = {}
 

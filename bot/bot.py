@@ -7,39 +7,39 @@ aspirationWindow = 50
 exact = 0
 upper = 1
 lower = 2
-tableSize = 1048576
-transpositionTable = [None] * tableSize
+tableSize = 1048576 # Size of transposition table. 2 raised to power of 20. Means that (table size - 1) can be used to create a mask of all 1s and a 0 at the start
+transpositionTable = [None] * tableSize # Creates an empty transposition table
 historyTable = [0] * 4096   # All moves. From every square to every other square. 64 * 64
 pruneMoves = []
 minimumDepth = 3 # The depth the bot has to be at before it can use null move pruning. The earlier it is used (higher value) the more safer it is as the opponent has more time to capitalise. The later is is used (lower value) the higher the gain and risk
 for i in range(50):
-    pruneMoves.append([None, None])
+    pruneMoves.append([None, None]) # Creates 50, 2 element long arrays
 
 def storeEvaluation(hash, depth, score, flag, bestMove):
-    transpositionTable[hash & (tableSize - 1)] = (
-        hash,
-        depth,
-        score,
-        flag,
-        bestMove
+    transpositionTable[hash & (tableSize - 1)] = ( # hash & mask creates the index in the table
+        hash, # Hash of the position
+        depth, # Depth the position was evaluated to
+        score, # The evaluation score
+        flag, # Whether the score is the lowerbound, upperbound or exact
+        bestMove # The best move to make in the position
     )
 
 def getEvaluation(hash, depth, alpha, beta):
-    index = hash & (tableSize - 1)
+    index = hash & (tableSize - 1) # Gets index of transposition table 
     position = transpositionTable[index]
-    if position is not None and position[0] == hash:
+    if position is not None and position[0] == hash: # If the hash in the table is correct then the evaluation will also be correct
         score = position[2]
         flag = position[3]
         bestMove = position[4]
-        if position[1] >= depth:
+        if position[1] >= depth: # Making sure the depth the position was evaluated to is adequate
             if flag == exact:
-                return score, bestMove
+                return score, bestMove # If score is exact move score return score and best move
             elif flag == upper and score <= alpha:
-                return score, bestMove
+                return score, bestMove # If score is upperbound return score and best move
             elif flag == lower and score >= beta:
-                return score, bestMove
-        return None, bestMove
-    return None, None
+                return score, bestMove # If score is lowerbound return score and best move
+        return None, bestMove # Only return bestMove if evaluation wasn't to an adequate depth
+    return None, None # If nothing else just return None, None so that whatever called the functions can get a response
 
 def getAllPossibleMoves(board, colour):
     allMoves = []
@@ -120,18 +120,26 @@ def minimax(board, depth, ply, maximisingPlayer, startTime, timeLimit, alpha=-99
     initialAlpha = alpha
     initialBeta = beta
     currentColour = white if maximisingPlayer else black
+
+    # Null Move Pruning (NMP)
+
     if allowNull and depth >= minimumDepth and not board.kingCheck(currentColour) and not board.endgame:
-        depthSkip = (depth // 6) + 2 # Reduced evaluation depth during null move pruning. Calculated by some random ahh formula that gives a depth skip based off of current depth.
-        savedEnPassant = board.enPassantTarget
-        board.setEnPassantTarget(None)
-        board.switchTurn()
-        score = minimax(board, depth - depthSkip, ply + 1, not maximisingPlayer, startTime, timeLimit, alpha, beta, False)
-        board.switchTurn()
-        board.setEnPassantTarget(savedEnPassant)
+        depthSkip = (depth // 6) + 2 # Reduced evaluation depth during NMP. Calculated by some random ahh formula that gives a depth skip based off of current depth.
+        savedEnPassant = board.enPassantTarget # Stores current en passant so that it can be set back to current afterwards 
+        board.setEnPassantTarget(None) # Sets en passant target to none as it is simulating the bot passing its go. En passants can only be made on the same turn they become available
+        board.switchTurn() # Switches colours
+        score = minimax(board, depth - depthSkip, ply + 1, not maximisingPlayer, startTime, timeLimit, alpha, beta, False) # Evaluates move at reduced depth
+        board.switchTurn() # Switches colours again so back to original
+        board.setEnPassantTarget(savedEnPassant) # Sets en passant back to original so that nothing changed from at first
+
+        # If the move is bad as expected just return the beta or alpha
+
         if maximisingPlayer and score >= beta:
             return beta
         elif not maximisingPlayer and score <= alpha:
             return alpha 
+
+        # If not re-evaluate at full depth
 
     bestScore = -999999 if maximisingPlayer else 999999
     moves = getAllPossibleMoves(board, currentColour)
@@ -150,13 +158,15 @@ def minimax(board, depth, ply, maximisingPlayer, startTime, timeLimit, alpha=-99
 
         legalMovesFound = True
 
-        if depth >= 3 and (moveScores[move] < 7000):
-            reduced = (depth // 6) + 2
-            score = minimax(board, depth - 1 - reduced, ply + 1, not maximisingPlayer, startTime, timeLimit, alpha, beta)
-            if (maximisingPlayer and score > alpha) or (not maximisingPlayer and score < beta):
+        # Late Move Reduction (LMR)
+
+        if depth >= 3 and (moveScores[move] < 7000): # Only use LMR on deeper depths and bad quiet moves (non quiet moves all have score of more than 7000. Best quiet moves have score of 7000)
+            reduced = (depth // 6) + 2 # Dynamically update the amount that depth is reduced by based off of current depth
+            score = minimax(board, depth - 1 - reduced, ply + 1, not maximisingPlayer, startTime, timeLimit, alpha, beta) # Run evaluation at reduced depth
+            if (maximisingPlayer and score > alpha) or (not maximisingPlayer and score < beta): # If move is good after reduced evaluation rerun at full depth
                 score = minimax(board, depth - 1, ply + 1, not maximisingPlayer, startTime, timeLimit, alpha, beta)
         else:
-            score = minimax(board, depth - 1, ply + 1, not maximisingPlayer, startTime, timeLimit, alpha, beta)
+            score = minimax(board, depth - 1, ply + 1, not maximisingPlayer, startTime, timeLimit, alpha, beta) # If not using LMR evaluate at full depth
 
         board.unmakeMove(undoInfo)
         if maximisingPlayer:
@@ -187,11 +197,11 @@ def minimax(board, depth, ply, maximisingPlayer, startTime, timeLimit, alpha=-99
             return 0
 
     if bestScore <= initialAlpha:
-        flag = upper
+        flag = upper # So transposition table knows that the value is only the upperbound of the move score
     elif bestScore >= initialBeta:
-        flag = lower
+        flag = lower # So transposition table knows that the value is only the lowerbound of the move score
     else:
-        flag = exact
+        flag = exact # So transposition table knows that the value is the exact move score
 
     if not constants.abortSearch:
         storeEvaluation(hash, depth, bestScore, flag, bestMove)
@@ -298,14 +308,16 @@ def searchMovesAtDepth(board, moves, depth, ply, alpha, beta, playerMaximising, 
         if board.kingCheck(botColour):
             board.unmakeMove(undoInfo)
             continue
+
+        # Late Move Reduction (LMR)
         
-        if depth >= 3 and (moveScore < 7000):
-            reduced = (depth // 6) + 2
-            score = minimax(board, depth - 1 - reduced, ply + 1, not playerMaximising, startTime, timeLimit, alpha, beta)
-            if (playerMaximising and score > alpha) or (not playerMaximising and score < beta):
+        if depth >= 3 and (moveScore < 7000): # Only use LMR on deeper depths and bad quiet moves (non quiet moves all have score of more than 7000. Best quiet moves have score of 7000)
+            reduced = (depth // 6) + 2 # Dynamically update the amount that depth is reduced by based off of current depth
+            score = minimax(board, depth - 1 - reduced, ply + 1, not playerMaximising, startTime, timeLimit, alpha, beta) # Run evaluation at reduced depth
+            if (playerMaximising and score > alpha) or (not playerMaximising and score < beta): # If move is good after reduced evaluation rerun at full depth
                 score = minimax(board, depth - 1, ply + 1, not playerMaximising, startTime, timeLimit, alpha, beta)
         else:
-            score = minimax(board, depth - 1, ply + 1, not playerMaximising, startTime, timeLimit, alpha, beta)
+            score = minimax(board, depth - 1, ply + 1, not playerMaximising, startTime, timeLimit, alpha, beta) # If not using LMR evaluate at full depth
 
         board.unmakeMove(undoInfo)
         
@@ -343,7 +355,7 @@ def findBestMove(board, depth, botColour, startTime, timeLimit):
     moveScores = {}
     for move in moves:
         moveScores[move] = scoreMove(board, move, 0, bestMove) # Dictionary containing each move and their priority based off of scoreMove()
-    moves.sort(key=moveScores.get, reverse=True) # Sort by values in moveScores
+    moves.sort(key=moveScores.get, reverse=True) # Sort by values in moveScores. Descending order
     if not moves:
         return None, 0
     bestMove = moves[0]
