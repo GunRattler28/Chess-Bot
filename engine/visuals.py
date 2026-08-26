@@ -1,7 +1,7 @@
 import pygame
 import pygame.freetype
 import math
-import constants
+from engine import constants
 from engine.constants import windowSize, positionSize, piecesTextures, overlays, botColour, empty, white, knight, bishop, rook, queen
 
 pygame.init()
@@ -47,7 +47,7 @@ def drawBoard(board):
                     color = "#97C997"
                 elif column == endColumn and row == endRow:
                     color = "#8DCE8D"
-            if constants.premove:
+            if constants.premove != None:
                 startRow, startColumn, endRow, endColumn = constants.premove
                 if column == startColumn and row == startRow:
                     color = "#FF9900"

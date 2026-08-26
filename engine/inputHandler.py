@@ -61,6 +61,7 @@ def onClick(x, y, board):
         if visuals.activeSquare == None:
             if piece != empty and (piece & 24) == playerColour:
                 visuals.activeSquare = [row, column]
+                visuals.redraw = True
         else:
             startRow, startColumn = visuals.activeSquare
             if (row, column) != (startRow , startColumn):
