@@ -70,6 +70,7 @@ def onClick(x, y, board):
                 constants.premove = (startRow, startColumn, row, column)
             visuals.activeSquare = None
             visuals.redraw = True
+        return
 
     if visuals.activeSquare == None:
         handleSelection(board, row, column)

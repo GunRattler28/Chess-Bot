@@ -32,7 +32,6 @@ class mainLoop:
         self.running = True
         self.searchedDepth = None
         self.currentGameOverMessage = None
-        print(constants.fen)
         if self.board.loadFEN(constants.fen):
             print("FEN string loaded!")
         else:
