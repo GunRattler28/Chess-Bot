@@ -580,7 +580,7 @@ class logic:
 
     def gameState(self):
         
-        if self.positionHistory.count(self.hash) >= 3:
+        if self.positionCounts.get(self.hash, 0) >= 3:
             self.gameOverMessage = "Three-fold \nRepetition!\nNobody  wins!"
             sounds["checkmate"].play()
             return
