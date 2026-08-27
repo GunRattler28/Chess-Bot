@@ -50,9 +50,9 @@ def drawBoard(board):
             if constants.premove != None:
                 startRow, startColumn, endRow, endColumn = constants.premove
                 if column == startColumn and row == startRow:
-                    color = "#FF9900"
+                    color = "#DD9048"
                 elif column == endColumn and row == endRow:
-                    color = "#FF4800"
+                    color = "#DFAD63"
 
             pygame.draw.rect(screen, color, (drawCol * positionSize, drawRow * positionSize, positionSize, positionSize))
             piece = board.squarePiece[row * 8 + column]
