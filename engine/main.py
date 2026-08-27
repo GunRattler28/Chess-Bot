@@ -87,7 +87,7 @@ class mainLoop:
 
     def draw(self):
         visuals.drawBoard(self.board) # Updates board to have pieces in correct positions after move
-        visuals.drawHighlights(self.board) # Draws the circles made when right click is tapped
+        visuals.drawHighlights(self.board) # Draws the circles where the piece can move
         visuals.drawArrows() # Draws the arrows the user has made
 
         if self.board.gameOverMessage: 

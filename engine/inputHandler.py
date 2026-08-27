@@ -61,12 +61,14 @@ def onClick(x, y, board):
         if visuals.activeSquare == None:
             if piece != empty and (piece & 24) == playerColour:
                 visuals.activeSquare = [row, column]
+                visuals.possibleMoves = board.fullyLegalMove(row, column)
                 visuals.redraw = True
         else:
             startRow, startColumn = visuals.activeSquare
             if (row, column) != (startRow , startColumn):
                 constants.premove = (startRow, startColumn, row, column)
             visuals.activeSquare = None
+            visuals.possibleMoves.clear()
             visuals.redraw = True
         return
 

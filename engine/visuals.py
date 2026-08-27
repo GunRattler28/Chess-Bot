@@ -119,7 +119,10 @@ def drawHighlights(board):
         if board.squarePiece[moveRow * 8 + moveColumn] != empty:
             screen.blit(overlays["red"], (x, y))
         else:
-            screen.blit(overlays["green"], (x, y))
+            if board.turnColour != botColour:
+                screen.blit(overlays["green"], (x, y))
+            else:
+                screen.blit(overlays["orange"], (x, y))
 
     if board.kingCheck(board.turnColour):
         king = board.findKing(board.turnColour)
@@ -170,7 +173,8 @@ def drawArrow(surface, color, start, end, thickness=25, arrowSize=50):
     dx = end[0] - start[0]
     dy = end[1] - start[1]
     length = math.hypot(dx, dy)
-    if length == 0: return
+    if length == 0: 
+        return
 
     direction = (dx / length, dy / length)
     perpendicular = (-direction[1], direction[0])

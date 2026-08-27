@@ -46,7 +46,8 @@ piecesTextures = {
 
 overlays = {
     "red": pygame.transform.scale(pygame.image.load("images/redOverlay.png").convert_alpha(), (positionSize, positionSize)),
-    "green": pygame.transform.scale(pygame.image.load("images/greenOverlay.png").convert_alpha(), (positionSize, positionSize))
+    "green": pygame.transform.scale(pygame.image.load("images/greenOverlay.png").convert_alpha(), (positionSize, positionSize)),
+    "orange": pygame.transform.scale(pygame.image.load("images/orangeOverlay.png").convert_alpha(), (positionSize, positionSize))
 }
 
 # Dictionary of the different sounds that can play
