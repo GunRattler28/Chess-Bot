@@ -46,6 +46,11 @@ def handleInputs(inputs, board):
 def onClick(x, y, board):
     if visuals.promotionActive: 
         return
+
+    if constants.premove:
+        constants.premove = None
+        visuals.redraw = True
+
     if len(visuals.lines) > 0 or len(visuals.strategyCircles) > 0: 
         clearArrows()
 
