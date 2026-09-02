@@ -56,8 +56,24 @@ def drawBoard(board):
 
             pygame.draw.rect(screen, color, (drawCol * positionSize, drawRow * positionSize, positionSize, positionSize))
             piece = board.squarePiece[row * 8 + column]
-            if piece != empty:
+
+            piecePremove = False
+            for move in constants.premove:
+                if move[0] == row and move[1] == column:
+                    piecePremove = True
+                    break
+
+            if piece != empty and not piecePremove:
                 screen.blit(piecesTextures[piece], (drawCol * positionSize, drawRow * positionSize))
+
+            for move in constants.premove:
+                startRow, startColumn, endRow, endColumn = move
+                if endRow == row and endColumn == column:
+                    movingPiece = board.squarePiece[startRow * 8 + startColumn]
+                    if movingPiece != empty:
+                        texture = piecesTextures[movingPiece].copy()
+                        texture.set_alpha(150)
+                        screen.blit(texture, (drawCol * positionSize, drawRow * positionSize))
 
 def blurSurface(surface, scaleFactor=3):
     if scaleFactor <= 1: return surface.copy()
