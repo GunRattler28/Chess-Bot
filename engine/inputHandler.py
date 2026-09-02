@@ -58,7 +58,7 @@ def onClick(x, y, board):
     if board.turnColour == botColour:
         if visuals.activeSquare == None:
             visuals.activeSquare = [row, column]
-            visuals.possibleMoves = board.fullyLegalMove(row, column)
+            visuals.possibleMoves = board.calculateLegalMoves(row, column, True)
             visuals.redraw = True
         else:
             startRow, startColumn = visuals.activeSquare
