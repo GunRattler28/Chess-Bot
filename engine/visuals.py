@@ -47,8 +47,8 @@ def drawBoard(board):
                     color = "#97C997"
                 elif column == endColumn and row == endRow:
                     color = "#8DCE8D"
-            if constants.premove != None:
-                startRow, startColumn, endRow, endColumn = constants.premove
+            for move in constants.premove:
+                startRow, startColumn, endRow, endColumn = move
                 if column == startColumn and row == startRow:
                     color = "#DD9048"
                 elif column == endColumn and row == endRow:

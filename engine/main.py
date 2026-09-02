@@ -39,8 +39,7 @@ class mainLoop:
             self.board.loadFEN("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1")
 
     def executePremove(self):
-        startRow, startColumn, endRow, endColumn = constants.premove
-        constants.premove = None
+        startRow, startColumn, endRow, endColumn = constants.premove.pop(0)
         piece = self.board.squarePiece[startRow * 8 + startColumn]
         playerColour = constants.white if constants.botColour == constants.black else constants.black
         if piece != constants.empty and (piece & 24) == playerColour:
@@ -49,6 +48,10 @@ class mainLoop:
                 self.board.makeMove(startRow, startColumn, endRow, endColumn)
                 self.board.gameState()
                 print(f"Move: {self.board.moves:>3} | Evaluation Score: {self.board.evaluationScore:>5} | Time:   0.00 seconds | Depth: N/A | Endgame: {str(bot.evaluation.isEndgame(self.board)):>5} | Total pieces: {self.board.totalPieces:>2}")
+            else:
+                constants.premove.clear()
+        else:
+            constants.premove.clear()
 
     def searchMove(self, hash, boardCopy):
         calculatedMove, searchedDepth = bot.bot.findBestMove(boardCopy, 20, constants.botColour, pygame.time.get_ticks(), constants.timeLimit * 1000) # Gets the best move from bot.py with a max search depth of 10
@@ -78,7 +81,7 @@ class mainLoop:
                 time = pygame.time.get_ticks() - self.botCooldownUntil + (constants.timeLimit * 1000)
                 constants.playerTimeStart = pygame.time.get_ticks()
                 print(f"Move: {board.moves:>3} | Evaluation Score: {board.evaluationScore:>5} | Time: {time / 1000:>6.2f} seconds | Depth: {self.searchedDepth:>3} | Endgame: {str(bot.evaluation.isEndgame(board)):>5} | Total pieces: {board.totalPieces:>2}")
-                if constants.premove != None:
+                if len(constants.premove) > 0:
                     self.executePremove()
             self.bestMove = None
             return True

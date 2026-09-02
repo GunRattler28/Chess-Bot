@@ -46,11 +46,7 @@ def handleInputs(inputs, board):
 def onClick(x, y, board):
     if visuals.promotionActive: 
         return
-
-    if constants.premove:
-        constants.premove = None
-        visuals.redraw = True
-
+    
     if len(visuals.lines) > 0 or len(visuals.strategyCircles) > 0: 
         clearArrows()
 
@@ -71,7 +67,7 @@ def onClick(x, y, board):
         else:
             startRow, startColumn = visuals.activeSquare
             if (row, column) != (startRow , startColumn):
-                constants.premove = (startRow, startColumn, row, column)
+                constants.premove.append((startRow, startColumn, row, column))
             visuals.activeSquare = None
             visuals.possibleMoves.clear()
             visuals.redraw = True
@@ -111,6 +107,11 @@ def clearArrows():
 def onRightClick(x, y):
     if visuals.promotionActive: 
         return
+    
+    if len(constants.premove) > 0:
+        constants.premove.clear()
+        visuals.redraw = True
+        
     visuals.rightClickStart = getBoardPos(x, y)
 
 def onRightDrag(x, y):
