@@ -63,7 +63,11 @@ def onClick(x, y, board):
         else:
             startRow, startColumn = visuals.activeSquare
             if (row, column) != (startRow , startColumn):
-                constants.premove.append((startRow, startColumn, row, column))
+                move = (startRow, startColumn, row, column)
+                if move in constants.premove:
+                    constants.premove.remove(move)
+                else:
+                    constants.premove.append(move)
             visuals.activeSquare = None
             visuals.possibleMoves.clear()
             visuals.redraw = True
@@ -104,10 +108,6 @@ def onRightClick(x, y):
     if visuals.promotionActive: 
         return
     
-    if len(constants.premove) > 0:
-        constants.premove.clear()
-        visuals.redraw = True
-        
     visuals.rightClickStart = getBoardPos(x, y)
 
 def onRightDrag(x, y):
