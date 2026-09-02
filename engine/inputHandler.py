@@ -1,6 +1,6 @@
 import pygame
 from engine import visuals, constants
-from engine.constants import positionSize, white, black, empty, botColour
+from engine.constants import positionSize, white, empty, botColour
 import bot.evaluation
 
 def getBoardPos(x, y):

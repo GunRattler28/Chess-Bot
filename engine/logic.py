@@ -1,5 +1,5 @@
 from engine.constants import rookDirections, bishopDirections, queenDirections, knightAtk, kingAtk, sounds, botColour, empty, queen, king, knight, rook, bishop, pawn, black, white, zobristKeys, zobristTurn, zobristCastling, zobristEnPassant
-from engine import visuals
+from engine import visuals, constants
 from bot import evaluation
 
 class logic:
@@ -653,6 +653,7 @@ class logic:
         visuals.possibleMoves.clear()
         visuals.lines.clear()
         visuals.strategyCircles.clear()
+        constants.premove.clear()
         self.gameState()
         
         if len(self.moveHistory) > 0:
@@ -710,6 +711,7 @@ class logic:
         visuals.possibleMoves.clear()
         visuals.lines.clear()
         visuals.strategyCircles.clear()
+        constants.premove.clear()
         visuals.lastMove = (start[0], start[1], end[0], end[1])
         
         self.gameState()
