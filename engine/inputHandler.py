@@ -55,15 +55,11 @@ def onClick(x, y, board):
     if not (0 <= row < 8 and 0 <= column < 8):
         return
 
-    playerColour = white if botColour == black else black
-
     if board.turnColour == botColour:
-        piece = board.squarePiece[row * 8 + column]
         if visuals.activeSquare == None:
-            if piece != empty and (piece & 24) == playerColour:
-                visuals.activeSquare = [row, column]
-                visuals.possibleMoves = board.fullyLegalMove(row, column)
-                visuals.redraw = True
+            visuals.activeSquare = [row, column]
+            visuals.possibleMoves = board.fullyLegalMove(row, column)
+            visuals.redraw = True
         else:
             startRow, startColumn = visuals.activeSquare
             if (row, column) != (startRow , startColumn):
