@@ -16,8 +16,12 @@ def handleInputs(inputs, board):
             inputs.running = False
             
         elif event.type == pygame.MOUSEBUTTONDOWN:
-            if event.button == 1: 
+            if event.button == 1:
                 onClick(event.pos[0], event.pos[1], board)
+            elif event.button == 2:
+                if len(constants.premove) > 0:
+                    constants.premove.clear()
+                    visuals.redraw = True 
             elif event.button == 3: 
                 onRightClick(event.pos[0], event.pos[1])
                 
@@ -46,14 +50,14 @@ def handleInputs(inputs, board):
 def onClick(x, y, board):
     if visuals.promotionActive: 
         return
-    
-    if len(visuals.lines) > 0 or len(visuals.strategyCircles) > 0: 
-        clearArrows()
 
     row, column = getBoardPos(x, y)
 
     if not (0 <= row < 8 and 0 <= column < 8):
-        return
+        return 
+
+    if len(visuals.lines) > 0 or len(visuals.strategyCircles) > 0: 
+        clearArrows()
 
     if board.turnColour == botColour:
         if visuals.activeSquare == None:
