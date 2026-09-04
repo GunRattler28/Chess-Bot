@@ -45,8 +45,11 @@ def drawBoard(board):
                 startRow, startColumn, endRow, endColumn = lastMove
                 if column == startColumn and row == startRow:
                     color = "#97C997"
+                    piecePremove = True
                 elif column == endColumn and row == endRow:
                     color = "#8DCE8D"
+                    premoveDestination = board.squarePiece[move[0] * 8 + move[1]]
+
             for move in constants.premoves:
                 startRow, startColumn, endRow, endColumn = move
                 if column == startColumn and row == startRow:
@@ -55,15 +58,6 @@ def drawBoard(board):
                     color = "#DFAD63"
 
             pygame.draw.rect(screen, color, (drawCol * positionSize, drawRow * positionSize, positionSize, positionSize))
-
-            piecePremove = False
-            premoveDestination = False
-            
-            for move in constants.premoves:
-                if move[0] == row and move[1] == column:
-                    piecePremove = True
-                if move[2] == row and move[3] == column:
-                    premoveDestination = board.squarePiece[move[0] * 8 + move[1]]
 
             piece = board.squarePiece[row * 8 + column]
 
