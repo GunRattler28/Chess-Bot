@@ -55,25 +55,25 @@ def drawBoard(board):
                     color = "#DFAD63"
 
             pygame.draw.rect(screen, color, (drawCol * positionSize, drawRow * positionSize, positionSize, positionSize))
-            piece = board.squarePiece[row * 8 + column]
 
             piecePremove = False
+            premoveDestination = False
+            
             for move in constants.premove:
                 if move[0] == row and move[1] == column:
                     piecePremove = True
-                    break
+                if move[2] == row and move[3] == column:
+                    premoveDestination = board.squarePiece[move[0] * 8 + move[1]]
 
-            if piece != empty and not piecePremove:
+            piece = board.squarePiece[row * 8 + column]
+
+            if piece != empty and not piecePremove and not premoveDestination:
                 screen.blit(piecesTextures[piece], (drawCol * positionSize, drawRow * positionSize))
 
-            for move in constants.premove:
-                startRow, startColumn, endRow, endColumn = move
-                if endRow == row and endColumn == column:
-                    movingPiece = board.squarePiece[startRow * 8 + startColumn]
-                    if movingPiece != empty:
-                        texture = piecesTextures[movingPiece].copy()
-                        texture.set_alpha(150)
-                        screen.blit(texture, (drawCol * positionSize, drawRow * positionSize))
+            if premoveDestination != empty:
+                texture = piecesTextures[premoveDestination].copy()
+                texture.set_alpha(150)
+                screen.blit(texture, (drawCol * positionSize, drawRow * positionSize))
 
 def blurSurface(surface, scaleFactor=3):
     if scaleFactor <= 1: return surface.copy()
