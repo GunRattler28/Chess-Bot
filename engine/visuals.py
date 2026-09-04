@@ -45,17 +45,20 @@ def drawBoard(board):
                 startRow, startColumn, endRow, endColumn = lastMove
                 if column == startColumn and row == startRow:
                     color = "#97C997"
-                    piecePremove = True
                 elif column == endColumn and row == endRow:
                     color = "#8DCE8D"
-                    premoveDestination = board.squarePiece[move[0] * 8 + move[1]]
+
+            piecePremove = False
+            premoveDestination = False
 
             for move in constants.premoves:
                 startRow, startColumn, endRow, endColumn = move
                 if column == startColumn and row == startRow:
+                    piecePremove = True
                     color = "#DD9048"
                 elif column == endColumn and row == endRow:
                     color = "#DFAD63"
+                    premoveDestination = board.squarePiece[move[0] * 8 + move[1]]
 
             pygame.draw.rect(screen, color, (drawCol * positionSize, drawRow * positionSize, positionSize, positionSize))
 
