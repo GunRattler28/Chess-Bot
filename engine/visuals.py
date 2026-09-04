@@ -47,7 +47,7 @@ def drawBoard(board):
                     color = "#97C997"
                 elif column == endColumn and row == endRow:
                     color = "#8DCE8D"
-            for move in constants.premove:
+            for move in constants.premoves:
                 startRow, startColumn, endRow, endColumn = move
                 if column == startColumn and row == startRow:
                     color = "#DD9048"
@@ -59,7 +59,7 @@ def drawBoard(board):
             piecePremove = False
             premoveDestination = False
             
-            for move in constants.premove:
+            for move in constants.premoves:
                 if move[0] == row and move[1] == column:
                     piecePremove = True
                 if move[2] == row and move[3] == column:

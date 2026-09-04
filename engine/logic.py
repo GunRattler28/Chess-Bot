@@ -653,7 +653,7 @@ class logic:
         visuals.possibleMoves.clear()
         visuals.lines.clear()
         visuals.strategyCircles.clear()
-        constants.premove.clear()
+        constants.premoves.clear()
         self.gameState()
         
         if len(self.moveHistory) > 0:
@@ -711,7 +711,7 @@ class logic:
         visuals.possibleMoves.clear()
         visuals.lines.clear()
         visuals.strategyCircles.clear()
-        constants.premove.clear()
+        constants.premoves.clear()
         visuals.lastMove = (start[0], start[1], end[0], end[1])
         
         self.gameState()

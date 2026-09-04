@@ -19,8 +19,8 @@ def handleInputs(inputs, board):
             if event.button == 1:
                 onClick(event.pos[0], event.pos[1], board)
             elif event.button == 2:
-                if len(constants.premove) > 0:
-                    constants.premove.clear()
+                if len(constants.premoves) > 0:
+                    constants.premoves.clear()
                     visuals.redraw = True 
             elif event.button == 3: 
                 onRightClick(event.pos[0], event.pos[1])
@@ -60,18 +60,24 @@ def onClick(x, y, board):
         clearArrows()
 
     if board.turnColour == botColour:
+        futureBoard = board.clone()
+        for premove in constants.premoves:
+            preRow, preColumn, endRow, endColumn = premove
+            futureBoard.makeMove(preRow, preColumn, endRow, endColumn, True)
+        piece = futureBoard.squarePiece[row * 8 + column]
         if visuals.activeSquare == None:
-            visuals.activeSquare = [row, column]
-            visuals.possibleMoves = board.calculateLegalMoves(row, column, True)
-            visuals.redraw = True
+            if piece == empty or (piece & 24) != botColour:
+                visuals.activeSquare = [row, column]
+                visuals.possibleMoves = futureBoard.fullyLegalMove(row, column)
+                visuals.redraw = True
         else:
             startRow, startColumn = visuals.activeSquare
             if (row, column) != (startRow , startColumn):
                 move = (startRow, startColumn, row, column)
-                if move in constants.premove:
-                    constants.premove.remove(move)
-                else:
-                    constants.premove.append(move)
+                if move in constants.premoves:
+                    constants.premoves.remove(move)
+                elif (row, column) in visuals.possibleMoves:
+                    constants.premoves.append(move)
             visuals.activeSquare = None
             visuals.possibleMoves.clear()
             visuals.redraw = True
