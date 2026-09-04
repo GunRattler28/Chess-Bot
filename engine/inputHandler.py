@@ -19,9 +19,7 @@ def handleInputs(inputs, board):
             if event.button == 1:
                 onClick(event.pos[0], event.pos[1], board)
             elif event.button == 2:
-                if len(constants.premoves) > 0:
-                    constants.premoves.clear()
-                    visuals.redraw = True 
+                onMiddleClick(event.pos[0], event.pos[1], board)
             elif event.button == 3: 
                 onRightClick(event.pos[0], event.pos[1])
                 
@@ -56,9 +54,6 @@ def onClick(x, y, board):
     if not (0 <= row < 8 and 0 <= column < 8):
         return 
 
-    if len(visuals.lines) > 0 or len(visuals.strategyCircles) > 0: 
-        clearArrows()
-
     if board.turnColour == botColour:
         futureBoard = board.clone()
         for premove in constants.premoves:
@@ -77,7 +72,7 @@ def onClick(x, y, board):
                 move = (startRow, startColumn, row, column)
                 if move in constants.premoves:
                     constants.premoves.remove(move)
-                elif (row, column) in visuals.possibleMoves:
+                else:
                     constants.premoves.append(move)
             visuals.activeSquare = None
             visuals.possibleMoves.clear()
@@ -114,6 +109,22 @@ def clearArrows():
     visuals.strategyCircles.clear()
     visuals.lines.clear()
     visuals.redraw = True
+
+def onMiddleClick(x, y, board):
+    if visuals.promotionActive: 
+        return
+
+    row, column = getBoardPos(x, y)
+    
+    if len(visuals.lines) > 0 or len(visuals.strategyCircles) > 0: 
+        clearArrows()
+
+    if len(constants.premoves) > 0:
+        constants.premoves.clear()
+        visuals.redraw = True
+
+    if not (0 <= row < 8 and 0 <= column < 8):
+        return 
 
 def onRightClick(x, y):
     if visuals.promotionActive: 
