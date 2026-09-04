@@ -67,7 +67,8 @@ def onClick(x, y, board):
         piece = futureBoard.squarePiece[row * 8 + column]
         if visuals.activeSquare == None:
             if piece == empty or (piece & 24) != botColour:
-                visuals.activeSquare = [row, column]
+                if piece != empty:
+                    visuals.activeSquare = [row, column]
                 visuals.possibleMoves = futureBoard.fullyLegalMove(row, column)
                 visuals.redraw = True
         else:
