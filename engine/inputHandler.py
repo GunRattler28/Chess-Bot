@@ -1,6 +1,6 @@
 import pygame
 from engine import visuals, constants
-from engine.constants import positionSize, white, empty, botColour
+from engine.constants import positionSize, white, empty, botColour, sounds
 import bot.evaluation
 
 def getBoardPos(x, y):
@@ -73,6 +73,10 @@ def onClick(x, y, board):
             startRow, startColumn = visuals.activeSquare
             if (row, column) != (startRow , startColumn):
                 move = (startRow, startColumn, row, column)
+                if piece != empty:
+                    sounds["capture"].play()
+                else:
+                    sounds["move"].play()
                 constants.premoves.append(move)
             visuals.activeSquare = None
             visuals.possibleMoves.clear()
