@@ -315,7 +315,7 @@ class logic:
         if (self.castleRights & kl and self.squarePiece[row * 8 + 1] == empty and self.squarePiece[row * 8 + 2] == empty and self.squarePiece[row * 8 + 3] == empty and not self.kingCheck(pieceColour) and not self.isSquareAttacked(row, 3, enemy) and not self.isSquareAttacked(row, 2, enemy) and self.squarePiece[row * 8 + 0] == (pieceColour | rook)):
             possibleMoves.append((row, 2))
 
-    def calculateLegalMoves(self, row, column, includeCastling):
+    def calculateLegalMoves(self, row, column):
         possibleMoves = []
         piece = self.squarePiece[row * 8 + column]
         if piece == empty: 
@@ -329,7 +329,7 @@ class logic:
             self.instaMoves(knightAtk[row * 8 + column], friendlyOccupied, possibleMoves)
         elif pieceType == king:
             self.instaMoves(kingAtk[row * 8 + column], friendlyOccupied, possibleMoves)
-            if includeCastling: self.addCastleMoves(pieceColour, possibleMoves)
+            self.addCastleMoves(pieceColour, possibleMoves)
         elif pieceType == rook: 
             self.slidingMoves(row, column, rookDirections, friendlyOccupied, self.occupied, possibleMoves)
         elif pieceType == bishop: 
@@ -359,7 +359,7 @@ class logic:
         if piece == empty: return []
         validMoves = []
         
-        for endRow, endColumn in self.calculateLegalMoves(row, column, True):
+        for endRow, endColumn in self.calculateLegalMoves(row, column):
             targetPiece = self.squarePiece[endRow * 8 + endColumn]
             capturedSquare = None
             capturedPiece = targetPiece

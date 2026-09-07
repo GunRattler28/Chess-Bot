@@ -50,7 +50,7 @@ def getAllPossibleMoves(board, colour):
                 index = lsb.bit_length() - 1
                 row = index // 8
                 column = index % 8
-                pieceMoves = board.calculateLegalMoves(row, column, True)
+                pieceMoves = board.calculateLegalMoves(row, column)
                 for endRow, endColumn in pieceMoves:
                     allMoves.append((row, column, endRow, endColumn))
                 bitboard &= bitboard - 1
