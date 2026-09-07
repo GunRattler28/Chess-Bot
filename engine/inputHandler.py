@@ -52,7 +52,10 @@ def onClick(x, y, board):
     row, column = getBoardPos(x, y)
 
     if not (0 <= row < 8 and 0 <= column < 8):
-        return 
+        return
+
+    if visuals.premoveSquare:
+        visuals.premoveSquare = None
 
     if board.turnColour == botColour:
         futureBoard = board.clone()
@@ -70,10 +73,7 @@ def onClick(x, y, board):
             startRow, startColumn = visuals.activeSquare
             if (row, column) != (startRow , startColumn):
                 move = (startRow, startColumn, row, column)
-                if move in constants.premoves:
-                    constants.premoves.remove(move)
-                else:
-                    constants.premoves.append(move)
+                constants.premoves.append(move)
             visuals.activeSquare = None
             visuals.possibleMoves.clear()
             visuals.redraw = True
@@ -115,16 +115,30 @@ def onMiddleClick(x, y, board):
         return
 
     row, column = getBoardPos(x, y)
-    
-    if len(visuals.lines) > 0 or len(visuals.strategyCircles) > 0: 
-        clearArrows()
-
-    if len(constants.premoves) > 0:
-        constants.premoves.clear()
-        visuals.redraw = True
 
     if not (0 <= row < 8 and 0 <= column < 8):
         return 
+
+    piece = board.squarePiece[row * 8 + column]
+
+    if piece == empty:
+        if len(visuals.lines) > 0 or len(visuals.strategyCircles) > 0: 
+            clearArrows()
+
+        if len(constants.premoves) > 0:
+            constants.premoves.clear()
+            visuals.redraw = True
+    
+    if visuals.premoveSquare == None:
+        visuals.premoveSquare = [row, column]
+        visuals.redraw = True
+    else:
+        startRow, startColumn = visuals.premoveSquare
+        move = (startRow, startColumn, row, column)
+        if move in constants.premoves:
+            constants.premoves.remove(move)
+        visuals.premoveSquare = None
+        visuals.redraw = True
 
 def onRightClick(x, y):
     if visuals.promotionActive: 

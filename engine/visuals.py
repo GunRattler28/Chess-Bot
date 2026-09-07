@@ -23,6 +23,7 @@ except:
 
 promotionActive = False
 activeSquare = None
+premoveSquare = None
 possibleMoves = []
 lines = []
 rightClickStart = None
@@ -55,7 +56,6 @@ def drawBoard(board):
                 startRow, startColumn, endRow, endColumn = move
                 if column == startColumn and row == startRow:
                     piecePremove = True
-                    color = "#DD9048"
                 elif column == endColumn and row == endRow:
                     color = "#DFAD63"
                     premoveDestination = board.squarePiece[move[0] * 8 + move[1]]
@@ -125,6 +125,11 @@ def drawHighlights(board):
         row, column = activeSquare
         drawRow, drawColumn = getDrawPos(row, column)
         pygame.draw.rect(screen, (0, 255, 0), (drawColumn * positionSize, drawRow * positionSize, positionSize, positionSize), 4)
+
+    if premoveSquare:
+        row, column = premoveSquare
+        drawRow, drawColumn = getDrawPos(row, column)
+        pygame.draw.rect(screen, (255, 165, 0), (drawColumn * positionSize, drawRow * positionSize, positionSize, positionSize), 4)
 
     for moveRow, moveColumn in possibleMoves:
         drawRow, drawColumn = getDrawPos(moveRow, moveColumn)
