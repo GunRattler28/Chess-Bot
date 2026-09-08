@@ -125,7 +125,7 @@ def onMiddleClick(x, y, board):
 
     piece = board.squarePiece[row * 8 + column]
 
-    if piece == empty:
+    if piece == empty and visuals.premoveSquare == None:
         if len(visuals.lines) > 0 or len(visuals.strategyCircles) > 0: 
             clearArrows()
 
@@ -140,6 +140,7 @@ def onMiddleClick(x, y, board):
         move = (startRow, startColumn, row, column)
         if move in constants.premoves:
             constants.premoves.remove(move)
+
         visuals.premoveSquare = None
     visuals.redraw = True
 
