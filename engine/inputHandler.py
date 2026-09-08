@@ -135,14 +135,13 @@ def onMiddleClick(x, y, board):
     
     if visuals.premoveSquare == None:
         visuals.premoveSquare = [row, column]
-        visuals.redraw = True
     else:
         startRow, startColumn = visuals.premoveSquare
         move = (startRow, startColumn, row, column)
         if move in constants.premoves:
             constants.premoves.remove(move)
         visuals.premoveSquare = None
-        visuals.redraw = True
+    visuals.redraw = True
 
 def onRightClick(x, y):
     if visuals.promotionActive: 
