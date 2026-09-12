@@ -67,7 +67,7 @@ def onClick(x, y, board):
             if piece == empty or (piece & 24) != botColour:
                 if piece != empty:
                     visuals.activeSquare = [row, column]
-                visuals.possibleMoves = futureBoard.fullyLegalMove(row, column)
+                visuals.possibleMoves = getEmptyPieceMoves(piece, row, column)
                 visuals.redraw = True
         else:
             startRow, startColumn = visuals.activeSquare
@@ -175,3 +175,41 @@ def onRightRelease(x, y):
 
     visuals.rightClickStart = visuals.temporaryLine = None
     visuals.redraw = True
+
+def getEmptyPieceMoves(piece, row, column):
+    moves = []
+    pieceType = piece & 7
+    pieceColour = piece & 24
+    index = row * 8 + column
+    mask = 0
+    if pieceType == constants.knight:
+        mask = constants.knightAtk[index]
+    elif pieceType == constants.king:
+        mask = constants.kingAtk[index]
+    elif pieceType == constants.rook:
+        mask = constants.rookAtk[index]
+    elif pieceType == constants.bishop:
+        mask = constants.bishopAtk[index]
+    elif pieceType == constants.queen:
+        mask = constants.queenAtk[index]
+
+    while mask:
+        lsb = mask & -mask
+        square = lsb.bit_length() - 1
+        moves.append((square // 8, square % 8))
+        mask &= (mask - 1)
+
+    if pieceType == constants.pawn:
+        direction = -1 if pieceColour == constants.white else 1
+        potRow = row + direction
+        if 0 <= potRow < 8:
+            moves.append((potRow, column))
+            if pieceColour == constants.white and row == 6: 
+                moves.append((potRow - 1, column))
+            elif pieceColour == constants.black and row == 1: 
+                moves.append((potRow + 1, column))
+        for colChange in [-1, 1]:
+            if 0 <= potRow < 8 and 0 <= column + colChange < 8:
+                moves.append((potRow, column + colChange))
+
+    return moves

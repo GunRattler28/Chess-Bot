@@ -81,10 +81,27 @@ def createAttackTable(offsets):
         table[square] = mask
     return table
 
+def createSlidingAttackTable(directions):
+    table = [0] * 64
+    for square in range(64):
+        row, column = square // 8, square % 8
+        mask = 0
+        for rowChange, columnChange in directions:
+            newRow, newColumn = row + rowChange, column + columnChange
+            while 0 <= newRow < 8 and 0 <= newColumn < 8:
+                mask |= 1 << (newRow * 8 + newColumn)
+                newRow += rowChange
+                newColumn += columnChange
+        table[square] = mask
+    return table
+
 # Creates array for king and knight of where they can move from each location
 
 knightAtk = createAttackTable(knightMoves)
 kingAtk = createAttackTable(kingMoves)
+rookAtk = createSlidingAttackTable(rookDirections)
+bishopAtk = createSlidingAttackTable(bishopDirections)
+queenAtk = createSlidingAttackTable(queenDirections)
 
 random.seed(1149) # Used to ensure that using random generates the same result for each input so that zobrist hashing can be used
 
