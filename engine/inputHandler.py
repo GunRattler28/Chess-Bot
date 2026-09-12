@@ -140,7 +140,6 @@ def onMiddleClick(x, y, board):
         move = (startRow, startColumn, row, column)
         if move in constants.premoves:
             constants.premoves.remove(move)
-
         visuals.premoveSquare = None
     visuals.redraw = True
 

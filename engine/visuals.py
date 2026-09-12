@@ -51,14 +51,15 @@ def drawBoard(board):
 
             piecePremove = False
             premoveDestination = False
-
+            futureBoard = board.clone()
             for move in constants.premoves:
                 startRow, startColumn, endRow, endColumn = move
+                futureBoard.makeMove(startRow, startColumn, endRow, endColumn, True)
                 if column == startColumn and row == startRow:
                     piecePremove = True
                 elif column == endColumn and row == endRow:
                     color = "#DFAD63"
-                    premoveDestination = board.squarePiece[move[0] * 8 + move[1]]
+                    premoveDestination = futureBoard.squarePiece[endRow * 8 + endColumn]
 
             pygame.draw.rect(screen, color, (drawCol * positionSize, drawRow * positionSize, positionSize, positionSize))
 
@@ -129,7 +130,7 @@ def drawHighlights(board):
     if premoveSquare:
         row, column = premoveSquare
         drawRow, drawColumn = getDrawPos(row, column)
-        pygame.draw.rect(screen, (255, 165, 0), (drawColumn * positionSize, drawRow * positionSize, positionSize, positionSize), 4)
+        pygame.draw.rect(screen, (255, 0, 0), (drawColumn * positionSize, drawRow * positionSize, positionSize, positionSize), 4)
 
     for moveRow, moveColumn in possibleMoves:
         drawRow, drawColumn = getDrawPos(moveRow, moveColumn)
