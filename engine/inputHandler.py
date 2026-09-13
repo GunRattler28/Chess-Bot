@@ -1,6 +1,6 @@
 import pygame
 from engine import visuals, constants
-from engine.constants import positionSize, white, empty
+from engine.constants import positionSize, white, empty, botColour, sounds
 import bot.evaluation
 
 def getBoardPos(x, y):
@@ -16,11 +16,10 @@ def handleInputs(inputs, board):
             inputs.running = False
             
         elif event.type == pygame.MOUSEBUTTONDOWN:
-            if event.button == 1: 
-                if not inputs.searching: 
-                    onClick(event.pos[0], event.pos[1], board)
-                else:
-                    clearArrows()
+            if event.button == 1:
+                onClick(event.pos[0], event.pos[1], board)
+            elif event.button == 2:
+                onMiddleClick(event.pos[0], event.pos[1], board)
             elif event.button == 3: 
                 onRightClick(event.pos[0], event.pos[1])
                 
@@ -49,15 +48,42 @@ def handleInputs(inputs, board):
 def onClick(x, y, board):
     if visuals.promotionActive: 
         return
-    if len(visuals.lines) > 0 or len(visuals.strategyCircles) > 0: 
-        clearArrows()
 
     row, column = getBoardPos(x, y)
 
     if not (0 <= row < 8 and 0 <= column < 8):
         return
 
-    if visuals.activeSquare is None:
+    if visuals.premoveSquare:
+        visuals.premoveSquare = None
+
+    if board.turnColour == botColour:
+        futureBoard = board.clone()
+        for premove in constants.premoves:
+            preRow, preColumn, endRow, endColumn = premove
+            futureBoard.makeMove(preRow, preColumn, endRow, endColumn, True)
+        piece = futureBoard.squarePiece[row * 8 + column]
+        if visuals.activeSquare == None:
+            if piece == empty or (piece & 24) != botColour:
+                if piece != empty:
+                    visuals.activeSquare = [row, column]
+                visuals.possibleMoves = getEmptyPieceMoves(piece, row, column)
+                visuals.redraw = True
+        else:
+            startRow, startColumn = visuals.activeSquare
+            move = (startRow, startColumn, row, column)
+            if (row, column) in visuals.possibleMoves:
+                if piece != empty:
+                    sounds["capture"].play()
+                else:
+                    sounds["move"].play()
+                constants.premoves.append(move)
+            visuals.activeSquare = None
+            visuals.possibleMoves.clear()
+            visuals.redraw = True
+        return
+
+    if visuals.activeSquare == None:
         handleSelection(board, row, column)
         return
 
@@ -88,9 +114,39 @@ def clearArrows():
     visuals.lines.clear()
     visuals.redraw = True
 
+def onMiddleClick(x, y, board):
+    if visuals.promotionActive: 
+        return
+
+    row, column = getBoardPos(x, y)
+
+    if not (0 <= row < 8 and 0 <= column < 8):
+        return 
+
+    piece = board.squarePiece[row * 8 + column]
+
+    if piece == empty and visuals.premoveSquare == None:
+        if len(visuals.lines) > 0 or len(visuals.strategyCircles) > 0: 
+            clearArrows()
+
+        if len(constants.premoves) > 0:
+            constants.premoves.clear()
+            visuals.redraw = True
+    
+    if visuals.premoveSquare == None:
+        visuals.premoveSquare = [row, column]
+    else:
+        startRow, startColumn = visuals.premoveSquare
+        move = (startRow, startColumn, row, column)
+        if move in constants.premoves:
+            constants.premoves.remove(move)
+        visuals.premoveSquare = None
+    visuals.redraw = True
+
 def onRightClick(x, y):
     if visuals.promotionActive: 
         return
+    
     visuals.rightClickStart = getBoardPos(x, y)
 
 def onRightDrag(x, y):
@@ -119,3 +175,49 @@ def onRightRelease(x, y):
 
     visuals.rightClickStart = visuals.temporaryLine = None
     visuals.redraw = True
+
+def getEmptyPieceMoves(piece, row, column):
+    moves = []
+    pieceType = piece & 7
+    pieceColour = piece & 24
+    index = row * 8 + column
+    mask = 0
+    if pieceType == constants.knight:
+        mask = constants.knightAtk[index]
+    elif pieceType == constants.king:
+        mask = constants.kingAtk[index]
+    elif pieceType == constants.rook:
+        mask = constants.rookAtk[index]
+    elif pieceType == constants.bishop:
+        mask = constants.bishopAtk[index]
+    elif pieceType == constants.queen:
+        mask = constants.queenAtk[index]
+
+    while mask:
+        lsb = mask & -mask
+        square = lsb.bit_length() - 1
+        moves.append((square // 8, square % 8))
+        mask &= (mask - 1)
+
+    if pieceType == constants.king:
+        if pieceColour == constants.white and row == 7 and column == 4:
+            moves.append((7, 2))
+            moves.append((7, 6))
+        elif pieceColour == constants.black and row == 0 and column == 4:
+            moves.append((0, 2))
+            moves.append((0, 6))
+
+    if pieceType == constants.pawn:
+        direction = -1 if pieceColour == constants.white else 1
+        potRow = row + direction
+        if 0 <= potRow < 8:
+            moves.append((potRow, column))
+            if pieceColour == constants.white and row == 6: 
+                moves.append((potRow - 1, column))
+            elif pieceColour == constants.black and row == 1: 
+                moves.append((potRow + 1, column))
+        for colChange in [-1, 1]:
+            if 0 <= potRow < 8 and 0 <= column + colChange < 8:
+                moves.append((potRow, column + colChange))
+
+    return moves

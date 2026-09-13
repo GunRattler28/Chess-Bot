@@ -22,7 +22,8 @@ botColour = black if randomColour else white
 playerTimeStart = 0
 playerTotalTime = 0 # The total time the player has taken in making moves
 abortSearch = False
-timeLimit = 1.5 # How long the bot has to search for a move each turn
+premoves = []
+timeLimit = 5 # How long the bot has to search for a move each turn
 
 # Dictionary of each colour + piece binary code as the keys and the textures as the values
 
@@ -45,7 +46,8 @@ piecesTextures = {
 
 overlays = {
     "red": pygame.transform.scale(pygame.image.load("images/redOverlay.png").convert_alpha(), (positionSize, positionSize)),
-    "green": pygame.transform.scale(pygame.image.load("images/greenOverlay.png").convert_alpha(), (positionSize, positionSize))
+    "green": pygame.transform.scale(pygame.image.load("images/greenOverlay.png").convert_alpha(), (positionSize, positionSize)),
+    "orange": pygame.transform.scale(pygame.image.load("images/orangeOverlay.png").convert_alpha(), (positionSize, positionSize))
 }
 
 # Dictionary of the different sounds that can play
@@ -79,10 +81,27 @@ def createAttackTable(offsets):
         table[square] = mask
     return table
 
+def createSlidingAttackTable(directions):
+    table = [0] * 64
+    for square in range(64):
+        row, column = square // 8, square % 8
+        mask = 0
+        for rowChange, columnChange in directions:
+            newRow, newColumn = row + rowChange, column + columnChange
+            while 0 <= newRow < 8 and 0 <= newColumn < 8:
+                mask |= 1 << (newRow * 8 + newColumn)
+                newRow += rowChange
+                newColumn += columnChange
+        table[square] = mask
+    return table
+
 # Creates array for king and knight of where they can move from each location
 
 knightAtk = createAttackTable(knightMoves)
 kingAtk = createAttackTable(kingMoves)
+rookAtk = createSlidingAttackTable(rookDirections)
+bishopAtk = createSlidingAttackTable(bishopDirections)
+queenAtk = createSlidingAttackTable(queenDirections)
 
 random.seed(1149) # Used to ensure that using random generates the same result for each input so that zobrist hashing can be used
 

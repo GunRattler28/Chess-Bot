@@ -32,12 +32,26 @@ class mainLoop:
         self.running = True
         self.searchedDepth = None
         self.currentGameOverMessage = None
-        print(constants.fen)
         if self.board.loadFEN(constants.fen):
             print("FEN string loaded!")
         else:
             print("Invalid FEN string. Defaulting to standard starting position")
             self.board.loadFEN("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1")
+
+    def executePremove(self):
+        startRow, startColumn, endRow, endColumn = constants.premoves.pop(0)
+        piece = self.board.squarePiece[startRow * 8 + startColumn]
+        playerColour = constants.white if constants.botColour == constants.black else constants.black
+        if piece != constants.empty and (piece & 24) == playerColour:
+            moves = self.board.fullyLegalMove(startRow, startColumn)
+            if (endRow, endColumn) in moves:
+                self.board.makeMove(startRow, startColumn, endRow, endColumn)
+                self.board.gameState()
+                print(f"Move: {self.board.moves:>3} | Evaluation Score: {self.board.evaluationScore:>5} | Time:   0.00 seconds | Depth: N/A | Endgame: {str(bot.evaluation.isEndgame(self.board)):>5} | Total pieces: {self.board.totalPieces:>2}")
+            else:
+                constants.premoves.clear()
+        else:
+            constants.premoves.clear()
 
     def searchMove(self, hash, boardCopy):
         calculatedMove, searchedDepth = bot.bot.findBestMove(boardCopy, 20, constants.botColour, pygame.time.get_ticks(), constants.timeLimit * 1000) # Gets the best move from bot.py with a max search depth of 10
@@ -67,6 +81,8 @@ class mainLoop:
                 time = pygame.time.get_ticks() - self.botCooldownUntil + (constants.timeLimit * 1000)
                 constants.playerTimeStart = pygame.time.get_ticks()
                 print(f"Move: {board.moves:>3} | Evaluation Score: {board.evaluationScore:>5} | Time: {time / 1000:>6.2f} seconds | Depth: {self.searchedDepth:>3} | Endgame: {str(bot.evaluation.isEndgame(board)):>5} | Total pieces: {board.totalPieces:>2}")
+                if len(constants.premoves) > 0:
+                    self.executePremove()
             self.bestMove = None
             return True
             
@@ -74,7 +90,7 @@ class mainLoop:
 
     def draw(self):
         visuals.drawBoard(self.board) # Updates board to have pieces in correct positions after move
-        visuals.drawHighlights(self.board) # Draws the circles made when right click is tapped
+        visuals.drawHighlights(self.board) # Draws the circles where the piece can move
         visuals.drawArrows() # Draws the arrows the user has made
 
         if self.board.gameOverMessage: 

@@ -1,6 +1,7 @@
 import pygame
 import pygame.freetype
 import math
+from engine import constants
 from engine.constants import windowSize, positionSize, piecesTextures, overlays, botColour, empty, white, knight, bishop, rook, queen
 
 pygame.init()
@@ -22,6 +23,7 @@ except:
 
 promotionActive = False
 activeSquare = None
+premoveSquare = None
 possibleMoves = []
 lines = []
 rightClickStart = None
@@ -46,10 +48,43 @@ def drawBoard(board):
                     color = "#97C997"
                 elif column == endColumn and row == endRow:
                     color = "#8DCE8D"
+
+            piecePremove = False
+            premoveDestination = False
+            futureBoard = board.clone()
+
+            for move in constants.premoves:
+                startRow, startColumn, endRow, endColumn = move
+                piece = futureBoard.squarePiece[startRow * 8 + startColumn]
+                futureBoard.makeMove(startRow, startColumn, endRow, endColumn, True)
+                if column == startColumn and row == startRow:
+                    piecePremove = True
+                    premoveDestination = empty
+                elif column == endColumn and row == endRow:
+                    color = "#DFAD63"
+                    premoveDestination = futureBoard.squarePiece[endRow * 8 + endColumn]
+
+                if ((piece == (constants.white | constants.king)) or (piece == (constants.black | constants.king))) and abs(startColumn - endColumn) == 2:
+                    rookStartColumn = 7 if endColumn == 6 else 0
+                    rookEndColumn = 5 if endColumn == 6 else 3
+                    if column == rookStartColumn and row == startRow:
+                        piecePremove = True
+                        premoveDestination = empty
+                    elif column == rookEndColumn and row == startRow:
+                        color = "#DFAD63"
+                        premoveDestination = futureBoard.squarePiece[startRow * 8 + rookEndColumn]
+
             pygame.draw.rect(screen, color, (drawCol * positionSize, drawRow * positionSize, positionSize, positionSize))
+
             piece = board.squarePiece[row * 8 + column]
-            if piece != empty:
+
+            if piece != empty and not piecePremove and not premoveDestination:
                 screen.blit(piecesTextures[piece], (drawCol * positionSize, drawRow * positionSize))
+
+            if premoveDestination != empty:
+                texture = piecesTextures[premoveDestination].copy()
+                texture.set_alpha(150)
+                screen.blit(texture, (drawCol * positionSize, drawRow * positionSize))
 
 def blurSurface(surface, scaleFactor=3):
     if scaleFactor <= 1: return surface.copy()
@@ -105,13 +140,21 @@ def drawHighlights(board):
         drawRow, drawColumn = getDrawPos(row, column)
         pygame.draw.rect(screen, (0, 255, 0), (drawColumn * positionSize, drawRow * positionSize, positionSize, positionSize), 4)
 
+    if premoveSquare:
+        row, column = premoveSquare
+        drawRow, drawColumn = getDrawPos(row, column)
+        pygame.draw.rect(screen, (255, 0, 0), (drawColumn * positionSize, drawRow * positionSize, positionSize, positionSize), 4)
+
     for moveRow, moveColumn in possibleMoves:
         drawRow, drawColumn = getDrawPos(moveRow, moveColumn)
         x, y = drawColumn * positionSize, drawRow * positionSize
         if board.squarePiece[moveRow * 8 + moveColumn] != empty:
             screen.blit(overlays["red"], (x, y))
         else:
-            screen.blit(overlays["green"], (x, y))
+            if board.turnColour != botColour:
+                screen.blit(overlays["green"], (x, y))
+            else:
+                screen.blit(overlays["orange"], (x, y))
 
     if board.kingCheck(board.turnColour):
         king = board.findKing(board.turnColour)
@@ -162,7 +205,8 @@ def drawArrow(surface, color, start, end, thickness=25, arrowSize=50):
     dx = end[0] - start[0]
     dy = end[1] - start[1]
     length = math.hypot(dx, dy)
-    if length == 0: return
+    if length == 0: 
+        return
 
     direction = (dx / length, dy / length)
     perpendicular = (-direction[1], direction[0])
