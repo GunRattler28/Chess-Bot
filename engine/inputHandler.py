@@ -71,8 +71,8 @@ def onClick(x, y, board):
                 visuals.redraw = True
         else:
             startRow, startColumn = visuals.activeSquare
-            if (row, column) != (startRow , startColumn):
-                move = (startRow, startColumn, row, column)
+            move = (startRow, startColumn, row, column)
+            if (row, column) in visuals.possibleMoves:
                 if piece != empty:
                     sounds["capture"].play()
                 else:
@@ -206,7 +206,7 @@ def getEmptyPieceMoves(piece, row, column):
         elif pieceColour == constants.black and row == 0 and column == 4:
             moves.append((0, 2))
             moves.append((0, 6))
-            
+
     if pieceType == constants.pawn:
         direction = -1 if pieceColour == constants.white else 1
         potRow = row + direction
