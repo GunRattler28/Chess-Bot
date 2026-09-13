@@ -199,6 +199,14 @@ def getEmptyPieceMoves(piece, row, column):
         moves.append((square // 8, square % 8))
         mask &= (mask - 1)
 
+    if pieceType == constants.king:
+        if pieceColour == constants.white and row == 7 and column == 4:
+            moves.append((7, 2))
+            moves.append((7, 6))
+        elif pieceColour == constants.black and row == 0 and column == 4:
+            moves.append((0, 2))
+            moves.append((0, 6))
+            
     if pieceType == constants.pawn:
         direction = -1 if pieceColour == constants.white else 1
         potRow = row + direction
