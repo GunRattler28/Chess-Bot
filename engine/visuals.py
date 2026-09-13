@@ -57,6 +57,7 @@ def drawBoard(board):
                 futureBoard.makeMove(startRow, startColumn, endRow, endColumn, True)
                 if column == startColumn and row == startRow:
                     piecePremove = True
+                    premoveDestination = empty
                 elif column == endColumn and row == endRow:
                     color = "#DFAD63"
                     premoveDestination = futureBoard.squarePiece[endRow * 8 + endColumn]
