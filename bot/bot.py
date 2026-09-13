@@ -148,6 +148,7 @@ def minimax(board, depth, ply, maximisingPlayer, startTime, timeLimit, alpha=-99
         moveScores[move] = scoreMove(board, move, ply, bestMove) # Dictionary containing each move and their priority based off of scoreMove()
     moves.sort(key=moveScores.get, reverse=True) # Sort by values in moveScores
     legalMovesFound = False
+    pv = False
 
     for move in moves:
         startRow, startColumn, endRow, endColumn = move
@@ -159,14 +160,22 @@ def minimax(board, depth, ply, maximisingPlayer, startTime, timeLimit, alpha=-99
         legalMovesFound = True
 
         # Late Move Reduction (LMR)
-
-        if depth >= 3 and (moveScores[move] < 7000): # Only use LMR on deeper depths and bad quiet moves (non quiet moves all have score of more than 7000. Best quiet moves have score of 7000)
-            reduced = (depth // 6) + 2 # Dynamically update the amount that depth is reduced by based off of current depth
-            score = minimax(board, depth - 1 - reduced, ply + 1, not maximisingPlayer, startTime, timeLimit, alpha, beta) # Run evaluation at reduced depth
-            if (maximisingPlayer and score > alpha) or (not maximisingPlayer and score < beta): # If move is good after reduced evaluation rerun at full depth
-                score = minimax(board, depth - 1, ply + 1, not maximisingPlayer, startTime, timeLimit, alpha, beta)
+        
+        if not pv:
+            score = minimax(board, depth - 1, ply + 1, not maximisingPlayer, startTime, timeLimit, alpha, beta)
         else:
-            score = minimax(board, depth - 1, ply + 1, not maximisingPlayer, startTime, timeLimit, alpha, beta) # If not using LMR evaluate at full depth
+            alphaWindow = alpha if maximisingPlayer else beta - 1
+            betaWindow = alpha + 1 if maximisingPlayer else beta
+            if depth >= 3 and (moveScores[move] < 7000): # Only use LMR on deeper depths and bad quiet moves (non quiet moves all have score of more than 7000. Best quiet moves have score of 7000)
+                reduced = (depth // 6) + 2 # Dynamically update the amount that depth is reduced by based off of current depth
+                score = minimax(board, depth - 1 - reduced, ply + 1, not maximisingPlayer, startTime, timeLimit, alphaWindow, betaWindow) # Run evaluation at reduced depth
+                if (maximisingPlayer and score > alpha) or (not maximisingPlayer and score < beta): # If move is good after reduced evaluation rerun at full depth
+                    score = minimax(board, depth - 1, ply + 1, not maximisingPlayer, startTime, timeLimit, alphaWindow, betaWindow)
+            else:
+                score = minimax(board, depth - 1, ply + 1, not maximisingPlayer, startTime, timeLimit, alphaWindow, betaWindow) # If not using LMR evaluate at full depth
+
+            if (score > alpha) or (score < beta):
+                score = minimax(board, depth - 1, ply + 1, not maximisingPlayer, startTime, timeLimit, alpha, beta)
 
         board.unmakeMove(undoInfo)
         if maximisingPlayer:
