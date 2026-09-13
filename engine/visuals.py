@@ -52,8 +52,10 @@ def drawBoard(board):
             piecePremove = False
             premoveDestination = False
             futureBoard = board.clone()
+
             for move in constants.premoves:
                 startRow, startColumn, endRow, endColumn = move
+                piece = futureBoard.squarePiece[startRow * 8 + startColumn]
                 futureBoard.makeMove(startRow, startColumn, endRow, endColumn, True)
                 if column == startColumn and row == startRow:
                     piecePremove = True
@@ -61,6 +63,16 @@ def drawBoard(board):
                 elif column == endColumn and row == endRow:
                     color = "#DFAD63"
                     premoveDestination = futureBoard.squarePiece[endRow * 8 + endColumn]
+
+                if ((piece == (constants.white | constants.king)) or (piece == (constants.black | constants.king))) and abs(startColumn - endColumn) == 2:
+                    rookStartColumn = 7 if endColumn == 6 else 0
+                    rookEndColumn = 5 if endColumn == 6 else 3
+                    if column == rookStartColumn and row == startRow:
+                        piecePremove = True
+                        premoveDestination = empty
+                    elif column == rookEndColumn and row == startRow:
+                        color = "#DFAD63"
+                        premoveDestination = futureBoard.squarePiece[startRow * 8 + rookEndColumn]
 
             pygame.draw.rect(screen, color, (drawCol * positionSize, drawRow * positionSize, positionSize, positionSize))
 
