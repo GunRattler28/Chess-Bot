@@ -174,10 +174,12 @@ def minimax(board, depth, ply, maximisingPlayer, startTime, timeLimit, alpha=-99
             else:
                 score = minimax(board, depth - 1, ply + 1, not maximisingPlayer, startTime, timeLimit, alphaWindow, betaWindow) # If not using LMR evaluate at full depth
 
-            if (score > alpha) or (score < beta):
+            if alpha < score < beta: # If score better than bot's current best guaranteed score and also better than opponents best guaratneed score
                 score = minimax(board, depth - 1, ply + 1, not maximisingPlayer, startTime, timeLimit, alpha, beta)
 
         board.unmakeMove(undoInfo)
+        pv = True
+
         if maximisingPlayer:
             if score > bestScore:
                 bestScore = score
@@ -300,12 +302,13 @@ def quiescentSearch(board, alpha, beta, maximisingPlayer, ply, startTime, timeLi
 
     return bestScore
 
-def searchMovesAtDepth(board, moves, depth, ply, alpha, beta, playerMaximising, botColour, startTime, timeLimit):
+def searchMovesAtDepth(board, moves, depth, ply, alpha, beta, maximisingPlayer, botColour, startTime, timeLimit):
     if (pygame.time.get_ticks() - startTime) > timeLimit:
         return 0, None
     
-    currentBestScore = -999999 if playerMaximising else 999999
+    currentBestScore = -999999 if maximisingPlayer else 999999
     currentBestMove = None
+    pv = False
     
     for move in moves:
         if constants.abortSearch:
@@ -320,17 +323,26 @@ def searchMovesAtDepth(board, moves, depth, ply, alpha, beta, playerMaximising, 
 
         # Late Move Reduction (LMR)
         
-        if depth >= 3 and (moveScore < 7000): # Only use LMR on deeper depths and bad quiet moves (non quiet moves all have score of more than 7000. Best quiet moves have score of 7000)
-            reduced = (depth // 6) + 2 # Dynamically update the amount that depth is reduced by based off of current depth
-            score = minimax(board, depth - 1 - reduced, ply + 1, not playerMaximising, startTime, timeLimit, alpha, beta) # Run evaluation at reduced depth
-            if (playerMaximising and score > alpha) or (not playerMaximising and score < beta): # If move is good after reduced evaluation rerun at full depth
-                score = minimax(board, depth - 1, ply + 1, not playerMaximising, startTime, timeLimit, alpha, beta)
+        if not pv:
+            score = minimax(board, depth - 1, ply + 1, not maximisingPlayer, startTime, timeLimit, alpha, beta)
         else:
-            score = minimax(board, depth - 1, ply + 1, not playerMaximising, startTime, timeLimit, alpha, beta) # If not using LMR evaluate at full depth
+            alphaWindow = alpha if maximisingPlayer else beta - 1
+            betaWindow = alpha + 1 if maximisingPlayer else beta
+            if depth >= 3 and (moveScore < 7000): # Only use LMR on deeper depths and bad quiet moves (non quiet moves all have score of more than 7000. Best quiet moves have score of 7000)
+                reduced = (depth // 6) + 2 # Dynamically update the amount that depth is reduced by based off of current depth
+                score = minimax(board, depth - 1 - reduced, ply + 1, not maximisingPlayer, startTime, timeLimit, alphaWindow, betaWindow) # Run evaluation at reduced depth
+                if (maximisingPlayer and score > alpha) or (not maximisingPlayer and score < beta): # If move is good after reduced evaluation rerun at full depth
+                    score = minimax(board, depth - 1, ply + 1, not maximisingPlayer, startTime, timeLimit, alphaWindow, betaWindow)
+            else:
+                score = minimax(board, depth - 1, ply + 1, not maximisingPlayer, startTime, timeLimit, alphaWindow, betaWindow) # If not using LMR evaluate at full depth
+
+            if alpha < score < beta: # If score better than bot's current best guaranteed score and also better than opponents best guaratneed score
+                score = minimax(board, depth - 1, ply + 1, not maximisingPlayer, startTime, timeLimit, alpha, beta)
 
         board.unmakeMove(undoInfo)
+        pv = True
         
-        if playerMaximising:
+        if maximisingPlayer:
             if score > currentBestScore:
                 currentBestScore = score
                 currentBestMove = move
@@ -358,7 +370,7 @@ def findBestMove(board, depth, botColour, startTime, timeLimit):
     if constants.abortSearch:
         return None
     
-    playerMaximising = (botColour == white)
+    maximisingPlayer = (botColour == white)
     bestMove = None
     moves = getAllPossibleMoves(board, botColour)
     moveScores = {}
@@ -387,11 +399,11 @@ def findBestMove(board, depth, botColour, startTime, timeLimit):
             initialAlpha = -999999
             initialBeta = 999999
 
-        currentBestScore, currentBestMove = searchMovesAtDepth(board, moves, currentDepth, 0, initialAlpha, initialBeta, playerMaximising, botColour, startTime, timeLimit)
+        currentBestScore, currentBestMove = searchMovesAtDepth(board, moves, currentDepth, 0, initialAlpha, initialBeta, maximisingPlayer, botColour, startTime, timeLimit)
         if constants.abortSearch:
             break
         if currentDepth >= 4 and (currentBestScore <= initialAlpha or currentBestScore >= initialBeta):
-            currentBestScore, currentBestMove = searchMovesAtDepth(board, moves, currentDepth, 0, -999999, 999999, playerMaximising, botColour, startTime, timeLimit)
+            currentBestScore, currentBestMove = searchMovesAtDepth(board, moves, currentDepth, 0, -999999, 999999, maximisingPlayer, botColour, startTime, timeLimit)
             if constants.abortSearch:
                         break
         previousScore = currentBestScore
