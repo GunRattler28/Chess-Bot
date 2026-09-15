@@ -323,10 +323,10 @@ def searchMovesAtDepth(board, moves, depth, ply, alpha, beta, maximisingPlayer, 
 
         # Late Move Reduction (LMR)
         
-        if not pv:
+        if not pv: # Assumes first move searched is previous best move (principal variation)
             score = minimax(board, depth - 1, ply + 1, not maximisingPlayer, startTime, timeLimit, alpha, beta)
         else:
-            alphaWindow = alpha if maximisingPlayer else beta - 1
+            alphaWindow = alpha if maximisingPlayer else beta - 1 # Creates a tiny search window so that all moves worse than previous best move are instantly pruned. Very aggressive pruning. Saves lots of time 
             betaWindow = alpha + 1 if maximisingPlayer else beta
             if depth >= 3 and (moveScore < 7000): # Only use LMR on deeper depths and bad quiet moves (non quiet moves all have score of more than 7000. Best quiet moves have score of 7000)
                 reduced = (depth // 6) + 2 # Dynamically update the amount that depth is reduced by based off of current depth
@@ -336,8 +336,8 @@ def searchMovesAtDepth(board, moves, depth, ply, alpha, beta, maximisingPlayer, 
             else:
                 score = minimax(board, depth - 1, ply + 1, not maximisingPlayer, startTime, timeLimit, alphaWindow, betaWindow) # If not using LMR evaluate at full depth
 
-            if alpha < score < beta: # If score better than bot's current best guaranteed score and also better than opponents best guaratneed score
-                score = minimax(board, depth - 1, ply + 1, not maximisingPlayer, startTime, timeLimit, alpha, beta)
+            if alpha < score < beta: # Score must be better than current best guaranteed path and opponents best guaranteed path otherwise there is either no point or could be shut down instantly by playing beta
+                score = minimax(board, depth - 1, ply + 1, not maximisingPlayer, startTime, timeLimit, alpha, beta) # If it is actually a good move then research at normal alpha and beta 
 
         board.unmakeMove(undoInfo)
         pv = True
@@ -405,7 +405,7 @@ def findBestMove(board, depth, botColour, startTime, timeLimit):
         if currentDepth >= 4 and (currentBestScore <= initialAlpha or currentBestScore >= initialBeta):
             currentBestScore, currentBestMove = searchMovesAtDepth(board, moves, currentDepth, 0, -999999, 999999, maximisingPlayer, botColour, startTime, timeLimit)
             if constants.abortSearch:
-                        break
+                break
         previousScore = currentBestScore
         if currentBestMove:
             bestMove = currentBestMove
