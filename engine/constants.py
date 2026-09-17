@@ -23,7 +23,7 @@ playerTimeStart = 0
 playerTotalTime = 0 # The total time the player has taken in making moves
 abortSearch = False
 premoves = []
-timeLimit = 5 # How long the bot has to search for a move each turn
+timeLimit = 3 # How long the bot has to search for a move each turn
 
 # Dictionary of each colour + piece binary code as the keys and the textures as the values
 
