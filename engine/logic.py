@@ -70,13 +70,14 @@ class logic:
         for piece, bitboard in self.piecePositions.items():
             board = bitboard
             while board:
-                lsb = board & -board
-                index = lsb.bit_length() - 1
+                lsb = board & -board # <-- '-board' flips all bits then adds 1. This means that where the least significant 1 bit is in original number it would be 0 in flipped. but adding 1 means that there is a carry chain that ends at least significant bit and makes it 1. And therefore only has that bit
+                index = lsb.bit_length() - 1 # 'bit_length' returns bits needed to write number. That - 1 gives index from 0 to 63.
                 self.squarePiece[index] = piece
-                self.hash = self.hash ^ zobristKeys[piece][index]
+                self.hash = self.hash ^ zobristKeys[piece][index] # Updates hash to have the piece
                 self.totalPieces += 1
-                board &= board - 1
-        self.endgame = evaluation.isEndgame(self)
+                board &= board - 1 # Clears least significant bit
+
+        self.endgame = evaluation.isEndgame(self) # Finds if endgame so that bot makes appropiate moves if end game fen string loaded
 
         if self.turnColour == black:
             self.hash = self.hash ^ zobristTurn
