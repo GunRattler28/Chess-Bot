@@ -143,14 +143,17 @@ def minimax(board, depth, ply, maximisingPlayer, startTime, timeLimit, alpha=-99
 
     bestScore = -999999 if maximisingPlayer else 999999
     moves = getAllPossibleMoves(board, currentColour)
-    moveScores = {}
+    scoredMoves = []
+    
     for move in moves:
-        moveScores[move] = scoreMove(board, move, ply, bestMove) # Dictionary containing each move and their priority based off of scoreMove()
-    moves.sort(key=moveScores.get, reverse=True) # Sort by values in moveScores
+        moveScore = scoreMove(board, move, ply, bestMove)
+        scoredMoves.append((moveScore, move))
+
+    scoredMoves.sort(reverse=True) # Best first
     legalMovesFound = False
     pv = False
 
-    for move in moves:
+    for movesScore, move in scoredMoves:
         startRow, startColumn, endRow, endColumn = move
         undoInfo = board.makeMove(startRow, startColumn, endRow, endColumn, simulation=True)
         if board.kingCheck(currentColour):        
@@ -158,7 +161,7 @@ def minimax(board, depth, ply, maximisingPlayer, startTime, timeLimit, alpha=-99
             continue
 
         legalMovesFound = True
-
+        
         # Late Move Reduction (LMR)
         
         if not pv:
@@ -166,7 +169,7 @@ def minimax(board, depth, ply, maximisingPlayer, startTime, timeLimit, alpha=-99
         else:
             alphaWindow = alpha if maximisingPlayer else beta - 1
             betaWindow = alpha + 1 if maximisingPlayer else beta
-            if depth >= 3 and (moveScores[move] < 7000): # Only use LMR on deeper depths and bad quiet moves (non quiet moves all have score of more than 7000. Best quiet moves have score of 7000)
+            if depth >= 3 and (movesScore < 7000): # Only use LMR on deeper depths and bad quiet moves (non quiet moves all have score of more than 7000. Best quiet moves have score of 7000)
                 reduced = (depth // 6) + 2 # Dynamically update the amount that depth is reduced by based off of current depth
                 score = minimax(board, depth - 1 - reduced, ply + 1, not maximisingPlayer, startTime, timeLimit, alphaWindow, betaWindow) # Run evaluation at reduced depth
                 if (maximisingPlayer and score > alpha) or (not maximisingPlayer and score < beta): # If move is good after reduced evaluation rerun at full depth
@@ -258,12 +261,15 @@ def quiescentSearch(board, alpha, beta, maximisingPlayer, ply, startTime, timeLi
 
     # Sort captures
 
-    moveScores = {}
+    scoredCaptures = []
+    
     for move in captures:
-        moveScores[move] = scoreMove(board, move, ply) # Dictionary containing each move and their priority based off of scoreMove()
-    captures.sort(key=moveScores.get, reverse=True) # Sort by values in moveScores
+        moveScore = scoreMove(board, move, ply, bestMove)
+        scoredCaptures.append((moveScore, move))
 
-    for move in captures:
+    scoredCaptures.sort(reverse=True) # Best first
+
+    for movesScore, move in scoredCaptures:
         if constants.abortSearch:
             return bestScore
         
@@ -310,11 +316,10 @@ def searchMovesAtDepth(board, moves, depth, ply, alpha, beta, maximisingPlayer, 
     currentBestMove = None
     pv = False
     
-    for move in moves:
+    for moveScore, move in moves:
         if constants.abortSearch:
             break
         startRow, startColumn, endRow, endColumn = move
-        moveScore = scoreMove(board, move, ply, currentBestMove)
         undoInfo = board.makeMove(startRow, startColumn, endRow, endColumn, simulation=True)
         
         if board.kingCheck(botColour):
@@ -370,24 +375,28 @@ def findBestMove(board, depth, botColour, startTime, timeLimit):
     if constants.abortSearch:
         return None
 
-    # TEST WHETHER BELOW IS WORTH ADDING
+    for i in range(4096):
+        historyTable[i] = historyTable[i] // 8 # So that previous history table scores have less of an effect
 
-    # for i in range(4096):
-    #     historyTable[i] = historyTable[i] // 8 # So that previous history table scores have less of an effect
-
-    # for i in range(50): # Clear prune moves since they are board specific
-    #     pruneMoves[i][0] = None
-    #     pruneMoves[i][1] = None
+    for i in range(50): # Clear prune moves since they are board specific
+        pruneMoves[i][0] = None
+        pruneMoves[i][1] = None
 
     maximisingPlayer = (botColour == white)
     bestMove = None
-    moves = getAllPossibleMoves(board, botColour)
-    moveScores = {}
-    for move in moves:
-        moveScores[move] = scoreMove(board, move, 0, bestMove) # Dictionary containing each move and their priority based off of scoreMove()
-    moves.sort(key=moveScores.get, reverse=True) # Sort by values in moveScores. Descending order
+    allMoves = getAllPossibleMoves(board, botColour)
+
+    moves = []
+
+    for move in allMoves:
+        moveScore = scoreMove(board, move, 0, bestMove)
+        moves.append((moveScore, move))
+
+    moves.sort(reverse=True) # Best first
+
     if not moves:
         return None, 0
+    
     bestMove = moves[0]
     savedRedo = board.redoHistory.copy()
     savedMoves = board.moveHistory.copy()
@@ -419,9 +428,12 @@ def findBestMove(board, depth, botColour, startTime, timeLimit):
         if currentBestMove:
             bestMove = currentBestMove
             completedBestMove = currentBestMove
-            if bestMove in moves:
-                moves.remove(bestMove)
-                moves.insert(0, bestMove)
+            for each in moves:
+                score, move = each
+                if move == bestMove:
+                    moves.remove(each)
+                    moves.insert(0, each)
+                    break
 
     board.redoHistory = savedRedo
     board.moveHistory = savedMoves
