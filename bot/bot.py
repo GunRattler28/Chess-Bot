@@ -420,6 +420,6 @@ def findBestMove(board, depth, botColour, startTime, timeLimit):
     board.gameOverMessage = savedGameOver
 
     if completedBestMove:
-        return completedBestMove, currentDepth
+        return completedBestMove, (currentDepth - 1)
     else:
         return bestMove, depth
