@@ -369,7 +369,16 @@ def searchMovesAtDepth(board, moves, depth, ply, alpha, beta, maximisingPlayer, 
 def findBestMove(board, depth, botColour, startTime, timeLimit):
     if constants.abortSearch:
         return None
-    
+
+    # TEST WHETHER BELOW IS WORTH ADDING
+
+    # for i in range(4096):
+    #     historyTable[i] = historyTable[i] // 8 # So that previous history table scores have less of an effect
+
+    # for i in range(50): # Clear prune moves since they are board specific
+    #     pruneMoves[i][0] = None
+    #     pruneMoves[i][1] = None
+
     maximisingPlayer = (botColour == white)
     bestMove = None
     moves = getAllPossibleMoves(board, botColour)
