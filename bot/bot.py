@@ -12,6 +12,8 @@ transpositionTable = [None] * tableSize # Creates an empty transposition table
 historyTable = [0] * 4096   # All moves. From every square to every other square. 64 * 64
 pruneMoves = []
 minimumDepth = 3 # The depth the bot has to be at before it can use null move pruning. The earlier it is used (higher value) the more safer it is as the opponent has more time to capitalise. The later is is used (lower value) the higher the gain and risk
+nodes = 0
+
 for i in range(50):
     pruneMoves.append([None, None]) # Creates 50, 2 element long arrays
 
@@ -106,9 +108,14 @@ def scoreMove(board, move, ply, previousBestMove=None):
 def minimax(board, depth, ply, maximisingPlayer, startTime, timeLimit, alpha=-999999, beta=999999, allowNull=True):
     if constants.abortSearch:
         return 0
-    if (pygame.time.get_ticks() - startTime) > timeLimit:
-        constants.abortSearch = True
+
+    global nodes
+    nodes += 1
+    if (nodes & 2047) == 0: # Activates every 2048 nodes
+        if (pygame.time.get_ticks() - startTime) > timeLimit:
+            constants.abortSearch = True
         return 0
+    
     if depth <= 0:
         return quiescentSearch(board, alpha, beta, maximisingPlayer, ply, startTime, timeLimit)
     if board.halfmoveClock >= 100 or board.positionCounts.get(board.hash, 0) >= 3:
@@ -374,6 +381,9 @@ def searchMovesAtDepth(board, moves, depth, ply, alpha, beta, maximisingPlayer, 
 def findBestMove(board, depth, botColour, startTime, timeLimit):
     if constants.abortSearch:
         return None
+
+    global nodes
+    nodes = 0
 
     for i in range(4096):
         historyTable[i] = historyTable[i] // 8 # So that previous history table scores have less of an effect
