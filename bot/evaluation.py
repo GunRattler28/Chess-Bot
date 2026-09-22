@@ -1,13 +1,17 @@
 from engine.constants import white, black, pawn, knight, bishop, rook, queen, king, empty
 
+# how much each piece is valued respective to one another
+
 pieceValues = {
     pawn: 10,
     bishop: 40,
     knight: 45,
     rook: 70,
     queen: 130,
-    king: 99999
+    king: 99999 # very big number so that no amount of score gained could ever be worth letting a king get captured
 }
+
+# 64 element arrays for each piece that add a bonus if good positioning or punishment if bad positioning
 
 knightPositionScores = [
     -50, -40, -30, -30, -30, -30, -40, -50,
@@ -86,6 +90,8 @@ kingEndgamePositionScores = [
     -50, -30, -30, -30, -30, -30, -30, -50
 ]
 
+# Dictionary so that getPieceScore can use same code for different pieces
+
 positionTables = {
     pawn: pawnPositionScores,
     bishop: bishopPositionScores,
@@ -95,35 +101,36 @@ positionTables = {
 }
 
 def isEndgame(board):
-    wQ = board.piecePositions[white | queen].bit_count()
-    bQ = board.piecePositions[black | queen].bit_count()
-    wP = board.piecePositions[white | pawn].bit_count()
-    bP = board.piecePositions[black | pawn].bit_count()
+    wQ = board.piecePositions[white | queen].bit_count() # Number of white queens
+    bQ = board.piecePositions[black | queen].bit_count() # Number of black queens
+    wP = board.piecePositions[white | pawn].bit_count() # Number of white pawns
+    bP = board.piecePositions[black | pawn].bit_count() # Number of black pawns
+    # if ((neither side has more than 1 queen) and less than 16 pieces in total) or less than 5 non pawn pieces
     if ((wQ <= 2 and bQ <= 2) and board.totalPieces < 16) or (board.totalPieces - (wP + bP)) < 5:
         return True
     return False
 
 def getPieceScore(piece, index, endgame=False):
-    if piece == empty:
+    if piece == empty: # Safety check but will never be true
         return 0
     
-    colour = piece & 24
-    pieceType = piece & 7
+    colour = piece & 24 # First 2 digits of binary number
+    pieceType = piece & 7 # last 3 digits of binary number
     score = 0
-    score += (pieceValues[pieceType] * 5)
+    score += (pieceValues[pieceType] * 5) # Weighted how much each piece is worth based off of value alone (not position)
 
     if colour == black:
-        index = index ^ 56
+        index = index ^ 56 # Flips the bits so that 64 - > 0, 63 -> 1, etc. Index is a 6 bit binary number (0 to 63). 56 is a 6 bit binary number of half 1s and half 0s. Acts as toggle  
         
     if pieceType == king:
-        if endgame:
+        if endgame: # Seperate position based tables based off endgame or not. Rewards king positioning in endgame (where the king is a bital piece)
             score += kingEndgamePositionScores[index]
-        else:
+        else: # Rewards safe king positioning in early and midgame (where the king can easily get checkmated)
             score += kingPositionScores[index]
     else:
-        score += positionTables[pieceType][index]
+        score += positionTables[pieceType][index] # For other pieces goes to piece specific position bonus table -> specific square to get value
 
     if colour == white:
-        return score
+        return score # White wants highest score possible
     else:
-        return -score
+        return -score # Negative score since black want's lowest score possible
