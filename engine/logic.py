@@ -3,6 +3,9 @@ from engine import visuals, constants
 from bot import evaluation
 
 class logic:
+
+    # Creates all the tmpty variables that will later be used
+
     def __init__(self):
         self.gameOverMessage = None
         self.moves = 0
@@ -23,6 +26,10 @@ class logic:
         self.endgame = 0
         self.castleRights = 0b1111
 
+        # Each bit represents a rook. 1 means can castle. From smallest to largest bit: white queenside castle, white kingside castle, black queenside castle, black kingside castle
+
+        # Initialises empty bitboards so that they can be populated by fen string
+
         self.piecePositions = {
             (black | queen): 0x0000000000000000, 
             (black | king): 0x0000000000000000, 
@@ -38,10 +45,15 @@ class logic:
             (white | pawn): 0x0000000000000000
         }
 
-        self.updateOccupied()
+        self.updateOccupied() # Updates bitboards which handle occupancy
+
+    # So that other scripts can use the logic without actually changing anything (such as what we see). main.py passes a copy of logic.py to bot.py so that the we don't see the moves the bot is testing while we wait
 
     def clone(self):
-        newState = logic()
+        newState = logic() # For all the functions
+
+        # For all the current values
+
         newState.moves = self.moves
         newState.halfmoveClock = self.halfmoveClock
         newState.turnColour = self.turnColour
@@ -64,7 +76,7 @@ class logic:
         return newState
 
     def createSquareTable(self):
-        self.squarePiece = [empty] * 64
+        self.squarePiece = [empty] * 64 # 64 element long array. Defaults to all empty squares so we don't need to loop through all squares just those with pieces
         self.hash = 0
         self.totalPieces = 0
         for piece, bitboard in self.piecePositions.items():
@@ -72,29 +84,33 @@ class logic:
             while board:
                 lsb = board & -board # <-- '-board' flips all bits then adds 1. This means that where the least significant 1 bit is in original number it would be 0 in flipped. but adding 1 means that there is a carry chain that ends at least significant bit and makes it 1. And therefore only has that bit
                 index = lsb.bit_length() - 1 # 'bit_length' returns bits needed to write number. That - 1 gives index from 0 to 63.
-                self.squarePiece[index] = piece
+                self.squarePiece[index] = piece # Changes specific square in array to correct piece
                 self.hash = self.hash ^ zobristKeys[piece][index] # Updates hash to have the piece
-                self.totalPieces += 1
+                self.totalPieces += 1 # Tracks total pieces
                 board &= board - 1 # Clears least significant bit
 
         self.endgame = evaluation.isEndgame(self) # Finds if endgame so that bot makes appropiate moves if end game fen string loaded
 
-        if self.turnColour == black:
-            self.hash = self.hash ^ zobristTurn
+        if self.turnColour == black: # So that hash is different for black and white
+            self.hash = self.hash ^ zobristTurn # xor toggles bits on and off
 
-        self.hash = self.hash ^ zobristCastling[self.castleRights]
+        self.hash = self.hash ^ zobristCastling[self.castleRights] # castlerights being stored in binary mean each combination / computation has a unique value. xor by same value means it is a toggle
 
         if self.enPassantTarget != None:
-            self.hash = self.hash ^ zobristEnPassant[self.enPassantTarget[1]]
+            self.hash = self.hash ^ zobristEnPassant[self.enPassantTarget[1]] # Toggles hash by same value en passant value
         
-        self.evaluationScore = 0
+        self.evaluationScore = 0 # Evaluation is tracked throughout the game
+
         for index in range(64):
-            piece = self.squarePiece[index]
+            piece = self.squarePiece[index] # Gets piece from 64 element array
             if piece != empty:
-                self.evaluationScore += evaluation.getPieceScore(piece, index, self.endgame)
+                self.evaluationScore += evaluation.getPieceScore(piece, index, self.endgame) # Starts off evaluation score. Ready to be tracked rest of game.
 
     def loadFEN(self, fen):
         try:
+
+            # Splits the FEN string into the 6 components
+
             fenParts = fen.split(" ")
             placements = fenParts[0]
             colour = fenParts[1]
@@ -102,6 +118,8 @@ class logic:
             enPassant = fenParts[3]
             halfMove = fenParts[4]
             fullMoves = fenParts[5]
+
+            # Map between FEN string piece names and my program's piece names (e.g: p: black pawn)
 
             pieceCode = {
                 "p": black | pawn,
@@ -118,8 +136,12 @@ class logic:
                 "K": white | king
             }
 
+            # Clears bitboards
+
             for bitboard in self.piecePositions.keys():
                 self.piecePositions[bitboard] = 0
+
+            # Sets array to have all 64 squares empty
 
             self.squarePiece = [empty] * 64
 
@@ -127,50 +149,55 @@ class logic:
             column = 0
 
             for character in placements:
-                if character == "/":
+                if character == "/": # '/' is the separator for rows
                     row += 1
                     column = 0
-                elif character.isdigit():
+                elif character.isdigit(): # number of empty spaces in a row
                     column += int(character)
                 else:
-                    piece = pieceCode[character]
+                    piece = pieceCode[character] # translate between FEN string piece names and my piece names
                     index = row * 8 + column
-                    self.piecePositions[piece] |= (1 << index)
-                    column += 1
+                    self.piecePositions[piece] |= (1 << index) # left shifts a 1 bit to the index of the piece then adds that 1 in that position to the bitboard. 
+                    column += 1 # pieces take 1 square so move to the next square
 
-            self.turnColour = white if colour == "w" else black
+            self.turnColour = white if colour == "w" else black # sets the turn colour to what FEN string says
 
-            self.castleRights = 0
+            self.castleRights = 0 # resets castle rights
+
+            # sets castle rights to what FEN string says
+
             if "Q" in castlingRights:
-                self.castleRights |= 1
+                self.castleRights |= 1 # bit 1 is white queen side castle
             if "K" in castlingRights:
-                self.castleRights |= 2
+                self.castleRights |= 2 # bit 2 is white king side castle
             if "q" in castlingRights:
-                self.castleRights |= 4
+                self.castleRights |= 4 # bit 3 is black queen side castle
             if "k" in castlingRights:
-                self.castleRights |= 8
+                self.castleRights |= 8 # bit 4 is black king wside castle
 
-            if enPassant == "-":
+            if enPassant == "-": # No en passant
                 self.enPassantTarget = None
             else:
                 enRow = 8 - int(enPassant[1]) # Because for me it is reversed
                 enColumm = ord(enPassant[0]) - 97 # ord gets ASCII code of the letter. ASCII code - 97 (ASCII code for a) shows how many columns past a it is
-                self.enPassantTarget = (enRow, enColumm)
+                self.enPassantTarget = (enRow, enColumm) # sets en passant target
 
-            self.halfmoveClock = int(halfMove)
-            self.moves = (int(fullMoves) - 1) * 2 + (1 if self.turnColour == black else 0)
+            self.halfmoveClock = int(halfMove) # moves since last irreversible move (pawn push, capture)
+            self.moves = (int(fullMoves) - 1) * 2 + (1 if self.turnColour == black else 0) # FEN string counts 1 move as every time both sides play. I count as different so this converts.
+
+            # Clears variables which werent set
 
             self.moveHistory.clear()
             self.redoHistory.clear()
             self.positionHistory.clear()
             self.positionCounts.clear()
-            self.updateOccupied()
-            self.createSquareTable()
-            self.positionHistory.append(self.hash)
-            self.positionCounts[self.hash] = 1
-            return True
+            self.updateOccupied() # set's up bitboard of where there is a piece
+            self.createSquareTable() # creates array containing piece on every square
+            self.positionHistory.append(self.hash) # set's current state as the first move in move history
+            self.positionCounts[self.hash] = 1 # resets hash
+            return True # if no errors has occured it was successful
         except:
-            return False
+            return False # there was an error so tell whatever called function and it can handle error smoothly
 
     def updateSquare(self, row, column, newPiece):
         index = row * 8 + column
@@ -202,11 +229,11 @@ class logic:
         self.whiteOccupied = 0
         self.blackOccupied = 0
         for piece, bitboard in self.piecePositions.items():
-            if piece & white:
-                self.whiteOccupied |= bitboard
+            if piece & white: # Binary for white is 01000. Binary for any piece type only affects last 3 bits. This means and will only give a 01000 if piece is white or give 00000 for anything else
+                self.whiteOccupied |= bitboard # Adds the bits where those white pieces are to white bitboard
             else:
-                self.blackOccupied |= bitboard
-        self.occupied = (self.whiteOccupied | self.blackOccupied)
+                self.blackOccupied |= bitboard # Adds bits where other pieces are to bitboards
+        self.occupied = (self.whiteOccupied | self.blackOccupied) # Combines bitboards for map of which squares are occupied
 
     def switchTurn(self):
         self.turnColour = black if self.turnColour == white else white
