@@ -4,10 +4,7 @@ from engine.constants import white, black, empty, pawn, king
 from bot import evaluation
 
 aspirationWindow = 50
-exact = 0
-upper = 1
-lower = 2
-tableSize = 1048576 # Size of transposition table. 2 raised to power of 20. Means that (table size - 1) can be used to create a mask of all 1s and a 0 at the start
+tableSize = 1048576 # Size of transposition table. 2 raised to power of 20. Means that (table size - 1) can be used to create a mask of all 1s.
 transpositionTable = [None] * tableSize # Creates an empty transposition table
 historyTable = [0] * 4096   # All moves. From every square to every other square. 64 * 64
 pruneMoves = []
@@ -32,11 +29,11 @@ def getEvaluation(hash, depth, alpha, beta):
         flag = position[3]
         bestMove = position[4]
         if position[1] >= depth: # Making sure the depth the position was evaluated to is adequate
-            if flag == exact:
+            if flag == "exact":
                 return score, bestMove # If score is exact move score return score and best move
-            elif flag == upper and score <= alpha:
+            elif flag == "upper" and score <= alpha:
                 return score, bestMove # If score is upperbound return score and best move
-            elif flag == lower and score >= beta:
+            elif flag == "lower" and score >= beta:
                 return score, bestMove # If score is lowerbound return score and best move
         return None, bestMove # Only return bestMove if evaluation wasn't to an adequate depth
     return None, None # If nothing else just return None, None so that whatever called the functions can get a response
@@ -208,11 +205,11 @@ def minimax(board, depth, ply, maximisingPlayer, startTime, timeLimit, alpha=-99
             return 0
 
     if bestScore <= initialAlpha:
-        flag = upper # So transposition table knows that the value is only the upperbound of the move score
+        flag = "upper" # So transposition table knows that the value is only the upperbound of the move score
     elif bestScore >= initialBeta:
-        flag = lower # So transposition table knows that the value is only the lowerbound of the move score
+        flag = "lower" # So transposition table knows that the value is only the lowerbound of the move score
     else:
-        flag = exact # So transposition table knows that the value is the exact move score
+        flag = "exact" # So transposition table knows that the value is the exact move score
 
     if not constants.abortSearch:
         storeEvaluation(hash, depth, bestScore, flag, bestMove)
@@ -291,11 +288,11 @@ def quiescentSearch(board, alpha, beta, maximisingPlayer, ply, startTime, timeLi
             break
 
     if bestScore <= initialAlpha:
-        flag = upper
+        flag = "upper"
     elif bestScore >= initialBeta:
-        flag = lower
+        flag = "lower"
     else:
-        flag = exact
+        flag = "exact"
 
     if not constants.abortSearch:
         storeEvaluation(board.hash, 0, bestScore, flag, bestMove)
