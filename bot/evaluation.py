@@ -105,7 +105,7 @@ def isEndgame(board):
     bQ = board.piecePositions[black | queen].bit_count() # Number of black queens
     wP = board.piecePositions[white | pawn].bit_count() # Number of white pawns
     bP = board.piecePositions[black | pawn].bit_count() # Number of black pawns
-    # if ((neither side has more than 1 queen) and less than 16 pieces in total) or less than 5 non pawn pieces
+    # if ((neither side has more than 2 queen) and less than 16 pieces in total) or less than 5 non pawn pieces
     if ((wQ <= 2 and bQ <= 2) and board.totalPieces < 16) or (board.totalPieces - (wP + bP)) < 5:
         return True
     return False
@@ -120,7 +120,7 @@ def getPieceScore(piece, index, endgame=False):
     score += (pieceValues[pieceType] * 5) # Weighted how much each piece is worth based off of value alone (not position)
 
     if colour == black:
-        index = index ^ 56 # Flips the bits so that 64 - > 0, 63 -> 1, etc. Index is a 6 bit binary number (0 to 63). 56 is a 6 bit binary number of half 1s and half 0s. Acts as toggle  
+        index = index ^ 56 # Flips the bits. Index is a 6 bit binary number (0 to 63). 56 is a 6 bit binary number of half 1s and half 0s. Flips the first 3 bits which flips the row 7 -> 1, 6 -> 2 but leaves the columns correct. Allows position bonus tables to work for both colours
         
     if pieceType == king:
         if endgame: # Seperate position based tables based off endgame or not. Rewards king positioning in endgame (where the king is a bital piece)

@@ -236,48 +236,51 @@ class logic:
         self.occupied = (self.whiteOccupied | self.blackOccupied) # Combines bitboards for map of which squares are occupied
 
     def switchTurn(self):
-        self.turnColour = black if self.turnColour == white else white
-        self.hash = self.hash ^ zobristTurn
+        self.turnColour = black if self.turnColour == white else white # Changes turn colour
+        self.hash = self.hash ^ zobristTurn # Toggles hash by turn colour
 
     def setEnPassantTarget(self, target):
-        if self.enPassantTarget != target:
+        if self.enPassantTarget != target: # Checks whether target has changed to ensure that the whole thing isn't done for no reason (this would be when the target is none both moves)
             if self.enPassantTarget != None:
-                self.hash = self.hash ^ zobristEnPassant[self.enPassantTarget[1]]
-            self.enPassantTarget = target
+                self.hash = self.hash ^ zobristEnPassant[self.enPassantTarget[1]] # Untoggles current target from hash
+            self.enPassantTarget = target # Sets target
             if self.enPassantTarget != None:
-                self.hash = self.hash ^ zobristEnPassant[self.enPassantTarget[1]]  
+                self.hash = self.hash ^ zobristEnPassant[self.enPassantTarget[1]] # Hashes current target
 
     def slidingMoves(self, row, column, movements, friendlyOccupied, occupied, possibleMoves):
-        for rowChange, columnChange in movements:
-            potRow, potColumn = row + rowChange, column + columnChange
-            while 0 <= potRow < 8 and 0 <= potColumn < 8:
-                targetBit = 1 << (potRow * 8 + potColumn)
+        for rowChange, columnChange in movements: # Splits movement tuple into row offset, column offset. Checks how far piece can move in each direction
+            potRow, potColumn = row + rowChange, column + columnChange # Changes potential row and column to test if it is legal or not
+            while 0 <= potRow < 8 and 0 <= potColumn < 8: # While still in board bounds
+                targetBit = 1 << (potRow * 8 + potColumn) # Creates mask by left shifting bit that has a value of 1 to where the potential row and column put it
                 if targetBit & friendlyOccupied: 
-                    break
-                possibleMoves.append((potRow, potColumn))
-                if targetBit & occupied: 
-                    break
-                potRow += rowChange
-                potColumn += columnChange
+                    break # If piece is occupied by friendly piece don't include that square in where piece can move in this direction
+                possibleMoves.append((potRow, potColumn)) # Add this new square to possible moves that can be played
+                if targetBit & occupied:
+                    break # If piece is occupied by enemy piece include that square in where piece can move in this direction
+                potRow += rowChange # Move to next row
+                potColumn += columnChange # Move to next column
 
     def instaMoves(self, atkMask, friendOccupied, possibleMoves):
-        legalMask = atkMask & ~friendOccupied
+        legalMask = atkMask & ~friendOccupied # '~' flips bits. This means that legal mask is where atkMask is and there isn't a friendly piece. Attack mask is made in constants.py
         while legalMask:
-            lsb = legalMask & -legalMask
-            index = lsb.bit_length() - 1
-            possibleMoves.append((index // 8, index % 8))
-            legalMask &= legalMask - 1
+            lsb = legalMask & -legalMask # '-' flips all bits then adds 1. This means that where the least significant 1 bit is in original number it would be 0 in flipped. but adding 1 means that there is a carry chain that ends at least significant bit and makes it 1. And therefore only has that bit
+            index = lsb.bit_length() - 1 # 'bit_length' returns bits needed to write number. That - 1 gives index from 0 to 63.
+            possibleMoves.append((index // 8, index % 8)) # adds tuple of row and column into possible places that piece can move
+            legalMask &= legalMask - 1 # Clears least significant bit and continues
 
     def isSquareAttacked(self, row, column, atkColour):
         targetIndex = row * 8 + column
-        
-        if knightAtk[targetIndex] & self.piecePositions[atkColour | knight]:
+        # knightAtk[targetIndex] is mask of where knight can move from specific square. Since targetIndex is square we want to see is attacked it shows where a knight would have to be to move to target square
+        if knightAtk[targetIndex] & self.piecePositions[atkColour | knight]: # If where the knight would have to be to attack target square has a knight in that square it means a knight is attacking target square
             return True
-            
+        # Same thing as knight but for king
         if kingAtk[targetIndex] & self.piecePositions[atkColour | king]:
             return True
         
         pawnMask = 0
+
+        # Creates mask of where pawns can move from, that being up 1 and across on either side. Does this for both colours and both directions the pawn could move horizontally
+        
         if atkColour == white:
             if row < 7 and column > 0: 
                 pawnMask |= 1 << ((row + 1) * 8 + (column - 1))
@@ -289,31 +292,32 @@ class logic:
             if row > 0 and column < 7: 
                 pawnMask |= 1 << ((row - 1) * 8 + (column + 1))
             
-        if pawnMask & self.piecePositions[atkColour | pawn]:
+        if pawnMask & self.piecePositions[atkColour | pawn]: # If possible places pawns could be to attack square has a pawn in one of those places return true
             return True
-
-        for rowChange, columnChange in rookDirections:
-            potRow, potColumn = row + rowChange, column + columnChange
-            while 0 <= potRow < 8 and 0 <= potColumn < 8:
-                testMask = 1 << (potRow * 8 + potColumn)
-                if testMask & self.occupied:
-                    if testMask & (self.piecePositions[atkColour | rook] | self.piecePositions[atkColour | queen]):
+        
+        for rowChange, columnChange in rookDirections: # Row offset and column offset of rook movements
+            potRow, potColumn = row + rowChange, column + columnChange # Potential row and column that piece could be in
+            while 0 <= potRow < 8 and 0 <= potColumn < 8: # While potential row and column is in board bounds
+                testMask = 1 << (potRow * 8 + potColumn) # Creates mask by left shifting bit that has a value of 1 to where the potential row and column put it
+                if testMask & self.occupied: # If there is any piece on this new potential square test if it is a 
+                    if testMask & (self.piecePositions[atkColour | rook] | self.piecePositions[atkColour | queen]): # If there is a rook or queen on any of these squares return true
                         return True
-                    break
-                potRow += rowChange
-                potColumn += columnChange
+                    break # If it hits any other piece stop searching in this direction
+                potRow += rowChange # Moves to next row
+                potColumn += columnChange # Moves to next column
 
-        for rowChange, columnChange in bishopDirections:
-            potRow, potColumn = row + rowChange, column + columnChange
-            while 0 <= potRow < 8 and 0 <= potColumn < 8:
-                testMask = 1 << (potRow * 8 + potColumn)
-                if testMask & self.occupied:
-                    if testMask & (self.piecePositions[atkColour | bishop] | self.piecePositions[atkColour | queen]):
+        for rowChange, columnChange in bishopDirections: # Row offset and column offset of bishop movements
+            potRow, potColumn = row + rowChange, column + columnChange # Potential row and column that piece could be in
+            while 0 <= potRow < 8 and 0 <= potColumn < 8: # While potential row and column is in board bounds
+                testMask = 1 << (potRow * 8 + potColumn) # Creates mask by left shifting bit that has a value of 1 to where the potential row and column put it
+                if testMask & self.occupied: # If there is any piece on this new potential square test if it is a 
+                    if testMask & (self.piecePositions[atkColour | bishop] | self.piecePositions[atkColour | queen]): # If there is a bishop or queen on any of these squares return true
                         return True
-                    break
-                potRow += rowChange
-                potColumn += columnChange
-        return False
+                    break # If it hits any other piece stop searching in this direction
+                potRow += rowChange # Moves to next row
+                potColumn += columnChange # Moves to next column
+        
+        return False # If it can't be attacked by knights, kings, pawns, bishops, rooks or queens it can't be attacked
 
     def findKing(self, colour):
         kingBoard = self.piecePositions[colour | king]
