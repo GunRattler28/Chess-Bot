@@ -88,6 +88,12 @@ def onClick(x, y, board):
         return
 
     startRow, startColumn = visuals.activeSquare
+    if (startRow, startColumn) == (row, column):
+        visuals.activeSquare = None
+        visuals.possibleMoves.clear()
+        visuals.redraw = True
+        return
+
     if (row, column) in visuals.possibleMoves:
         board.makeMove(startRow, startColumn, row, column)
         board.gameState()
