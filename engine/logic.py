@@ -203,27 +203,33 @@ class logic:
         index = row * 8 + column
         oldPiece = self.squarePiece[index]
         if oldPiece != empty:
-            self.totalPieces -= 1
-            self.evaluationScore -= evaluation.getPieceScore(oldPiece, index, self.endgame)
-            self.piecePositions[oldPiece] = self.piecePositions[oldPiece] & ~(1 << index)
-            self.hash = self.hash ^ zobristKeys[oldPiece][index]
+            self.totalPieces -= 1 # Remove old piece from total pieces count
+            self.evaluationScore -= evaluation.getPieceScore(oldPiece, index, self.endgame) # Remove evaluation score that piece contributed
+            self.piecePositions[oldPiece] = self.piecePositions[oldPiece] & ~(1 << index) # Removes bit representing piece from piece type specific bitboard. Left shifts bit to correct position then inverts so all 1s and 1, 0 bit where piece is then AND gate to remove piece 
+            self.hash = self.hash ^ zobristKeys[oldPiece][index] # Removes piece from hash
+
+            # Removes old piece from coloured bitboards showing what squares are occupied
+
             if oldPiece & white:
-                self.whiteOccupied &= ~(1 << index)
+                self.whiteOccupied &= ~(1 << index) # Left shifts 1 to correct index then flips all bits. Puts 0 bit in colour occupied bitboard at correct index 
             else:
                 self.blackOccupied &= ~(1 << index)
 
         if newPiece != empty:
-            self.totalPieces += 1
-            self.evaluationScore += evaluation.getPieceScore(newPiece, index, self.endgame)
-            self.piecePositions[newPiece] = self.piecePositions[newPiece] | (1 << index)
-            self.hash = self.hash ^ zobristKeys[newPiece][index]
+            self.totalPieces += 1 # Add piece to total pieces count
+            self.evaluationScore += evaluation.getPieceScore(newPiece, index, self.endgame) # Add piece to evaluation score
+            self.piecePositions[newPiece] = self.piecePositions[newPiece] | (1 << index) # Left shifts bit to correct place then OR with piece type bitboard
+            self.hash = self.hash ^ zobristKeys[newPiece][index] # Adds piece to hash
+
+            # Adds piece to coloured bitboards showing what squares are occupied
+
             if newPiece & white:
-                self.whiteOccupied |= (1 << index)
+                self.whiteOccupied |= (1 << index) # Left shifts 1 to correct index. Puts 1 bit in colour occupied bitboard at correct index
             else:
                 self.blackOccupied |= (1 << index)
 
-        self.occupied = (self.whiteOccupied | self.blackOccupied)
-        self.squarePiece[index] = newPiece
+        self.occupied = (self.whiteOccupied | self.blackOccupied) # Updates occupied bitboard
+        self.squarePiece[index] = newPiece # Updates 64 square array
 
     def updateOccupied(self):
         self.whiteOccupied = 0
@@ -294,6 +300,8 @@ class logic:
             
         if pawnMask & self.piecePositions[atkColour | pawn]: # If possible places pawns could be to attack square has a pawn in one of those places return true
             return True
+
+        # Lots of duplicated code but still technically O(1) time complexity since fixed number of iterations. Can't think of another way to do it in O(1) time complexity
         
         for rowChange, columnChange in rookDirections: # Row offset and column offset of rook movements
             potRow, potColumn = row + rowChange, column + columnChange # Potential row and column that piece could be in
