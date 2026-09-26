@@ -83,7 +83,7 @@ class logic:
             board = bitboard
             while board:
                 lsb = board & -board # <-- '-board' flips all bits then adds 1. This means that where the least significant 1 bit is in original number it would be 0 in flipped. but adding 1 means that there is a carry chain that ends at least significant bit and makes it 1. And therefore only has that bit
-                index = lsb.bit_length() - 1 # 'bit_length' returns bits needed to write number. That - 1 gives index from 0 to 63.
+                index = lsb.bit_length() - 1 # 'bit_length' returns bits needed to write number. -1 gives index from 0 to 63.
                 self.squarePiece[index] = piece # Changes specific square in array to correct piece
                 self.hash = self.hash ^ zobristKeys[piece][index] # Updates hash to have the piece
                 self.totalPieces += 1 # Tracks total pieces
@@ -270,7 +270,7 @@ class logic:
         legalMask = atkMask & ~friendOccupied # '~' flips bits. This means that legal mask is where atkMask is and there isn't a friendly piece. Attack mask is made in constants.py
         while legalMask:
             lsb = legalMask & -legalMask # '-' flips all bits then adds 1. This means that where the least significant 1 bit is in original number it would be 0 in flipped. but adding 1 means that there is a carry chain that ends at least significant bit and makes it 1. And therefore only has that bit
-            index = lsb.bit_length() - 1 # 'bit_length' returns bits needed to write number. That - 1 gives index from 0 to 63.
+            index = lsb.bit_length() - 1 # 'bit_length' returns bits needed to write number. -1 gives index from 0 to 63.
             possibleMoves.append((index // 8, index % 8)) # adds tuple of row and column into possible places that piece can move
             legalMask &= legalMask - 1 # Clears least significant bit and continues
 
@@ -328,27 +328,31 @@ class logic:
         return False # If it can't be attacked by knights, kings, pawns, bishops, rooks or queens it can't be attacked
 
     def findKing(self, colour):
-        kingBoard = self.piecePositions[colour | king]
+        kingBoard = self.piecePositions[colour | king] # Correct bitboad for specific colour of king
         if kingBoard == empty: 
-            return None
-        index = kingBoard.bit_length() - 1
-        return (index // 8, index % 8)
+            return None # Handles no king
+        index = kingBoard.bit_length() - 1 # 'bit_length' returns bits needed to write number. -1 gives index from 0 to 63.
+        return (index // 8, index % 8) # Return row and column from index through integer division and modulo respectively
 
     def kingCheck(self, colour):
-        king = self.findKing(colour)
+        king = self.findKing(colour) # (row, column) of king
         if king is None: 
-            return False
-        return self.isSquareAttacked(king[0], king[1], white if colour == black else black)
+            return False # Handles no king
+        return self.isSquareAttacked(king[0], king[1], white if colour == black else black) # king[0] is row, king[1] is column, colour that would be attacking
 
     def addCastleMoves(self, pieceColour, possibleMoves):
-        row = 7 if pieceColour == white else 0
+        row = 7 if pieceColour == white else 0 # Always back rank. Changes based on colour
         enemy = black if pieceColour == white else white
+        # Assigns value of bit that represents castle direction to varaible for readable and gates 
         if pieceColour == white:
             kl = 1
             kr = 2
         else:
             kl = 4
             kr = 8
+
+        # If king can castle on specific side, squares in between are empty, and king isn't in check. This means can castle on that side. Add this as a move that can be played
+
         if (self.castleRights & kr and self.squarePiece[row * 8 + 5] == empty and self.squarePiece[row * 8 + 6] == empty and not self.kingCheck(pieceColour) and not self.isSquareAttacked(row, 5, enemy) and not self.isSquareAttacked(row, 6, enemy) and self.squarePiece[row * 8 + 7] == (pieceColour | rook)):
             possibleMoves.append((row, 6))
 
@@ -356,87 +360,91 @@ class logic:
             possibleMoves.append((row, 2))
 
     def calculateLegalMoves(self, row, column):
-        possibleMoves = []
-        piece = self.squarePiece[row * 8 + column]
-        if piece == empty: 
+        possibleMoves = [] # Empty list of what moves can be made
+        piece = self.squarePiece[row * 8 + column] # Piece that on specific square
+        if piece == empty:
             return []
-
-        pieceType = piece & 7
-        pieceColour = white if (piece & white) else black
+                                            #           Colour  +   Piece Type
+        pieceType = piece & 7 # Piece is represented by   01          001           (example). & 7 gets the last 3 bits (001 in this case)
+        pieceColour = white if (piece & white) else black # variable & white gives 0 if variable is not also white
         friendlyOccupied = self.whiteOccupied if pieceColour == white else self.blackOccupied
 
         if pieceType == knight: 
-            self.instaMoves(knightAtk[row * 8 + column], friendlyOccupied, possibleMoves)
+            self.instaMoves(knightAtk[row * 8 + column], friendlyOccupied, possibleMoves) # knightAtk is everywhere knight can move from any square. Since knights don't have ray attacks it can be easily precomputed
         elif pieceType == king:
-            self.instaMoves(kingAtk[row * 8 + column], friendlyOccupied, possibleMoves)
-            self.addCastleMoves(pieceColour, possibleMoves)
+            self.instaMoves(kingAtk[row * 8 + column], friendlyOccupied, possibleMoves) # kingAtk is everywhere king can move from any square
+            self.addCastleMoves(pieceColour, possibleMoves) # Add castling as a possible move
         elif pieceType == rook: 
-            self.slidingMoves(row, column, rookDirections, friendlyOccupied, self.occupied, possibleMoves)
+            self.slidingMoves(row, column, rookDirections, friendlyOccupied, self.occupied, possibleMoves) # Everywhere rook can move
         elif pieceType == bishop: 
-            self.slidingMoves(row, column, bishopDirections, friendlyOccupied, self.occupied, possibleMoves)
+            self.slidingMoves(row, column, bishopDirections, friendlyOccupied, self.occupied, possibleMoves) # Everywhere bishop can move
         elif pieceType == queen: 
-            self.slidingMoves(row, column, queenDirections, friendlyOccupied, self.occupied, possibleMoves)
+            self.slidingMoves(row, column, queenDirections, friendlyOccupied, self.occupied, possibleMoves) # Everywhere queen can move
         elif pieceType == pawn:
-            direction = -1 if pieceColour == white else 1
+            direction = -1 if pieceColour == white else 1 # Direction pawn moves in based off of colour
             potRow = row + direction
-            if 0 <= potRow < 8:
-                if self.squarePiece[potRow * 8 + column] == empty:
+            if 0 <= potRow < 8: # If inside board boundaries
+                if self.squarePiece[potRow * 8 + column] == empty: # If square in front of pawn is empty
                     possibleMoves.append((potRow, column))
-                    if pieceColour == white and row == 6 and self.squarePiece[(potRow - 1) * 8 + column] == empty: possibleMoves.append((potRow - 1, column))
-                    elif pieceColour == black and row == 1 and self.squarePiece[(potRow + 1) * 8 + column] == empty: possibleMoves.append((potRow + 1, column))
+                    if pieceColour == white and row == 6 and self.squarePiece[(potRow - 1) * 8 + column] == empty: # If square 2 in front is also empty
+                        possibleMoves.append((potRow - 1, column))
+                    elif pieceColour == black and row == 1 and self.squarePiece[(potRow + 1) * 8 + column] == empty: # If square 2 in front is also empty
+                        possibleMoves.append((potRow + 1, column))
 
-            for columnChange in [-1, 1]:
-                potRow, potColumn = row + direction, column + columnChange
-                if 0 <= potRow < 8 and 0 <= potColumn < 8:
-                    target = self.squarePiece[potRow * 8 + potColumn]
-                    if target != empty and (target & 24) != pieceColour: possibleMoves.append((potRow, potColumn))
-                    elif self.enPassantTarget == (potRow, potColumn): possibleMoves.append((potRow, potColumn))
+            for columnChange in [-1, 1]: # For both directions pawn can capture (left and right)
+                potRow, potColumn = row + direction, column + columnChange # New row and column
+                if 0 <= potRow < 8 and 0 <= potColumn < 8: # If inside board boundaries
+                    target = self.squarePiece[potRow * 8 + potColumn] # Piece on target square
+                    if target != empty and (target & 24) != pieceColour: # If there is an ENEMY piece
+                        possibleMoves.append((potRow, potColumn))
+                    elif self.enPassantTarget == (potRow, potColumn): # Allows en passant
+                        possibleMoves.append((potRow, potColumn))
 
         return possibleMoves
 
     def fullyLegalMove(self, row, column):
-        piece = self.squarePiece[row * 8 + column]
-        if piece == empty: return []
-        validMoves = []
+        piece = self.squarePiece[row * 8 + column] # Piece at specified coordinates
+        if piece == empty: 
+            return [] # No possible moves if no piece
+        validMoves = [] # List of all completely legal moves
         
-        for endRow, endColumn in self.calculateLegalMoves(row, column):
-            targetPiece = self.squarePiece[endRow * 8 + endColumn]
-            capturedSquare = None
-            capturedPiece = targetPiece
+        for endRow, endColumn in self.calculateLegalMoves(row, column): # For all moves that are possible movement
+            targetPiece = self.squarePiece[endRow * 8 + endColumn] # Target square
+            capturedSquare = None # Square captured from en passant
 
-            if (piece & 7) == pawn and targetPiece == empty and column != endColumn:
-                if self.enPassantTarget == (endRow, endColumn):
-                    capturedSquare = (endRow - (-1 if (piece & 24) == white else 1), endColumn)
-                    capturedPiece = self.squarePiece[capturedSquare[0] * 8 + capturedSquare[1]]
+            if (piece & 7) == pawn and targetPiece == empty and column != endColumn: # If piece is a pawn and moving to empty square and it moves left or right (just if a pawn is capturing)
+                if self.enPassantTarget == (endRow, endColumn): # If it is an en passant
+                    capturedSquare = (endRow - (-1 if (piece & 24) == white else 1), endColumn) # -1 or 1 depending on direction pawn is moving. Subtracting this means that square that is being captured is 1 below where the pawn moves. En passant rules...
+                    targetPiece = self.squarePiece[capturedSquare[0] * 8 + capturedSquare[1]] # Index of target piece
 
-            self.simulateMove(piece, (row, column), (endRow, endColumn), capturedPiece, capturedSquare)
-            if not self.kingCheck(piece & 24): 
+            self.simulateMove(piece, (row, column), (endRow, endColumn), targetPiece, capturedSquare) # Simulate making move. Just moves piece no other stuff (such as turn colour chaging, moves going up...) 
+            if not self.kingCheck(piece & 24): # If player making move isn't put in check becuase of move it is a move that is fully legal and can be made
                 validMoves.append((endRow, endColumn))
-            self.undoMove(piece, (row, column), (endRow, endColumn), capturedPiece, capturedSquare)
+            self.undoMove(piece, (row, column), (endRow, endColumn), targetPiece, capturedSquare) # Undo the move simulation
 
-        return validMoves
+        return validMoves # Return list of all fully legal moves
 
     def legalMoves(self, colour):
         for piece, bitboard in self.piecePositions.items():
-            if (piece & 24) == colour:
-                board = bitboard
-                while board:
-                    lsb = board & -board
-                    index = lsb.bit_length() - 1
-                    if self.fullyLegalMove(index // 8, index % 8): 
-                        return True
-                    board &= board - 1
-        return False
+            if (piece & 24) == colour: # For all the player's bitboards
+                board = bitboard # To ensure actual bitboard isn't messed with
+                while board: # While there is still at least 1, 1 bit continue
+                    lsb = board & -board # '-' flips all bits then adds 1. This means that where the least significant 1 bit is in original number it would be 0 in flipped. but adding 1 means that there is a carry chain that ends at least significant bit and makes it 1. And therefore only has that bit
+                    index = lsb.bit_length() - 1 # 'bit_length' returns bits needed to write number. -1 gives index from 0 to 63.
+                    if self.fullyLegalMove(index // 8, index % 8): # Finds what moves that specific piece can make that are fully legal. Uses integer division and modulo to ge row and column
+                        return True # If a move can be made, there are still legal moves that can be played
+                    board &= board - 1 # Clears least significant bit and continues
+        return False # If after going through all the pieces that could move and not finding any legal moves, there are no legal moves
 
     def isPromotable(self, piece, row):
-        return (piece == (white | pawn) and row == 0) or (piece == (black | pawn) and row == 7)
+        return (piece == (white | pawn) and row == 0) or (piece == (black | pawn) and row == 7) # If pawn is on the last row it can move to
 
     def insufficientMat(self):
         if (self.piecePositions[black | pawn] or self.piecePositions[black | rook] or self.piecePositions[black | queen] or self.piecePositions[white | pawn] or self.piecePositions[white | rook] or self.piecePositions[white | queen]): 
-            return False
+            return False # If there are pawns, rooks or queens then there is sufficient material
         totKnights = self.piecePositions[black | knight].bit_count() + self.piecePositions[white | knight].bit_count()
         totBishops = self.piecePositions[black | bishop].bit_count() + self.piecePositions[white | bishop].bit_count()
-        return (totBishops + totKnights) < 2
+        return (totBishops + totKnights) < 2 # If amount of knights and bishops is less than 2 then there is insufficient material, Technically not FIDE accurate but I would have to hard code specific scenarios which is too long and annoying 
 
     def moveCastleRook(self, piece, start, end, undo=False):
         if piece not in (white | king, black | king): 
@@ -463,7 +471,7 @@ class logic:
         if captured:
             if capturedSquare:
                 self.updateSquare(capturedSquare[0], capturedSquare[1], empty)
-            else:        
+            else:
                 self.updateSquare(end[0], end[1], empty)
 
         self.updateSquare(start[0], start[1], empty)
