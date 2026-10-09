@@ -9,14 +9,14 @@ class logic:
     def __init__(self):
         self.gameOverMessage = None
         self.moves = 0
-        self.halfmoveClock = 0
+        self.halfmoveClock = 0 # Moves since last irreversible move (pawn movement, capture, promotion...)
         self.turnColour = white
         self.moveHistory = []
         self.redoHistory = []
         self.positionHistory = []
         self.positionCounts = {}
         self.squarePiece = [empty] * 64
-        self.enPassantTarget = None
+        self.enPassantTarget = None # If there is a possible en passant and where
         self.hash = 0
         self.whiteOccupied = 0
         self.blackOccupied=  0
@@ -107,7 +107,7 @@ class logic:
                 self.evaluationScore += evaluation.getPieceScore(piece, index, self.endgame) # Starts off evaluation score. Ready to be tracked rest of game.
 
     def loadFEN(self, fen):
-        try:
+        try: # If anythign goes wrong instantly goes to except block which returns False showing function didn't work since FEN string inputted was invalid
 
             # Splits the FEN string into the 6 components
 
@@ -415,7 +415,7 @@ class logic:
             if (piece & 7) == pawn and targetPiece == empty and column != endColumn: # If piece is a pawn and moving to empty square and it moves left or right (just if a pawn is capturing)
                 if self.enPassantTarget == (endRow, endColumn): # If it is an en passant
                     capturedSquare = (endRow - (-1 if (piece & 24) == white else 1), endColumn) # -1 or 1 depending on direction pawn is moving. Subtracting this means that square that is being captured is 1 below where the pawn moves. En passant rules...
-                    targetPiece = self.squarePiece[capturedSquare[0] * 8 + capturedSquare[1]] # Index of target piece
+                    targetPiece = self.squarePiece[capturedSquare[0] * 8 + capturedSquare[1]] # Piece at target position of en passant (1 row below where pawn moves)
 
             self.simulateMove(piece, (row, column), (endRow, endColumn), targetPiece, capturedSquare) # Simulate making move. Just moves piece no other stuff (such as turn colour chaging, moves going up...) 
             if not self.kingCheck(piece & 24): # If player making move isn't put in check becuase of move it is a move that is fully legal and can be made
@@ -448,66 +448,68 @@ class logic:
 
     def moveCastleRook(self, piece, start, end, undo=False):
         if piece not in (white | king, black | king): 
-            return
-        row = 7 if piece == (white | king) else 0
+            return # If piece isn't a king don't have error and instead just return
+        row = 7 if piece == (white | king) else 0 # Starting rank of king for each colour
 
-        if start == (row, 4) and end == (row, 6): 
+        if start == (row, 4) and end == (row, 6): # If queen side castle
             if undo:
-                rookStart, rookEnd = ((row, 5), (row, 7)) 
+                rookStart, rookEnd = ((row, 5), (row, 7)) # If undoing castle
             else:
-                rookStart, rookEnd = ((row, 7), (row, 5))
-        elif start == (row, 4) and end == (row, 2):  
+                rookStart, rookEnd = ((row, 7), (row, 5)) # If castling
+        elif start == (row, 4) and end == (row, 2): # If king side castle
             if undo:
-                rookStart, rookEnd = ((row, 3), (row, 0))
+                rookStart, rookEnd = ((row, 3), (row, 0)) # If undoing castle
             else:
-                rookStart, rookEnd = ((row, 0), (row, 3))
+                rookStart, rookEnd = ((row, 0), (row, 3)) # If castling
         else: 
-            return
+            return # No need for rook to move
 
-        self.updateSquare(rookStart[0], rookStart[1], empty)
-        self.updateSquare(rookEnd[0], rookEnd[1], (piece & 24) | rook)
+        self.updateSquare(rookStart[0], rookStart[1], empty) # Remove rook from old square
+        self.updateSquare(rookEnd[0], rookEnd[1], (piece & 24) | rook) # Add rook to new square (and it's bitboard)
 
     def simulateMove(self, piece, start, end, captured, capturedSquare=None):
-        if captured:
-            if capturedSquare:
-                self.updateSquare(capturedSquare[0], capturedSquare[1], empty)
-            else:
-                self.updateSquare(end[0], end[1], empty)
+        if captured: # If there is a capture
+            if capturedSquare: # If en passant
+                self.updateSquare(capturedSquare[0], capturedSquare[1], empty) # Remove piece for en passant
+            else: # If normal capture. Move to square you want to capture
+                self.updateSquare(end[0], end[1], empty) # Remove piece on target square
 
-        self.updateSquare(start[0], start[1], empty)
-        self.updateSquare(end[0], end[1], piece)
+        self.updateSquare(start[0], start[1], empty) # Remove old moving piece
+        self.updateSquare(end[0], end[1], piece) # Add new piece after its moved
 
-        if piece in (white | king, black | king): 
+        if piece in (white | king, black | king): # If king is moving run moveCastleRook function. It will determine whether rook needs to be moved or not
             self.moveCastleRook(piece, start, end)
 
     def undoMove(self, piece, start, end, captured, capturedSquare=None):
-        self.updateSquare(end[0], end[1], empty)
-        self.updateSquare(start[0], start[1], piece)
+        self.updateSquare(end[0], end[1], empty) # Remove the piece from where it moved to before
+        self.updateSquare(start[0], start[1], piece) # Add piece to where it moved
 
         if captured:
-            if capturedSquare:
-                self.updateSquare(capturedSquare[0], capturedSquare[1], captured)
+            if capturedSquare: # If there was an en passant
+                self.updateSquare(capturedSquare[0], capturedSquare[1], captured) # Add pawn captured from en passant back
             else:
-                self.updateSquare(end[0], end[1], captured)
+                self.updateSquare(end[0], end[1], captured) # Add piece that was captured back
 
-        if piece in (white | king, black | king): 
+        if piece in (white | king, black | king): # If king moved run moveCastleRook function. It will determine whether rook needs to be moved or not
             self.moveCastleRook(piece, start, end, undo=True)
 
     def makeMove(self, startRow, startColumn, endRow, endColumn, simulation=False):
-        movingPiece = self.squarePiece[startRow * 8 + startColumn]
-        target = self.squarePiece[endRow * 8 + endColumn]
-        start, end = (startRow, startColumn), (endRow, endColumn)
+        movingPiece = self.squarePiece[startRow * 8 + startColumn] # Piece that is moving from 64 element array
+        target = self.squarePiece[endRow * 8 + endColumn] # Square that is being captured from 64 element array
+        start, end = (startRow, startColumn), (endRow, endColumn) # Tuples storing start row and column and end row and column
 
-        enPassantBefore = self.enPassantTarget
-        castleRightsBefore = self.castleRights
-        self.moveCastleRook(movingPiece, start, end)
+        enPassantBefore = self.enPassantTarget # Stores en passant before for move history
+        castleRightsBefore = self.castleRights # Store castle rights before for move history
+        self.moveCastleRook(movingPiece, start, end) # Will only do something if there is a castle
 
         if movingPiece == (white | king): 
-            self.castleRights &= ~0b0011
+            self.castleRights &= ~0b0011 # If white king moves remove both its castling rights. & makes sure it only changes the castle rights for white and keeps the same castle rights for black
         elif movingPiece == (black | king):
-            self.castleRights &= ~0b1100
+            self.castleRights &= ~0b1100  # If black king moves remove both its castling rights & makes sure it only changes the castle rights for wblackhite and keeps the same castle rights for white
 
-        if start == (7, 0) or end == (7, 0): 
+        # Remove castle right for rook if it moves or is captured
+
+        if start == (7, 0) or end == (7, 0):
             self.castleRights &= ~0b0001
         if start == (7, 7) or end == (7, 7): 
             self.castleRights &= ~0b0010
@@ -516,251 +518,243 @@ class logic:
         if start == (0, 7) or end == (0, 7): 
             self.castleRights &= ~0b1000
 
-        if self.castleRights != castleRightsBefore:
-            self.hash ^= zobristCastling[castleRightsBefore]
-            self.hash ^= zobristCastling[self.castleRights]
+        if self.castleRights != castleRightsBefore: # If move removes castling rights update hash
+            self.hash ^= zobristCastling[castleRightsBefore] # Remove old hash
+            self.hash ^= zobristCastling[self.castleRights] # Add new hash
 
         enPassantCapture = False
         capturedPiece = target
         capturedSquare = None
 
+        # If a pawn is moving forward by 1 and it changes column and it moves to an en passant target (just if move is an en passant)
+
         if (movingPiece & 7) == pawn and target == empty and startColumn != endColumn and self.enPassantTarget == (endRow, endColumn):
-            capturedRow = endRow - (-1 if (movingPiece & 24) == white else 1)
-            capturedPiece = self.squarePiece[capturedRow * 8 + endColumn]
+            capturedRow = endRow - (-1 if (movingPiece & 24) == white else 1)  # -1 or 1 depending on direction pawn is moving. Subtracting this means that square that is being captured is 1 below where the pawn moves. En passant rules...
+            capturedPiece = self.squarePiece[capturedRow * 8 + endColumn] # Piece at target position of en passant (1 row below where pawn moves)
             if capturedPiece != empty:
-                self.updateSquare(capturedRow, endColumn, empty)
-                capturedSquare = (capturedRow, endColumn)
+                self.updateSquare(capturedRow, endColumn, empty) # Remove pawn from en passant
+                capturedSquare = (capturedRow, endColumn) # Store coordinates of where piece was captured for move history
                 enPassantCapture = True
-                if not simulation: 
-                    sounds["capture"].play()
 
         if not simulation:
-            if target != empty:
+            if target != empty or enPassantCapture: # If a piece was captured play the capture sound
                 sounds["capture"].play()
             else:
-                sounds["move"].play()
-            visuals.possibleMoves.clear()
-            self.redoHistory.clear()
+                sounds["move"].play() # Otherwise a piece just moved so play the movement sound
+            visuals.possibleMoves.clear() # Clear the visuals that show where the piece can move
+            self.redoHistory.clear() # Clear redo so that redoing won't cause a bug where game completely changes
 
-        self.updateSquare(startRow, startColumn, empty)
+        self.updateSquare(startRow, startColumn, empty) # Removes piece from square it moved from
         promotion = None
         if self.isPromotable(movingPiece, endRow):
-            if simulation or self.turnColour == botColour:
-                promotion = self.turnColour | queen
+            if simulation or self.turnColour == botColour: # Autopromote to queen if bot is playing
+                promotion = self.turnColour | queen # forms the full code for the piece
             else:
-                promotion = visuals.choosePromotion(self.turnColour)
+                promotion = visuals.choosePromotion(self.turnColour) # Trigger promotion gui
 
-        pieceToPlace = promotion if promotion is not None else movingPiece
-        self.updateSquare(endRow, endColumn, pieceToPlace)
+        pieceToPlace = promotion if promotion else movingPiece
+        self.updateSquare(endRow, endColumn, pieceToPlace) # Add piece to new position
 
         enPassantTarget = None
-        if (movingPiece & 7) == pawn and abs(endRow - startRow) == 2:
-            enemyPawn = black | pawn if (movingPiece & 24) == white else white | pawn
-            if endColumn > 0 and self.squarePiece[endRow * 8 + endColumn - 1] == enemyPawn:
-                enPassantTarget = ((startRow + endRow) // 2, startColumn)
-            elif endColumn < 7 and self.squarePiece[endRow * 8 + endColumn + 1] == enemyPawn:
-                enPassantTarget = ((startRow + endRow) // 2, startColumn)
+        if (movingPiece & 7) == pawn and abs(endRow - startRow) == 2: # If a pawn has moved 2 squares forward in one go...
+            enemyPawn = black | pawn if (movingPiece & 24) == white else white | pawn # Based off what colour the pawn was find what the code of the enemy piece will be. It will be (colour | pawn)
+            if endColumn > 0 and self.squarePiece[endRow * 8 + endColumn - 1] == enemyPawn: # If in board bounds and the piece next to where pawn moved has an enemy pawn
+                enPassantTarget = ((startRow + endRow) // 2, startColumn) # Row between where pawn started and where pawn ended (where pawn capturing would move)
+            elif endColumn < 7 and self.squarePiece[endRow * 8 + endColumn + 1] == enemyPawn: # If in board bounds and the piece next to where pawn moved has an enemy pawn
+                enPassantTarget = ((startRow + endRow) // 2, startColumn) # Row between where pawn started and where pawn ended (where pawn capturing would move)
 
-        self.setEnPassantTarget(enPassantTarget)
-        self.switchTurn()
-        self.halfmoveClock = 0 if (movingPiece & 7) == pawn or target != empty or enPassantCapture else self.halfmoveClock + 1
-        currentHash = self.hash
-        self.positionCounts[currentHash] = self.positionCounts.get(currentHash, 0) + 1
+        self.setEnPassantTarget(enPassantTarget) # Set en passant target just assigned as a possible en passant
+        self.switchTurn() # Does what needs to be done to switch turn (change hash and turn colour)
+        self.halfmoveClock = 0 if (movingPiece & 7) == pawn or target != empty or enPassantCapture else self.halfmoveClock + 1 # Change half move clock if there was a capture or a pawn moved
+        self.positionCounts[self.hash] = self.positionCounts.get(self.hash, 0) + 1
 
-        if simulation:
+        if simulation: # If not an actual move (just simulation) don't add the move to move history and redo the data needed to undo the move
             return (
                 movingPiece, 
                 start, 
                 end, 
                 capturedPiece, 
                 capturedSquare, 
-                enPassantBefore,
-                self.halfmoveClock, 
-                castleRightsBefore, 
-                currentHash
+                enPassantBefore, # Possible en passasnt target before the move
+                self.halfmoveClock, # Half move clock before
+                castleRightsBefore, # Castle rights before the move
+                self.hash # Unique 64 bit hash of board state
             )
-        else:
-            self.moveHistory.append((
+        else: # If it is an actual move
+            self.moveHistory.append(( # Add all info needed to move history
                 movingPiece, 
                 start, 
                 end, 
                 capturedPiece, 
                 capturedSquare,
-                enPassantBefore,
-                castleRightsBefore, 
-                promotion, 
-                self.castleRights, 
-                self.enPassantTarget, 
-                self.halfmoveClock
+                enPassantBefore, # Possible en passasnt target before the move
+                castleRightsBefore, # Castle rights before the move
+                promotion, # Piece promoted to (None if no promotion)
+                self.castleRights,  # Castle rights after the move
+                self.enPassantTarget, # Possbile en passant after the move
+                self.halfmoveClock # Half move clock before
             ))
-            self.positionHistory.append(currentHash)
+            self.positionHistory.append(self.hash) # Adds the hash to the list of board states that have happened
             self.moves += 1                
-            if self.endgame != evaluation.isEndgame(self):
-                self.createSquareTable()
-            visuals.activeSquare = None
-            visuals.possibleMoves.clear()
-            visuals.lastMove = (startRow, startColumn, endRow, endColumn)
-            visuals.redraw = True
+            if self.endgame != evaluation.isEndgame(self): # Checks if the game is now in endgame so that this doesn't need to be recalculated 100s of times during the bot's search
+                self.createSquareTable() # Recreates the evaluation score using the position bonus tables for endgame instead so that score is accurate
+            visuals.activeSquare = None # Deselects square user had clicked
+            visuals.possibleMoves.clear() # Removes all dots showing where piece selected can move
+            visuals.lastMove = (startRow, startColumn, endRow, endColumn) # Store move made as tuple so that it can be shown when the board is updated
+            visuals.redraw = True # Redraws the board
 
     def unmakeMove(self, undoInfo):
-        movingPiece, start, end, capturedPiece, capturedSquare, enPassantBefore, halfmoveClock, castleRightsBefore, currentHash = undoInfo
-        self.positionCounts[currentHash] -= 1
+        movingPiece, start, end, capturedPiece, capturedSquare, enPassantBefore, halfmoveClock, castleRightsBefore, currentHash = undoInfo # Info supplied by makeMove when it is used in a simulation
+        self.positionCounts[currentHash] -= 1 # Remove current position from the dictionary holding how many times each board state has been reached. Prevents false threefold repetitions
         if self.positionCounts[currentHash] == 0:
-            del self.positionCounts[currentHash]
+            del self.positionCounts[currentHash] # Deletes the entry from the dictionary if there was only 1 occurence of that board state
             
         self.switchTurn()
         self.halfmoveClock = halfmoveClock
-        if self.castleRights != castleRightsBefore:
-            self.hash ^= zobristCastling[self.castleRights]
-            self.hash ^= zobristCastling[castleRightsBefore]
-            self.castleRights = castleRightsBefore
-        self.setEnPassantTarget(enPassantBefore)
-
-        self.updateSquare(end[0], end[1], empty)
-        self.updateSquare(start[0], start[1], movingPiece)
+        if self.castleRights != castleRightsBefore: # If move removes castling rights update hash
+            self.hash ^= zobristCastling[self.castleRights] # Remove hash from new move
+            self.hash ^= zobristCastling[castleRightsBefore] # Add hash from old move
+            self.castleRights = castleRightsBefore # Updates the castle rights
+        self.setEnPassantTarget(enPassantBefore) # Set en passant target to what it was before the move
+        self.updateSquare(end[0], end[1], empty) # Remove piece from new square
+        self.updateSquare(start[0], start[1], movingPiece) # Add piece to square it moved from
         
-        if capturedPiece != empty:
-            if capturedSquare:
-                self.updateSquare(capturedSquare[0], capturedSquare[1], capturedPiece)
+        if capturedPiece != empty: # If there was a capture
+            if capturedSquare: # If it was en passant
+                self.updateSquare(capturedSquare[0], capturedSquare[1], capturedPiece) # Add pawn back to square in front of where pawn moved
             else:
-                self.updateSquare(end[0], end[1], capturedPiece)
+                self.updateSquare(end[0], end[1], capturedPiece) # Add piece back to where the piece moved to
 
-        self.moveCastleRook(movingPiece, start, end, undo=True)
+        self.moveCastleRook(movingPiece, start, end, undo=True) # Automatically handles whether the rook actually needs to be moved or not
 
     def gameState(self):
         
-        if self.positionCounts.get(self.hash, 0) >= 3:
+        if self.positionCounts.get(self.hash, 0) >= 3: # If the board state has been reached 2 times before (this is the third time)
             self.gameOverMessage = "Three-fold \nRepetition!\nNobody  wins!"
             sounds["checkmate"].play()
             return
 
         inCheck = self.kingCheck(self.turnColour)
-        if not self.legalMoves(self.turnColour):
-            if inCheck:
+        if not self.legalMoves(self.turnColour): # If there are no legal moves
+            if inCheck: # If the king is in check with no legal moves, it is checkmate
                 winner = "Black" if self.turnColour == white else "White"
                 self.gameOverMessage = f"Checkmate!\n{winner}  wins!"
                 sounds["checkmate"].play()
-            else:
+            else: # If the king isn't in check but there are no legal moves, it is stalemate
                 self.gameOverMessage = "Stalemate!\nNobody  wins!"
                 sounds["checkmate"].play()
-        elif inCheck: 
+        elif inCheck: # Play check sound when the king is checked
             sounds["check"].play()
-        elif self.halfmoveClock >= 100:
+        elif self.halfmoveClock >= 100: # If it has been 50 moves since last irreversible move, end the game
             self.gameOverMessage = "50-move rule\nDraw!"
             sounds["checkmate"].play()
-        elif self.insufficientMat():
+        elif self.insufficientMat(): # If there isn't enough material for a checkmate to occur, end the game
             self.gameOverMessage = "Insufficient  Material! \n Nobody  wins"
             sounds["checkmate"].play()
         else: 
-            self.gameOverMessage = None
+            self.gameOverMessage = None # Otherwise the game shouldn't end. Clear gameover message to signify this
 
     def previousMove(self):
-        if not self.moveHistory: 
+        if not self.moveHistory: # If there isn't a previous move just return (so that it doesn't crash)
             return
+        
+        from engine import visuals # reimports visuals so that the variables in it that change can be used and have the latest values seen
 
-        move = self.moveHistory.pop()
+        move = self.moveHistory.pop() # Move data is the last move in the moveHistory array
 
-        if self.positionHistory: 
-            oldHash = self.positionHistory.pop()
-            self.positionCounts[oldHash] -= 1
+        if self.positionHistory: # If there is a hash in the positionHistory array
+            oldHash = self.positionHistory.pop() # The old hash is the last element of the array
+            self.positionCounts[oldHash] -= 1 # Remove hash from dictionary that counts for threefold repetition
             if self.positionCounts[oldHash] == 0:
-                del self.positionCounts[oldHash]
+                del self.positionCounts[oldHash] # Deletes the entry from the dictionary if there was only 1 occurence of that board state
 
-        self.redoHistory.append(move)
+        self.redoHistory.append(move) # Add move data to redo history array so that the move can be quickly redone
 
-        piece, start, end, capturedPiece, capturedSquare, enPassantBefore, castleRightsBefore, promotion, castleRightsAfter, enPassantAfter, halfmoveClock = move
+        piece, start, end, capturedPiece, capturedSquare, enPassantBefore, castleRightsBefore, promotion, castleRightsAfter, enPassantAfter, halfmoveClock = move # Unpacks the data
         self.switchTurn()
         self.moves -= 1
         self.halfmoveClock = halfmoveClock - 1
 
-        if self.castleRights != castleRightsBefore:
-            self.hash ^= zobristCastling[self.castleRights]
-            self.hash ^= zobristCastling[castleRightsBefore]
-            self.castleRights = castleRightsBefore
-
-        self.setEnPassantTarget(enPassantBefore)
-
-        self.updateSquare(end[0], end[1], empty)
-        self.updateSquare(start[0], start[1], piece)
+        if self.castleRights != castleRightsBefore: # If move removes castling rights, update hash
+            self.hash ^= zobristCastling[self.castleRights] # Untoggle hash from new castling rights
+            self.hash ^= zobristCastling[castleRightsBefore] # Toggle hash from old castling rights
+            self.castleRights = castleRightsBefore # Updates the castle rights
+        self.setEnPassantTarget(enPassantBefore) # Set en passant target to what it was before the move
+        self.updateSquare(end[0], end[1], empty) # Remove piece from new square
+        self.updateSquare(start[0], start[1], piece) # Add piece to square it moved from
             
-        if capturedPiece != empty:
-            if capturedSquare:
-                self.updateSquare(capturedSquare[0], capturedSquare[1], capturedPiece)
+        if capturedPiece != empty: # If there was a capture
+            if capturedSquare: # If it was en passant
+                self.updateSquare(capturedSquare[0], capturedSquare[1], capturedPiece) # Add pawn back to square in front of where pawn moved
             else:
-                self.updateSquare(end[0], end[1], capturedPiece)
-            sounds["capture"].play()
+                self.updateSquare(end[0], end[1], capturedPiece) # Add piece back to where the piece moved to
+            sounds["capture"].play() # Since there was a capture play the capture sound
         else:
-            sounds["move"].play()
+            sounds["move"].play() # Otherwise it was just a move so play the move sound
 
-        self.moveCastleRook(piece, start, end, undo=True)
+        self.moveCastleRook(piece, start, end, undo=True) # Automatically handles whether the rook actually needs to be moved or not
 
-        if self.endgame != evaluation.isEndgame(self):
+        if self.endgame != evaluation.isEndgame(self): # Checks if the game is now in endgame so that this doesn't need to be recalculated 100s of times during the bot's search
             self.createSquareTable()
-        from engine import visuals
-        visuals.activeSquare = None
-        visuals.possibleMoves.clear()
-        visuals.lines.clear()
-        visuals.strategyCircles.clear()
-        constants.premoves.clear()
-        self.gameState()
+        visuals.activeSquare = None # Deselects square user had clicked
+        visuals.possibleMoves.clear() # Removes all dots showing where piece selected can move
+        constants.premoves.clear() # Remove all premoves that where queued
+        self.gameState() # Check the gamestate again to see if it has changed (such as from checkmate to not checkmate)
         
-        if len(self.moveHistory) > 0:
+        if len(self.moveHistory) > 0: # If there was a move before
             secondLastMove = self.moveHistory[-1]
-            visuals.lastMove = (secondLastMove[1][0], secondLastMove[1][1], secondLastMove[2][0], secondLastMove[2][1])
+            visuals.lastMove = (secondLastMove[1][0], secondLastMove[1][1], secondLastMove[2][0], secondLastMove[2][1]) # Draw move made before so that it can be seen easily on board
         else:
             visuals.lastMove = None
-        visuals.redraw = True
+        visuals.redraw = True # Redraw the board
 
     def redoMove(self):
-        from engine import visuals
-        if not self.redoHistory: 
+        if not self.redoHistory: # If there is not a next move, return (so it doesn't crash)
             return
+        
+        from engine import visuals # reimports visuals so that the variables in it that change can be used and have the latest values seen
 
-        move = self.redoHistory.pop()
-        piece, start, end, capturedPiece, capturedSquare, enPassantBefore, castleRightsBefore, promotion, castleRightsAfter, enPassantAfter, halfmoveClock = move
+        move = self.redoHistory.pop() # Move data is the last move in the redoHistory array
+        piece, start, end, capturedPiece, capturedSquare, enPassantBefore, castleRightsBefore, promotion, castleRightsAfter, enPassantAfter, halfmoveClock = move # Unpacks the data of the last move
 
         self.switchTurn()
         self.moves += 1
         self.halfmoveClock = halfmoveClock
 
-        if castleRightsBefore != castleRightsAfter:
-            self.hash ^= zobristCastling[castleRightsBefore]
-            self.hash ^= zobristCastling[castleRightsAfter]
-            self.castleRights = castleRightsAfter
+        if castleRightsBefore != castleRightsAfter: # If move removes castling rights, update hash
+            self.hash ^= zobristCastling[castleRightsBefore] # Untoggle hash of old castle rights
+            self.hash ^= zobristCastling[castleRightsAfter ]# Toggle hash of new castle rights
+            self.castleRights = castleRightsAfter # Update castling rights
 
-        self.setEnPassantTarget(enPassantAfter)
+        self.setEnPassantTarget(enPassantAfter) # Set en passant target to what it was before the move
 
         if capturedPiece != empty:
-            sounds["capture"].play()
+            sounds["capture"].play() # Play capture sound if there was a capture
         else: 
-            sounds["move"].play()
+            sounds["move"].play() # Play move sound if no capture
 
-        self.moveCastleRook(piece, start, end)
-        self.updateSquare(start[0], start[1], empty)
+        self.moveCastleRook(piece, start, end) # Automatically handles whether the rook actually needs to be moved or not
+        self.updateSquare(start[0], start[1], empty) # Clear the square where the piece moved
 
-        if capturedPiece != empty and capturedSquare:
-            self.updateSquare(capturedSquare[0], capturedSquare[1], empty)
+        if capturedPiece != empty and capturedSquare: # If there was an en passant
+            self.updateSquare(capturedSquare[0], capturedSquare[1], empty) # Remove pawn from square in front of where pawn moved
         if promotion is not None:
-            self.updateSquare(end[0], end[1], promotion)
+            self.updateSquare(end[0], end[1], promotion) # Add piece that as promoted to
         else:
-            self.updateSquare(end[0], end[1], piece)
+            self.updateSquare(end[0], end[1], piece) # Add piece to where it moved when it captured
 
-        self.moveHistory.append(move)
-        currentHash = self.hash
-        self.positionHistory.append(currentHash)
-        if currentHash in self.positionCounts:
-            self.positionCounts[currentHash] += 1
+        self.moveHistory.append(move) # Add move to moveHistory array
+        self.positionHistory.append(self.hash) # Adds the hash to the list of board states that have happened
+        if self.hash in self.positionCounts:
+            self.positionCounts[self.hash] += 1 # Increment entry if it existed
         else:
-            self.positionCounts[currentHash] = 1
+            self.positionCounts[self.hash] = 1 # Creates entry if it didn't exist
                 
-        if self.endgame != evaluation.isEndgame(self):
+        if self.endgame != evaluation.isEndgame(self): # Checks if the game is now in endgame so that this doesn't need to be recalculated 100s of times during the bot's search
             self.createSquareTable()
-        visuals.activeSquare = None
-        visuals.possibleMoves.clear()
-        visuals.lines.clear()
-        visuals.strategyCircles.clear()
-        constants.premoves.clear()
-        visuals.lastMove = (start[0], start[1], end[0], end[1])
-        
-        self.gameState()
-        visuals.redraw = True
+        visuals.activeSquare = None # Deselects square user had clicked
+        visuals.possibleMoves.clear() # Removes all dots showing where piece selected can move
+        constants.premoves.clear() # Remove all premoves that where queued
+        visuals.lastMove = (start[0], start[1], end[0], end[1]) # Shows move that was made with highlights when board is drawn
+        self.gameState() # Check the gamestate again to see if it has changed (such as from checkmate to not checkmate)
+        visuals.redraw = True # Redraw the board
