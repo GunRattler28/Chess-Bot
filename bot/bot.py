@@ -4,11 +4,16 @@ from engine.constants import white, black, empty, pawn, king
 from bot import evaluation
 
 aspirationWindow = 50
-tableSize = 1048576 # Size of transposition table. 2 raised to power of 20. Means that (table size - 1) can be used to create a mask of all 1s.
+exact = 0
+upper = 1
+lower = 2
+tableSize = 1048576 # Size of transposition table. 2 raised to power of 20. Means that (table size - 1) can be used to create a mask of all 1s and a 0 at the start
 transpositionTable = [None] * tableSize # Creates an empty transposition table
 historyTable = [0] * 4096   # All moves. From every square to every other square. 64 * 64
 pruneMoves = []
 minimumDepth = 3 # The depth the bot has to be at before it can use null move pruning. The earlier it is used (higher value) the more safer it is as the opponent has more time to capitalise. The later is is used (lower value) the higher the gain and risk
+nodes = 0
+
 for i in range(50):
     pruneMoves.append([None, None]) # Creates 50, 2 element long arrays
 
@@ -29,11 +34,11 @@ def getEvaluation(hash, depth, alpha, beta):
         flag = position[3]
         bestMove = position[4]
         if position[1] >= depth: # Making sure the depth the position was evaluated to is adequate
-            if flag == "exact":
+            if flag == exact:
                 return score, bestMove # If score is exact move score return score and best move
-            elif flag == "upper" and score <= alpha:
+            elif flag == upper and score <= alpha:
                 return score, bestMove # If score is upperbound return score and best move
-            elif flag == "lower" and score >= beta:
+            elif flag == lower and score >= beta:
                 return score, bestMove # If score is lowerbound return score and best move
         return None, bestMove # Only return bestMove if evaluation wasn't to an adequate depth
     return None, None # If nothing else just return None, None so that whatever called the functions can get a response
@@ -103,9 +108,14 @@ def scoreMove(board, move, ply, previousBestMove=None):
 def minimax(board, depth, ply, maximisingPlayer, startTime, timeLimit, alpha=-999999, beta=999999, allowNull=True):
     if constants.abortSearch:
         return 0
-    if (pygame.time.get_ticks() - startTime) > timeLimit:
-        constants.abortSearch = True
+
+    global nodes
+    nodes += 1
+    if (nodes & 2047) == 0: # Activates every 2048 nodes
+        if (pygame.time.get_ticks() - startTime) > timeLimit:
+            constants.abortSearch = True
         return 0
+    
     if depth <= 0:
         return quiescentSearch(board, alpha, beta, maximisingPlayer, ply, startTime, timeLimit)
     if board.halfmoveClock >= 100 or board.positionCounts.get(board.hash, 0) >= 3:
@@ -140,14 +150,17 @@ def minimax(board, depth, ply, maximisingPlayer, startTime, timeLimit, alpha=-99
 
     bestScore = -999999 if maximisingPlayer else 999999
     moves = getAllPossibleMoves(board, currentColour)
-    moveScores = {}
+    scoredMoves = []
+    
     for move in moves:
-        moveScores[move] = scoreMove(board, move, ply, bestMove) # Dictionary containing each move and their priority based off of scoreMove()
-    moves.sort(key=moveScores.get, reverse=True) # Sort by values in moveScores
+        moveScore = scoreMove(board, move, ply, bestMove)
+        scoredMoves.append((moveScore, move))
+
+    scoredMoves.sort(reverse=True) # Best first
     legalMovesFound = False
     pv = False
 
-    for move in moves:
+    for movesScore, move in scoredMoves:
         startRow, startColumn, endRow, endColumn = move
         undoInfo = board.makeMove(startRow, startColumn, endRow, endColumn, simulation=True)
         if board.kingCheck(currentColour):        
@@ -155,7 +168,7 @@ def minimax(board, depth, ply, maximisingPlayer, startTime, timeLimit, alpha=-99
             continue
 
         legalMovesFound = True
-
+        
         # Late Move Reduction (LMR)
         
         if not pv:
@@ -163,7 +176,7 @@ def minimax(board, depth, ply, maximisingPlayer, startTime, timeLimit, alpha=-99
         else:
             alphaWindow = alpha if maximisingPlayer else beta - 1
             betaWindow = alpha + 1 if maximisingPlayer else beta
-            if depth >= 3 and (moveScores[move] < 7000): # Only use LMR on deeper depths and bad quiet moves (non quiet moves all have score of more than 7000. Best quiet moves have score of 7000)
+            if depth >= 3 and (movesScore < 7000): # Only use LMR on deeper depths and bad quiet moves (non quiet moves all have score of more than 7000. Best quiet moves have score of 7000)
                 reduced = (depth // 6) + 2 # Dynamically update the amount that depth is reduced by based off of current depth
                 score = minimax(board, depth - 1 - reduced, ply + 1, not maximisingPlayer, startTime, timeLimit, alphaWindow, betaWindow) # Run evaluation at reduced depth
                 if (maximisingPlayer and score > alpha) or (not maximisingPlayer and score < beta): # If move is good after reduced evaluation rerun at full depth
@@ -200,16 +213,16 @@ def minimax(board, depth, ply, maximisingPlayer, startTime, timeLimit, alpha=-99
 
     if not legalMovesFound:
         if board.kingCheck(currentColour):
-            return (-99999 - depth) if maximisingPlayer else (99999 + depth)
+            return (-99999 + ply) if maximisingPlayer else (99999 - ply)
         else:
             return 0
 
     if bestScore <= initialAlpha:
-        flag = "upper" # So transposition table knows that the value is only the upperbound of the move score
+        flag = upper # So transposition table knows that the value is only the upperbound of the move score
     elif bestScore >= initialBeta:
-        flag = "lower" # So transposition table knows that the value is only the lowerbound of the move score
+        flag = lower # So transposition table knows that the value is only the lowerbound of the move score
     else:
-        flag = "exact" # So transposition table knows that the value is the exact move score
+        flag = exact # So transposition table knows that the value is the exact move score
 
     if not constants.abortSearch:
         storeEvaluation(hash, depth, bestScore, flag, bestMove)
@@ -255,12 +268,15 @@ def quiescentSearch(board, alpha, beta, maximisingPlayer, ply, startTime, timeLi
 
     # Sort captures
 
-    moveScores = {}
+    scoredCaptures = []
+    
     for move in captures:
-        moveScores[move] = scoreMove(board, move, ply) # Dictionary containing each move and their priority based off of scoreMove()
-    captures.sort(key=moveScores.get, reverse=True) # Sort by values in moveScores
+        moveScore = scoreMove(board, move, ply, bestMove)
+        scoredCaptures.append((moveScore, move))
 
-    for move in captures:
+    scoredCaptures.sort(reverse=True) # Best first
+
+    for movesScore, move in scoredCaptures:
         if constants.abortSearch:
             return bestScore
         
@@ -288,11 +304,11 @@ def quiescentSearch(board, alpha, beta, maximisingPlayer, ply, startTime, timeLi
             break
 
     if bestScore <= initialAlpha:
-        flag = "upper"
+        flag = upper
     elif bestScore >= initialBeta:
-        flag = "lower"
+        flag = lower
     else:
-        flag = "exact"
+        flag = exact
 
     if not constants.abortSearch:
         storeEvaluation(board.hash, 0, bestScore, flag, bestMove)
@@ -307,11 +323,10 @@ def searchMovesAtDepth(board, moves, depth, ply, alpha, beta, maximisingPlayer, 
     currentBestMove = None
     pv = False
     
-    for move in moves:
+    for moveScore, move in moves:
         if constants.abortSearch:
             break
         startRow, startColumn, endRow, endColumn = move
-        moveScore = scoreMove(board, move, ply, currentBestMove)
         undoInfo = board.makeMove(startRow, startColumn, endRow, endColumn, simulation=True)
         
         if board.kingCheck(botColour):
@@ -366,16 +381,32 @@ def searchMovesAtDepth(board, moves, depth, ply, alpha, beta, maximisingPlayer, 
 def findBestMove(board, depth, botColour, startTime, timeLimit):
     if constants.abortSearch:
         return None
-    
+
+    global nodes
+    nodes = 0
+
+    for i in range(4096):
+        historyTable[i] = historyTable[i] // 8 # So that previous history table scores have less of an effect
+
+    for i in range(50): # Clear prune moves since they are board specific
+        pruneMoves[i][0] = None
+        pruneMoves[i][1] = None
+
     maximisingPlayer = (botColour == white)
     bestMove = None
-    moves = getAllPossibleMoves(board, botColour)
-    moveScores = {}
-    for move in moves:
-        moveScores[move] = scoreMove(board, move, 0, bestMove) # Dictionary containing each move and their priority based off of scoreMove()
-    moves.sort(key=moveScores.get, reverse=True) # Sort by values in moveScores. Descending order
+    allMoves = getAllPossibleMoves(board, botColour)
+
+    moves = []
+
+    for move in allMoves:
+        moveScore = scoreMove(board, move, 0, bestMove)
+        moves.append((moveScore, move))
+
+    moves.sort(reverse=True) # Best first
+
     if not moves:
         return None, 0
+    
     bestMove = moves[0]
     savedRedo = board.redoHistory.copy()
     savedMoves = board.moveHistory.copy()
@@ -407,9 +438,12 @@ def findBestMove(board, depth, botColour, startTime, timeLimit):
         if currentBestMove:
             bestMove = currentBestMove
             completedBestMove = currentBestMove
-            if bestMove in moves:
-                moves.remove(bestMove)
-                moves.insert(0, bestMove)
+            for each in moves:
+                score, move = each
+                if move == bestMove:
+                    moves.remove(each)
+                    moves.insert(0, each)
+                    break
 
     board.redoHistory = savedRedo
     board.moveHistory = savedMoves
@@ -417,6 +451,6 @@ def findBestMove(board, depth, botColour, startTime, timeLimit):
     board.gameOverMessage = savedGameOver
 
     if completedBestMove:
-        return completedBestMove, currentDepth
+        return completedBestMove, (currentDepth - 1)
     else:
         return bestMove, depth

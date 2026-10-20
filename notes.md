@@ -92,3 +92,7 @@ Aspiration windows work on the basis that moves don't usually swing the score by
 ## Transposition tables
 
 Transposition tables work by using zobrist hashing to see if the move has been analysed before. Due to many moves leading to the same outcome it means that when we find moves we have analysed before we can save computing power and just not analyse them. Zobrist hashes are used for this. 
+
+# .exe code
+
+py -m PyInstaller --onefile --windowed --icon="../images/icon.png" --add-data="../images;images" --add-data="../sounds;sounds" --name="ChessBot" --distpath="." --workpath="build" --specpath="build" engine\main.py
