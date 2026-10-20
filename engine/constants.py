@@ -146,9 +146,9 @@ def getStartSettings():
                     line = line.strip()
                     if line == "":
                         continue
-                    elif line == 'white':
+                    elif line.lower() == 'white' or line.lower() == 'w':
                         botColour = white
-                    elif line == 'black':
+                    elif line.lower() == 'black' or line.lower() == "b":
                         botColour = black
                     else:
                         fen = line
