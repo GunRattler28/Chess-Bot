@@ -1,5 +1,6 @@
 import os
 import sys
+import json
 import pygame
 import random
 
@@ -137,27 +138,23 @@ def getStartSettings():
     timeLimit = 3 # Default time for how long the bot has to search for a move each turn
     fen = None
 
-    path = os.path.join(basePath, 'settings.txt')
+    path = os.path.join(basePath, 'settings.json')
     if os.path.exists(path): # If file actually exists
-        with open(path, encoding='utf-8-sig') as file: # Opens the file and calls it 'file'. encoding='utf-8-sig' is just windows .txt default encoding. Ensures this doesn't count as a line
-            contents = file.readlines()
-            for line in contents:
-                line = line.strip()
-                if line == "":
-                    continue
-                elif line.lower() == 'white' or line.lower() == 'w': # Player colour is inputted
-                    botColour = black # Bot colour set to opposite
-                    print("Player colour changed")
-                elif line.lower() == 'black' or line.lower() == "b": # Player colour is inputted
-                    botColour = white # Bot colour set to opposite
-                    print("Player colour changed")
-                else:
-                    try:
-                        timeLimit = float(line)
-                        print("Time limit changed")
-                    except:
-                        fen = line
-                        print("FEN string changed")
+        try:
+            with open(path, encoding='utf-8-sig') as file: # Opens the file and calls it 'file'. encoding='utf-8-sig' is just windows .txt default encoding. Ensures this doesn't count as a line
+                data = json.load(file)
+                if data['playerColour'].lower() == "white" or data['playerColour'].lower() == "w":
+                    botColour = black
+                if data['playerColour'].lower() == "black" or data['playerColour'].lower() == "b":
+                    botColour = white
+                try:
+                    timeLimit = float(data['timeLimit'])
+                except:
+                    print("Error reading time")
+                if data['FEN'] != None:
+                    fen = data['FEN']
+        except:
+            print("Error reading settings.json")
 
     return botColour, timeLimit, fen # Returns values set by user or default values
 

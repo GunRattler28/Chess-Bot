@@ -1,6 +1,6 @@
 .vscode/
 **/__pycache__/
 /build
-settings.txt
+settings.json
 notes.md
 changelog.md
