@@ -22,7 +22,6 @@ playerTimeStart = 0
 playerTotalTime = 0 # The total time the player has taken in making moves
 abortSearch = False
 premoves = []
-timeLimit = 3 # How long the bot has to search for a move each turn
 
 # Dictionary of each colour + piece binary code as the keys and the textures as the values
 
@@ -133,28 +132,33 @@ def getStartSettings():
     else: # If code is being run in normal conditions
         basePath = (os.path.dirname(os.path.dirname(os.path.abspath(__file__)))) # Tells python to search other folders for files
 
-    fen = None
     randomColour = random.randint(0, 1) # Randomises what colour the player starts as
     botColour = black if randomColour else white
+    timeLimit = 3 # Default time for how long the bot has to search for a move each turn
+    fen = None
 
     path = os.path.join(basePath, 'settings.txt')
     if os.path.exists(path): # If file actually exists
-        try: # Handles errors
-            with open(path, encoding='utf-8-sig') as file: # Opens the file and calls it 'file'. encoding='utf-8-sig' is just windows .txt default encoding. Ensures this doesn't count as a line
-                contents = file.readlines()
-                for line in contents:
-                    line = line.strip()
-                    if line == "":
-                        continue
-                    elif line.lower() == 'white' or line.lower() == 'w':
-                        botColour = white
-                    elif line.lower() == 'black' or line.lower() == "b":
-                        botColour = black
-                    else:
+        with open(path, encoding='utf-8-sig') as file: # Opens the file and calls it 'file'. encoding='utf-8-sig' is just windows .txt default encoding. Ensures this doesn't count as a line
+            contents = file.readlines()
+            for line in contents:
+                line = line.strip()
+                if line == "":
+                    continue
+                elif line.lower() == 'white' or line.lower() == 'w':
+                    botColour = white
+                    print("Bot colour changed")
+                elif line.lower() == 'black' or line.lower() == "b":
+                    botColour = black
+                    print("Bot colour changed")
+                else:
+                    try:
+                        timeLimit = float(line)
+                        print("Time limit changed")
+                    except:
                         fen = line
-        except:
-            pass # If something went wrong at any point, return 'None'
+                        print("FEN string changed")
 
-    return fen, botColour # Returns None so that it is known that something went wrong. Will be handled later and defaulted to standard start position
+    return botColour, timeLimit, fen # Returns values set by user or default values
 
-fen, botColour = getStartSettings()
+botColour, timeLimit, fen = getStartSettings()
