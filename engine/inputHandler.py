@@ -49,6 +49,9 @@ def onClick(x, y, board):
     if visuals.promotionActive: 
         return
 
+    if len(visuals.strategyCircles) > 0:
+        visuals.strategyCircles.clear() # Clear strategy circles on click so that they don't confuse player on where selected can piece can move
+
     row, column = getBoardPos(x, y)
 
     if not (0 <= row < 8 and 0 <= column < 8):
