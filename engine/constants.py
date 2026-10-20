@@ -145,12 +145,12 @@ def getStartSettings():
                 line = line.strip()
                 if line == "":
                     continue
-                elif line.lower() == 'white' or line.lower() == 'w':
-                    botColour = white
-                    print("Bot colour changed")
-                elif line.lower() == 'black' or line.lower() == "b":
-                    botColour = black
-                    print("Bot colour changed")
+                elif line.lower() == 'white' or line.lower() == 'w': # Player colour is inputted
+                    botColour = black # Bot colour set to opposite
+                    print("Player colour changed")
+                elif line.lower() == 'black' or line.lower() == "b": # Player colour is inputted
+                    botColour = white # Bot colour set to opposite
+                    print("Player colour changed")
                 else:
                     try:
                         timeLimit = float(line)
