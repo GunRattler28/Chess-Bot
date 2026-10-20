@@ -18,8 +18,6 @@ black = 0b10000
 windowSize = 800
 positionSize = windowSize // 8 # Size of the piece textures
 
-randomColour = random.randint(0, 1) # Randomises what colour the player starts as
-botColour = black if randomColour else white
 playerTimeStart = 0
 playerTotalTime = 0 # The total time the player has taken in making moves
 abortSearch = False
@@ -129,21 +127,34 @@ zobristEnPassant = []
 for column in range(8):
     zobristEnPassant.append(random.getrandbits(64))
 
-def getFEN():
+def getStartSettings():
     if getattr(sys, 'frozen', False): # Frozen is if code is being run from a .exe
-        base_dir = os.path.dirname(sys.executable) # Where executable is stored
+        basePath = os.path.dirname(sys.executable) # Where executable is stored
     else: # If code is being run in normal conditions
-        base_dir = os.path.dirname(os.path.abspath(__file__)) # Path to file being run
+        basePath = (os.path.dirname(os.path.dirname(os.path.abspath(__file__)))) # Tells python to search other folders for files
 
-    path = os.path.join(base_dir, 'fen.txt')
+    fen = None
+    randomColour = random.randint(0, 1) # Randomises what colour the player starts as
+    botColour = black if randomColour else white
+
+    path = os.path.join(basePath, 'settings.txt')
     if os.path.exists(path): # If file actually exists
         try: # Handles errors
-            with open(path) as file: # Opens the file and calls it 'file'
-                fen = file.read().strip() # sets fen to what is in the file without any trailing spaces
-                if fen: # If there is actually something assume it is the fen string and return it. If it isn't fen string it will be handled later
-                    return fen
+            with open(path, encoding='utf-8-sig') as file: # Opens the file and calls it 'file'. encoding='utf-8-sig' is just windows .txt default encoding. Ensures this doesn't count as a line
+                contents = file.readlines()
+                for line in contents:
+                    line = line.strip()
+                    if line == "":
+                        continue
+                    elif line == 'white':
+                        botColour = white
+                    elif line == 'black':
+                        botColour = black
+                    else:
+                        fen = line
         except:
             pass # If something went wrong at any point, return 'None'
-    return None # Returns None so that it is known that something went wrong. Will be handled later and defaulted to standard start position
 
-fen = getFEN()
+    return fen, botColour # Returns None so that it is known that something went wrong. Will be handled later and defaulted to standard start position
+
+fen, botColour = getStartSettings()

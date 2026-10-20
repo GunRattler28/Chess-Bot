@@ -1,6 +1,6 @@
 .vscode/
 **/__pycache__/
 /build
-fen.txt
+settings.txt
 notes.md
 changelog.md
