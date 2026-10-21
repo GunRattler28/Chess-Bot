@@ -1,8 +1,8 @@
 import sys
 import os
 
-if getattr(sys, 'frozen', False):
-    os.chdir(sys._MEIPASS)
+if getattr(sys, 'frozen', False): # Frozen is if code is being run from a .exe
+    os.chdir(sys._MEIPASS) # Changes file path to a temporary folder
 
 import pygame
 import threading
