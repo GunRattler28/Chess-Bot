@@ -148,7 +148,8 @@ def getStartSettings():
                 elif data['playerColour'].lower() == "black" or data['playerColour'].lower() == "b":
                     botColour = white
                 try:
-                    timeLimit = float(data['timeLimit'])
+                    if float(data['timeLimit']) > 0:
+                        timeLimit = float(data['timeLimit'])
                 except:
                     print("Error reading time")
                 if data['FEN'] != None:
