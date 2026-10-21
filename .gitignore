@@ -1,2 +1,8 @@
+.vscode/
 **/__pycache__/
 /build
+settings.json
+readme/
+ChessBot.exe
+notes.md
+changelog.md
