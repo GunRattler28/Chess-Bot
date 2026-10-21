@@ -2,5 +2,7 @@
 **/__pycache__/
 /build
 settings.json
+readme/
+fen.txt
 notes.md
 changelog.md
