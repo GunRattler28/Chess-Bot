@@ -141,11 +141,11 @@ def getStartSettings():
     path = os.path.join(basePath, 'settings.json')
     if os.path.exists(path): # If file actually exists
         try:
-            with open(path, encoding='utf-8-sig') as file: # Opens the file and calls it 'file'. encoding='utf-8-sig' is just windows .txt default encoding. Ensures this doesn't count as a line
+            with open(path, encoding='utf-8') as file: # Opens the file and calls it 'file'. encoding='utf-8' is just default encoding. Ensures this doesn't count as a line
                 data = json.load(file)
                 if data['playerColour'].lower() == "white" or data['playerColour'].lower() == "w":
                     botColour = black
-                if data['playerColour'].lower() == "black" or data['playerColour'].lower() == "b":
+                elif data['playerColour'].lower() == "black" or data['playerColour'].lower() == "b":
                     botColour = white
                 try:
                     timeLimit = float(data['timeLimit'])
