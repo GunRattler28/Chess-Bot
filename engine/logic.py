@@ -501,6 +501,8 @@ class logic:
                 promotion = self.turnColour | queen
             else:
                 promotion = visuals.choosePromotion(self.turnColour)
+            if not simulation:    
+                sounds["promotion"].play()
 
         pieceToPlace = promotion if promotion is not None else movingPiece
         self.updateSquare(endRow, endColumn, pieceToPlace)

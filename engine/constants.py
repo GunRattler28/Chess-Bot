@@ -1,3 +1,6 @@
+import os
+import sys
+import json
 import pygame
 import random
 
@@ -16,14 +19,10 @@ black = 0b10000
 windowSize = 800
 positionSize = windowSize // 8 # Size of the piece textures
 
-fen = None
-randomColour = random.randint(0, 1) # Randomises what colour the player starts as
-botColour = black if randomColour else white
 playerTimeStart = 0
 playerTotalTime = 0 # The total time the player has taken in making moves
 abortSearch = False
 premoves = []
-timeLimit = 3 # How long the bot has to search for a move each turn
 
 # Dictionary of each colour + piece binary code as the keys and the textures as the values
 
@@ -57,6 +56,7 @@ sounds = {
     "capture": pygame.mixer.Sound("sounds/Capture.mp3"),
     "check": pygame.mixer.Sound("sounds/Check.mp3"),
     "checkmate": pygame.mixer.Sound("sounds/Checkmate.mp3"),
+    "promotion": pygame.mixer.Sound("sounds/Promotion.mp3")
 }
 
 # Arrays of each move each piece can do stored as tuples (offset x, offset y)
@@ -127,3 +127,37 @@ zobristEnPassant = []
 
 for column in range(8):
     zobristEnPassant.append(random.getrandbits(64))
+
+def getStartSettings():
+    if getattr(sys, 'frozen', False): # Frozen is if code is being run from a .exe
+        basePath = os.path.dirname(sys.executable) # Where executable is stored
+    else: # If code is being run in normal conditions
+        basePath = (os.path.dirname(os.path.dirname(os.path.abspath(__file__)))) # Tells python to search other folders for files
+
+    randomColour = random.randint(0, 1) # Randomises what colour the player starts as
+    botColour = black if randomColour else white
+    timeLimit = 3 # Default time for how long the bot has to search for a move each turn
+    fen = None
+
+    path = os.path.join(basePath, 'settings.json')
+    if os.path.exists(path): # If file actually exists
+        try:
+            with open(path, encoding='utf-8') as file: # Opens the file and calls it 'file'. encoding='utf-8' is just default encoding. Ensures this doesn't count as a line
+                data = json.load(file)
+                if data['playerColour'].lower() == "white" or data['playerColour'].lower() == "w":
+                    botColour = black
+                elif data['playerColour'].lower() == "black" or data['playerColour'].lower() == "b":
+                    botColour = white
+                try:
+                    if float(data['timeLimit']) > 0:
+                        timeLimit = float(data['timeLimit'])
+                except:
+                    print("Error reading time")
+                if data['FEN'] != None:
+                    fen = data['FEN']
+        except:
+            print("Error reading settings.json")
+
+    return botColour, timeLimit, fen # Returns values set by user or default values
+
+botColour, timeLimit, fen = getStartSettings()
