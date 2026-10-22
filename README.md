@@ -6,18 +6,18 @@ A small chess bot made in Python that you can hone your skills against. Can cons
 
 <div align="center">
 
-| Action              | Input                      | Description                                          |
-| :------------------ | :------------------------- | :--------------------------------------------------- |
-| **Select / Move**   | Left Click (Player's Turn) | Select and move a piece                              |
-| **Premove**         | Left Click (Bot's Turn)    | Queue a premove ahead of time                        |
-| **Strategy Circle** | Right Click (Tap)          | Create or remove a green circle on a square          |
-| **Temporary Arrow** | Right Click (Drag)         | Display a temporary drag arrow                       |
-| **Draw Arrow**      | Right Click (Release)      | Draw a permanent arrow between different squares     |
-| **Delete Drawing**  | Right Click (On existing)  | Remove a specific arrow or circle                    |
-| **Remove Premove**  | Middle Click (On premove)  | Delete a specific queued premove                     |
-| **Clear Drawings**  | Middle Click (Empty)       | Clear all arrows, strategy circles, and premoves     |
-| **Undo Move**       | Left Arrow Key             | Revert the game state back one move                  |
-| **Redo Move**       | Right Arrow Key            | Re-apply an undone move (within the 3-second window) |
+| Action              | Input                        | Description                                          |
+| :------------------ | :--------------------------- | :--------------------------------------------------- |
+| **Select / Move**   | Left Click (Player's Turn)   | Select and move a piece                              |
+| **Premove**         | Left Click (Bot's Turn)      | Queue a premove ahead of time                        |
+| **Strategy Circle** | Right Click (Tap)            | Create or remove a green circle on a square          |
+| **Temporary Arrow** | Right Click (Drag)           | Display a temporary drag arrow                       |
+| **Draw Arrow**      | Right Click (Release)        | Draw a permanent arrow between different squares     |
+| **Delete Drawing**  | Right Click (On existing)    | Remove a specific arrow or circle                    |
+| **Remove Premove**  | Middle Click (On premove)    | Delete a specific queued premove                     |
+| **Clear Drawings**  | Middle Click (Empty)         | Clear all arrows, strategy circles, and premoves     |
+| **Undo Move**       | Left Arrow Key (Scroll down) | Revert the game state back one move                  |
+| **Redo Move**       | Right Arrow Key (scroll up)  | Re-apply an undone move (within the 3-second window) |
 
 </div>
 
