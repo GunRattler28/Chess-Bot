@@ -53,3 +53,32 @@ In my `undoMove()` function I remove the last move done and add it to an array c
     However I wasn’t able to add a proper demo URL, format my devlogs better (yh thats on me I yap way too much lol), upload my game to gamejolt instead of using a .exe (I tried to do this but wasn’t rly sure how to do it), or add linux and mac support.
 
 I’m really happy with my new readme.md so I’d appreciate if you could check it out (at https://github.com/GunRattler28/Chess-Bot) and tell me how to improve it more!
+40. I tried to make the game playable on macOS and linux by using github workflows to automatically create 3 separate version of the app however this ended up making even the windows version not run. The reason the windows version did not run was because the `.exe` was literally deleted by microsoft defender lol. Bit extreme imo. Sadly because of this I don't think making the app usable on native macOS or linux will be possible.
+41. I've made a chess engine that comes with a bot. The bot has ~2000 elo on chess.com and has played against a real 2000 elo player.
+
+The engine lets the player do many things:
+
+- Only make fully legal moves
+- Show player where the selected piece can move
+- Queue premoves
+- Draw arrows and make circles
+- Undo and redo moves
+- Input FEN string to start from non standard start positions
+- Choose player colour
+
+The bot then uses many optimisations to be able to play at an average depth of 10 during midgame (when it has 3 seconds per move).
+
+The constructive feedback from last ship was really helpful and I’ve managed to do most of the things that people suggested there, including:
+
+- Somewhat adjustable difficulty
+- Demo videos in readme
+- Comments explaining advanced things in most files
+- Overall improved readme
+- Test the bot against an actual player rated 2000 elo (which the bot sadly lost after a very close endgame.)
+
+However I wasn’t able to:
+
+- Add a proper demo URL (as it required a major overhaul that would be very difficult and require lots of time)
+- Format my devlogs better
+- Upload my game to gamejolt instead of using a `.exe` (I tried to do this but it didn't work)
+- Add linux and mac support (Apps were blocked by default antiviruses)
