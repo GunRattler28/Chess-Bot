@@ -131,7 +131,6 @@ def choosePromotion(colour):
             
         pygame.display.flip()
         clock.tick(60)
-        
     return chosenPiece
 
 def drawHighlights(board):

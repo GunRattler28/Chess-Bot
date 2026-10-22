@@ -56,6 +56,7 @@ sounds = {
     "capture": pygame.mixer.Sound("sounds/Capture.mp3"),
     "check": pygame.mixer.Sound("sounds/Check.mp3"),
     "checkmate": pygame.mixer.Sound("sounds/Checkmate.mp3"),
+    "promotion": pygame.mixer.Sound("sounds/Promotion.mp3")
 }
 
 # Arrays of each move each piece can do stored as tuples (offset x, offset y)
