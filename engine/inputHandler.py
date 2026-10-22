@@ -30,7 +30,21 @@ def handleInputs(inputs, board):
         elif event.type == pygame.MOUSEBUTTONUP:
             if event.button == 3: 
                 onRightRelease(event.pos[0], event.pos[1])
-                
+
+        elif event.type == pygame.MOUSEWHEEL:
+            if event.y > 0:
+                board.redoMove()
+                inputs.botCooldownUntil = pygame.time.get_ticks() + 3000
+                inputs.bestMove = None
+                inputs.searching = False
+                constants.abortSearch = True
+            elif event.y < 0:
+                board.previousMove()
+                inputs.botCooldownUntil = pygame.time.get_ticks() + 3000
+                inputs.bestMove = None
+                inputs.searching = False
+                constants.abortSearch = True
+           
         elif event.type == pygame.KEYDOWN:
             if event.key == pygame.K_LEFT:
                 board.previousMove()
