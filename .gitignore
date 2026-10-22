@@ -1,8 +1,5 @@
 .vscode/
 **/__pycache__/
 /build
-readme/
 settings.json
 ChessBot.exe
-notes.md
-changelog.md
