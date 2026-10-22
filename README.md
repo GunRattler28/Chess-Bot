@@ -1,6 +1,6 @@
 # Overview
 
-A small chess bot made in Python that you can hone your skills against. Can consistently beat a 2000 elo bot on chess.com
+A small chess bot made in Python that you can hone your skills against.
 
 # Controls
 
