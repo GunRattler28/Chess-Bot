@@ -4,8 +4,7 @@ A small chess bot made in Python that you can hone your skills against. Can cons
 
 # Controls
 
-<table>
-  <td valign="top" width="60%">
+<div align="center">
 
 | Action              | Input                      | Description                                          |
 | :------------------ | :------------------------- | :--------------------------------------------------- |
@@ -20,16 +19,13 @@ A small chess bot made in Python that you can hone your skills against. Can cons
 | **Undo Move**       | Left Arrow Key             | Revert the game state back one move                  |
 | **Redo Move**       | Right Arrow Key            | Re-apply an undone move (within the 3-second window) |
 
-  </td>
-  <td valign="center" width="40%" align="center">
-    <video width="100%" height="100%" controls allowfullscreen autoplay loop muted playsinline style="object-fit: cover; border-radius: 12px;">
-      <source src="readme/checkmate.mp4" type="video/mp4">
-    </video>
-  </td>
-</table>
+</div>
+
+https://github.com/user-attachments/assets/9413976c-3d58-44f3-9805-79664743cf4e
+
+The video above shows the game reaching an end condition (checkmate in this example) and the game ending.
 
 # Gameplay
-<br>
 
 1. The player can make premoves by trying to make moves during the bot's turn. To show this a translucent texture of the piece will move to where you moved it. The square where the piece is moved will also turn orange. Multiple premoves can be made and queued. As soon as the bot moves, the first premove in the queue will be played if it is a fully legal move. Premoves can also be removed by middle clicking where the piece moved from then middle clicking where the piece moved to.
 
@@ -39,12 +35,7 @@ A small chess bot made in Python that you can hone your skills against. Can cons
    
 4. When undoing moves, the player can also redo moves if they realise they would make the same move again, however if paused on the bot's turn, if the move isn't redone before the bot moves, redos can no longer be made.
 
-<br>
-
 # Setup
-
-<table>
-  <td valign="top" width="60%">
 
 ### Prerequisites
 
@@ -62,19 +53,13 @@ A small chess bot made in Python that you can hone your skills against. Can cons
    - `FEN` is where a Forsyth-Edwards Notation (FEN) string can be inputted. If left as `""` or an invalid input is inputted, starting position will default to standard starting position.
 3. Launch `ChessBot.exe` to open the game.
 
-  </td>
-  <td valign="center" width="40%" align="center">
-    <video width="100%" height="100%" controls allowfullscreen autoplay loop muted playsinline style="object-fit: cover; border-radius: 12px;">
-      <source src="readme/settings.mp4" type="video/mp4">
-    </video>
-  </td>
-</table>
-
 <br>
+
+https://github.com/user-attachments/assets/3a4dcf14-77b4-4545-9ca2-905f02fc2c69
+
+The video above shows me changing values in `settings.json` so that I can play the bot from a different position.
 
 # Technical details
-
-<br>
 
 The bot includes:
 
@@ -94,18 +79,12 @@ The bot includes:
 - Null move pruning
 - Move evaluation (based off material difference + positional bonuses)
 
-<br>
-
 # Demo
 
-<video width="100%" height="100%" controls allowfullscreen autoplay loop muted playsinline style="object-fit: cover; border-radius: 12px;">
-  <source src="readme/overview.mp4" type="video/mp4">
-</video>
+https://github.com/user-attachments/assets/f02f9ad8-55f1-44e9-9e1a-dadd9f4fec8f
 
-<br>
+The video above shows me changing the start settings of the bot by changing some of the values in the `settings.json` file then playing the bot from a non standard starting position
 
-<video width="100%" height="100%" controls allowfullscreen autoplay loop muted playsinline style="object-fit: cover; border-radius: 12px;">
-  <source src="readme/fullgame.mp4" type="video/mp4">
-</video>
+https://github.com/user-attachments/assets/184d618d-a614-4815-8fad-4219a093bf67
 
 The video above shows me playing a full game with the bot. Some of the input variables were left empty to show that the program can deal with this and defaults to standard settings.
