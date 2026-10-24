@@ -3,7 +3,6 @@ import os
 
 if getattr(sys, 'frozen', False): # Frozen is if code is being run from a .exe
     os.chdir(sys._MEIPASS) # Changes file path to a temporary folder
-
 import pygame
 import threading
 
@@ -52,6 +51,7 @@ class mainLoop:
                 self.board.makeMove(startRow, startColumn, endRow, endColumn)
                 self.board.gameState() # Check the gamestate to see if it has changed
                 print(f"Move: {self.board.moves:>3} | Evaluation Score: {self.board.evaluationScore:>5} | Time:   0.00 seconds | Depth: N/A | Endgame: {str(bot.evaluation.isEndgame(self.board)):>5} | Total pieces: {self.board.totalPieces:>2}") # Used for debugging to see how the bot is playing and wby
+                constants.writeData(self.board.moves, self.board.evaluationScore, 0, "N/A", str(bot.evaluation.isEndgame(self.board)), self.board.totalPieces)
             else:
                 constants.premoves.clear() # If premove isn't a legal move, remove all premoves 
         else:
@@ -85,6 +85,7 @@ class mainLoop:
                 time = pygame.time.get_ticks() - self.botCooldownUntil + (constants.timeLimit * 1000) # How long it to make the move (used for debugging so I can test how many nodes I can search before checking if still within time limit. Basically used for helping to make the bot very slightly more efficient)
                 constants.playerTimeStart = pygame.time.get_ticks() # When the players turn starts
                 print(f"Move: {board.moves:>3} | Evaluation Score: {board.evaluationScore:>5} | Time: {time / 1000:>6.2f} seconds | Depth: {self.searchedDepth:>3} | Endgame: {str(bot.evaluation.isEndgame(board)):>5} | Total pieces: {board.totalPieces:>2}") # Used for debugging to see how the bot is playing and wby
+                constants.writeData(board.moves, board.evaluationScore, time / 1000, self.searchedDepth, str(bot.evaluation.isEndgame(board)), board.totalPieces)
                 if len(constants.premoves) > 0: # If there is a premove in the queue, test whether it is legal then play it
                     self.executePremove()
             self.bestMove = None
@@ -121,6 +122,7 @@ class mainLoop:
             self.currentGameOverMessage = self.board.gameOverMessage
             print(f"Average player time: {(constants.playerTotalTime / max(1, self.board.moves / 2)) / 1000 : .2f} seconds")
             print(f"Average bot time: {constants.timeLimit : .2f} seconds")
+            constants.storeTimeData((constants.playerTotalTime / max(1, self.board.moves / 2)) / 1000, constants.timeLimit, self.board.moves)
 
         pygame.display.flip() # Updates the screen
         visuals.redraw = False # Changes redraw to false so that the screen is only redrawn when a change happens

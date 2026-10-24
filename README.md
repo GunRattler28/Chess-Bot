@@ -6,18 +6,18 @@ A small chess bot made in Python that you can hone your skills against.
 
 <div align="center">
 
-| Action              | Input                        | Description                                          |
-| :------------------ | :--------------------------- | :--------------------------------------------------- |
-| **Select / Move**   | Left Click (Player's Turn)   | Select and move a piece                              |
-| **Premove**         | Left Click (Bot's Turn)      | Queue a premove ahead of time                        |
-| **Strategy Circle** | Right Click (Tap)            | Create or remove a green circle on a square          |
-| **Temporary Arrow** | Right Click (Drag)           | Display a temporary drag arrow                       |
-| **Draw Arrow**      | Right Click (Release)        | Draw a permanent arrow between different squares     |
-| **Delete Drawing**  | Right Click (On existing)    | Remove a specific arrow or circle                    |
-| **Remove Premove**  | Middle Click (On premove)    | Delete a specific queued premove                     |
-| **Clear Drawings**  | Middle Click (Empty)         | Clear all arrows, strategy circles, and premoves     |
-| **Undo Move**       | Left Arrow Key (Scroll down) | Revert the game state back one move                  |
-| **Redo Move**       | Right Arrow Key (Scroll up)  | Re-apply an undone move (within the 3-second window) |
+| Action              | Input                        | Description                                      |
+| :------------------ | :--------------------------- | :----------------------------------------------- |
+| **Select / Move**   | Left Click (Player's Turn)   | Select and move a piece                          |
+| **Premove**         | Left Click (Bot's Turn)      | Queue a premove ahead of time                    |
+| **Strategy Circle** | Right Click (Tap)            | Create or remove a green circle on a square      |
+| **Temporary Arrow** | Right Click (Drag)           | Display a temporary drag arrow                   |
+| **Draw Arrow**      | Right Click (Release)        | Draw a permanent arrow between different squares |
+| **Delete Drawing**  | Right Click (On existing)    | Remove a specific arrow or circle                |
+| **Remove Premove**  | Middle Click (On premove)    | Delete a specific queued premove                 |
+| **Clear Drawings**  | Middle Click (Empty)         | Clear all arrows, strategy circles, and premoves |
+| **Undo Move**       | Left Arrow Key (Scroll down) | Revert the game state back one move              |
+| **Redo Move**       | Right Arrow Key (Scroll up)  | Re-apply an undone move (before the bot moves)   |
 
 </div>
 
@@ -27,21 +27,25 @@ The video above shows the game reaching an end condition (checkmate in this exam
 
 # Gameplay
 
-1. The player can make premoves by trying to make moves during the bot's turn. To show this a translucent texture of the piece will move to where you moved it. The square where the piece is moved will also turn orange. Multiple premoves can be made and queued. As soon as the bot moves, the first premove in the queue will be played if it is a fully legal move. Premoves can also be removed by middle clicking where the piece moved from then middle clicking where the piece moved to.
+1. Data about each move is written to `moves.txt`. At the start of a new game, there is a double line break in `moves.txt` to signify a new game.
 
-2. If the player goes to promote their pawn, a small gui will pop up showing the different pieces they can promote to.
+2. The player can make premoves by trying to make moves during the bot's turn. To show this a translucent texture of the piece will move to where you moved it. The square where the piece is moved will also turn orange. Multiple premoves can be made and queued. As soon as the bot moves, the first premove in the queue will be played if it is a fully legal move. Each move has data about it written to `moves.txt`. Premoves can be removed by middle clicking where the piece moved from then middle clicking where the piece moved to. Alternatively, **all** premoves can be removed by middle clicking on an empty square that isn't related to one of the premoves.
+
+3. If the player goes to promote their pawn, a small gui will pop up showing the different pieces they can promote to.
    
-3. When the game ends, text will come up on the screen and say which colour won, or what type of end condition was met (e.g: checkmate, stalemate, three fold repetition, etc). Once this text comes up, the player can still undo moves to quickly get back to where they made a bad decision and play something else instead.
+4. When the game ends, red text will come up on the screen and say which colour won, or what type of end condition was met (e.g: checkmate, stalemate, three fold repetition, etc). The average time the bot took per move and the average time the player took per move are also written to `moves.txt`. Once this red text comes up, the player can still undo moves to quickly get back to where they made a bad decision and play something else instead.
    
-4. When undoing moves, the player can also redo moves if they realise they would make the same move again, however if paused on the bot's turn, if the move isn't redone before the bot moves, redos can no longer be made.
+5. When undoing moves, the player can also redo moves if they realise they would make the same move again, however if paused on the bot's turn, if the move isn't redone before the bot moves, redos can no longer be made. When undoing a move, a linebreak is created in `moves.txt` to show where undos took place.
 
 # Setup
 
 ### Prerequisites
 
+- Windows ( `.exes` only run on windows )
+- Python 3.14.2 or later
+  - Python version can be checked by running `python -V` in powershell
 - Pygame
   - Can be installed by running `pip install pygame` in cmd.
-- Windows ( `.exes` only run on windows )
 
 ### Setting up the game
 
@@ -52,6 +56,7 @@ The video above shows the game reaching an end condition (checkmate in this exam
    - `timeLimit` is the amount of time the bot has to make its move. Input a float / integer for the number of seconds the bot has to move. If left as `""` or an invalid input is inputted, the bot's time to move will default to 3 seconds.
    - `FEN` is where a Forsyth-Edwards Notation (FEN) string can be inputted. If left as `""` or an invalid input is inputted, starting position will default to standard starting position.
 3. Launch `ChessBot.exe` to open the game.
+4. As moves are made, data about them is written to `moves.txt`. `moves.txt` will be at the same level as `ChessBot.exe` and `settings.json`.
 
 <br>
 
