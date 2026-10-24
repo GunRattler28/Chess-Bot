@@ -138,7 +138,9 @@ def onStart():
 
     path = os.path.join(basePath, 'history.txt')
     with open(path, "a") as file:
-        file.write("\n")
+        lines = getLines(path)
+        if len(lines) > 1:
+            file.write("\n")
 
 def writeData(moves, evaluationScore, time, searchedDepth, endgame, totalPieces):
     global lastMove
@@ -154,7 +156,7 @@ def writeData(moves, evaluationScore, time, searchedDepth, endgame, totalPieces)
         file.write(f"Move: {moves:>3} | Evaluation Score: {evaluationScore:>5} | Time: {time / 1000:>6.2f} seconds | Depth: {searchedDepth:>3} | Endgame: {endgame:>5} | Total pieces: {totalPieces:>2} \n")
         lastMove = moves
 
-def storeTimeData(player, bot):
+def storeTimeData(player, bot, move):
     if getattr(sys, 'frozen', False): # Frozen is if code is being run from a .exe
         basePath = os.path.dirname(sys.executable) # Where executable is stored
     else: # If code is being run in normal conditions
@@ -163,8 +165,20 @@ def storeTimeData(player, bot):
     path = os.path.join(basePath, 'history.txt')
     with open(path, "a") as file:
         file.write("\n")
+        if move < lastMove:
+            lines = getLines(path)
+            file.seek(0) # Sets the pointer to line 0
+            file.truncate() # Deletes all data after pointer
+            for line in lines: # Rewrite all the lines except the last line
+                file.write(line)
+            return
         file.write(f"Average player time: {player:.2f} seconds \n")
         file.write(f"Average bot time: {bot: .2f} seconds \n")
+
+def getLines(filepath):
+    with open(filepath, "r") as file:
+        lines = file.readlines()
+        return(lines)
 
 def getStartSettings():
     if getattr(sys, 'frozen', False): # Frozen is if code is being run from a .exe

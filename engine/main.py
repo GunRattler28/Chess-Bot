@@ -122,7 +122,7 @@ class mainLoop:
             self.currentGameOverMessage = self.board.gameOverMessage
             print(f"Average player time: {(constants.playerTotalTime / max(1, self.board.moves / 2)) / 1000 : .2f} seconds")
             print(f"Average bot time: {constants.timeLimit : .2f} seconds")
-            constants.storeTimeData((constants.playerTotalTime / max(1, self.board.moves / 2)) / 1000, constants.timeLimit)
+            constants.storeTimeData((constants.playerTotalTime / max(1, self.board.moves / 2)) / 1000, constants.timeLimit, self.board.moves)
 
         pygame.display.flip() # Updates the screen
         visuals.redraw = False # Changes redraw to false so that the screen is only redrawn when a change happens
