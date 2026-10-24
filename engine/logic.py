@@ -553,6 +553,8 @@ class logic:
                 promotion = self.turnColour | queen # forms the full code for the piece
             else:
                 promotion = visuals.choosePromotion(self.turnColour) # Trigger promotion gui
+            if not simulation:    
+                sounds["promotion"].play()
 
         pieceToPlace = promotion if promotion else movingPiece
         self.updateSquare(endRow, endColumn, pieceToPlace) # Add piece to new position
