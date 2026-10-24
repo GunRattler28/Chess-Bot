@@ -144,9 +144,9 @@ def onStart():
         basePath = (os.path.dirname(os.path.dirname(os.path.abspath(__file__)))) # Tells python to search other folders for files
 
     path = os.path.join(basePath, 'moves.txt')
-    with open(path, "a") as file:
-        lines = getLines(path)
-        if len(lines) > 1:
+    with open(path, "a") as file: # open() automatically opens and closes the file. "a" means append mode so data is added to the end of moves.txt (not overwritten like with "w")
+        lines = getLines(path) # All the lines currently in the file
+        if len(lines) > 2: # If the document is currently empty don't create a line break
             file.write("\n")
 
 def writeData(moves, evaluationScore, time, searchedDepth, endgame, totalPieces):
@@ -172,21 +172,21 @@ def storeTimeData(player, bot, move):
         basePath = (os.path.dirname(os.path.dirname(os.path.abspath(__file__)))) # Tells python to search other folders for files
 
     path = os.path.join(basePath, 'moves.txt')
-    with open(path, "a") as file:
-        file.write("\n")
-        if move < lastMove:
+    with open(path, "a") as file: # Opens the file (and automatically closes it) in "a" mode. "a" means I am going to append (write) to it (without overwriting data).
+        file.write("\n") # There is already a line break. This creates a double line break so the average time section is clearly spaced out
+        if move < lastMove: # This means I would have undone a move
             lines = getLines(path)
             file.seek(0) # Sets the pointer to line 0
             file.truncate() # Deletes all data after pointer
             for line in lines: # Rewrite all the lines
-                file.write(line) # Seems pointless but sets the pointer to the end of the last line
+                file.write(line) # Seems pointless but sets the pointer to the end of the last line effectively deleting the last linebreak
             return
         file.write(f"Average player time: {player:.2f} seconds \n")
         file.write(f"Average bot time: {bot: .2f} seconds \n")
 
 def getLines(filepath):
-    with open(filepath, "r") as file:
-        lines = file.readlines()
+    with open(filepath, "r") as file: # Opens the file (and automatically closes it) in "r" mode. "r" means I am just going to read the data
+        lines = file.readlines() # Splits all the lines into an array
         return(lines)
 
 def getStartSettings():
@@ -210,16 +210,16 @@ def getStartSettings():
                 elif data['playerColour'].lower() == "black" or data['playerColour'].lower() == "b":
                     botColour = white
                 try:
-                    if float(data['timeLimit']) > 0:
+                    if float(data['timeLimit']) > 0: # Ensures that the input is a valid float that still gives the bot time
                         timeLimit = float(data['timeLimit'])
                 except:
                     print("Error reading time")
                 if data['FEN'] != None:
-                    fen = data['FEN']
+                    fen = data['FEN'] # Doesn't matter if valid since that is handled in loadFEN()
         except:
             print("Error reading settings.json")
 
     return botColour, timeLimit, fen # Returns values set by user or default values
 
-botColour, timeLimit, fen = getStartSettings()
-onStart()
+botColour, timeLimit, fen = getStartSettings() # Gets the inputs from settings.json
+onStart() # Creates the line break at the start of a new game in moves.txt
