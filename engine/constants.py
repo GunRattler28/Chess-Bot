@@ -152,7 +152,9 @@ def writeData(moves, evaluationScore, time, searchedDepth, endgame, totalPieces)
     path = os.path.join(basePath, 'history.txt')
     with open(path, "a") as file:
         if moves <= lastMove:
-            file.write("\n")
+            file.write("\n") # Add lines break if there was an undo
+        if moves == 1:
+            file.write("\n") # Add line break (so now theres 2 line breaks) if the game has been reset
         file.write(f"Move: {moves:>3} | Evaluation Score: {evaluationScore:>5} | Time: {time / 1000:>6.2f} seconds | Depth: {searchedDepth:>3} | Endgame: {endgame:>5} | Total pieces: {totalPieces:>2} \n")
         lastMove = moves
 
@@ -169,8 +171,8 @@ def storeTimeData(player, bot, move):
             lines = getLines(path)
             file.seek(0) # Sets the pointer to line 0
             file.truncate() # Deletes all data after pointer
-            for line in lines: # Rewrite all the lines except the last line
-                file.write(line)
+            for line in lines: # Rewrite all the lines
+                file.write(line) # Seems pointless but sets the pointer to the end of the last line
             return
         file.write(f"Average player time: {player:.2f} seconds \n")
         file.write(f"Average bot time: {bot: .2f} seconds \n")
