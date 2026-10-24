@@ -1,6 +1,6 @@
 # Overview
 
-A small chess bot made in Python that you can hone your skills against. Can consistently beat a 2000 elo bot on chess.com
+A small chess bot made in Python that you can hone your skills against.
 
 # Controls
 
@@ -17,7 +17,7 @@ A small chess bot made in Python that you can hone your skills against. Can cons
 | **Remove Premove**  | Middle Click (On premove)    | Delete a specific queued premove                     |
 | **Clear Drawings**  | Middle Click (Empty)         | Clear all arrows, strategy circles, and premoves     |
 | **Undo Move**       | Left Arrow Key (Scroll down) | Revert the game state back one move                  |
-| **Redo Move**       | Right Arrow Key (scroll up)  | Re-apply an undone move (within the 3-second window) |
+| **Redo Move**       | Right Arrow Key (Scroll up)  | Re-apply an undone move (within the 3-second window) |
 
 </div>
 
