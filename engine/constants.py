@@ -128,6 +128,16 @@ zobristEnPassant = []
 for column in range(8):
     zobristEnPassant.append(random.getrandbits(64))
 
+def writeData(moves, evaluationScore, time, searchedDepth, endgame, totalPieces):
+    if getattr(sys, 'frozen', False): # Frozen is if code is being run from a .exe
+        basePath = os.path.dirname(sys.executable) # Where executable is stored
+    else: # If code is being run in normal conditions
+        basePath = (os.path.dirname(os.path.dirname(os.path.abspath(__file__)))) # Tells python to search other folders for files
+
+    path = os.path.join(basePath, 'history.txt')
+    with open(path, "a") as file:
+        file.write(f"Move: {moves:>3} | Evaluation Score: {evaluationScore:>5} | Time: {time / 1000:>6.2f} seconds | Depth: {searchedDepth:>3} | Endgame: {endgame:>5} | Total pieces: {totalPieces:>2} \n")
+
 def getStartSettings():
     if getattr(sys, 'frozen', False): # Frozen is if code is being run from a .exe
         basePath = os.path.dirname(sys.executable) # Where executable is stored
