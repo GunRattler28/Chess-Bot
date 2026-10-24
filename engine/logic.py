@@ -184,7 +184,7 @@ class logic:
 
             self.halfmoveClock = int(halfMove) # moves since last irreversible move (pawn push, capture)
             self.moves = (int(fullMoves) - 1) * 2 + (1 if self.turnColour == black else 0) # FEN string counts 1 move as every time both sides play. I count as different so this converts.
-
+            constants.firstMove = self.moves
             # Clears variables which werent set
 
             self.moveHistory.clear()

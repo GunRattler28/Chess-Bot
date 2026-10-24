@@ -128,6 +128,7 @@ zobristEnPassant = []
 for column in range(8):
     zobristEnPassant.append(random.getrandbits(64))
 
+firstMove = 1
 lastMove = 0
 
 def onStart():
@@ -143,18 +144,18 @@ def onStart():
             file.write("\n")
 
 def writeData(moves, evaluationScore, time, searchedDepth, endgame, totalPieces):
-    global lastMove
+    global lastMove # Ensures that the lastMove variable is updated inside the function
     if getattr(sys, 'frozen', False): # Frozen is if code is being run from a .exe
         basePath = os.path.dirname(sys.executable) # Where executable is stored
     else: # If code is being run in normal conditions
         basePath = (os.path.dirname(os.path.dirname(os.path.abspath(__file__)))) # Tells python to search other folders for files
 
     path = os.path.join(basePath, 'moves.txt')
-    with open(path, "a") as file:
-        if moves <= lastMove:
+    with open(path, "a") as file: # Opens the file (and automatically closes it) in "a" mode. "a" means I am going to append (write) to it (without overwriting data).
+        if moves <= lastMove: # Detects whether player has undone a move
             file.write("\n") # Add lines break if there was an undo
-        if moves == 1:
-            file.write("\n") # Add line break (so now theres 2 line breaks) if the game has been reset
+        if moves == firstMove:
+            file.write("\n") # Add line break (so now theres 2 line breaks) if the game has been undone until the first move
         file.write(f"Move: {moves:>3} | Evaluation Score: {evaluationScore:>5} | Time: {time / 1000:>6.2f} seconds | Depth: {searchedDepth:>3} | Endgame: {endgame:>5} | Total pieces: {totalPieces:>2} \n")
         lastMove = moves
 
