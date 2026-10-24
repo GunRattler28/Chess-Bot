@@ -162,7 +162,7 @@ def writeData(moves, evaluationScore, time, searchedDepth, endgame, totalPieces)
             file.write("\n") # Add lines break if there was an undo
         if moves == firstMove:
             file.write("\n") # Add line break (so now theres 2 line breaks) if the game has been undone until the first move
-        file.write(f"Move: {moves:>3} | Evaluation Score: {evaluationScore:>5} | Time: {time / 1000:>6.2f} seconds | Depth: {searchedDepth:>3} | Endgame: {endgame:>5} | Total pieces: {totalPieces:>2} \n")
+        file.write(f"Move: {moves:>3} | Evaluation Score: {evaluationScore:>5} | Time: {time:>6.2f} seconds | Depth: {searchedDepth:>3} | Endgame: {endgame:>5} | Total pieces: {totalPieces:>2} \n")
         lastMove = moves
 
 def storeTimeData(player, bot, move):
