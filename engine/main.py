@@ -51,6 +51,7 @@ class mainLoop:
                 self.board.makeMove(startRow, startColumn, endRow, endColumn)
                 self.board.gameState() # Check the gamestate to see if it has changed
                 print(f"Move: {self.board.moves:>3} | Evaluation Score: {self.board.evaluationScore:>5} | Time:   0.00 seconds | Depth: N/A | Endgame: {str(bot.evaluation.isEndgame(self.board)):>5} | Total pieces: {self.board.totalPieces:>2}") # Used for debugging to see how the bot is playing and wby
+                constants.writeData(self.board.moves, self.board.evaluationScore, 0, "N/A", str(bot.evaluation.isEndgame(self.board)), self.board.totalPieces)
             else:
                 constants.premoves.clear() # If premove isn't a legal move, remove all premoves 
         else:
