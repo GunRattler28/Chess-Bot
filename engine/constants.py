@@ -136,7 +136,7 @@ def onStart():
     else: # If code is being run in normal conditions
         basePath = (os.path.dirname(os.path.dirname(os.path.abspath(__file__)))) # Tells python to search other folders for files
 
-    path = os.path.join(basePath, 'history.txt')
+    path = os.path.join(basePath, 'moves.txt')
     with open(path, "a") as file:
         lines = getLines(path)
         if len(lines) > 1:
@@ -149,7 +149,7 @@ def writeData(moves, evaluationScore, time, searchedDepth, endgame, totalPieces)
     else: # If code is being run in normal conditions
         basePath = (os.path.dirname(os.path.dirname(os.path.abspath(__file__)))) # Tells python to search other folders for files
 
-    path = os.path.join(basePath, 'history.txt')
+    path = os.path.join(basePath, 'moves.txt')
     with open(path, "a") as file:
         if moves <= lastMove:
             file.write("\n") # Add lines break if there was an undo
@@ -164,7 +164,7 @@ def storeTimeData(player, bot, move):
     else: # If code is being run in normal conditions
         basePath = (os.path.dirname(os.path.dirname(os.path.abspath(__file__)))) # Tells python to search other folders for files
 
-    path = os.path.join(basePath, 'history.txt')
+    path = os.path.join(basePath, 'moves.txt')
     with open(path, "a") as file:
         file.write("\n")
         if move < lastMove:
